@@ -1,0 +1,5 @@
+package_name=dev.axmol.cardgame
+project_type=lua
+ndk=r27
+min_sdk=21
+target_sdk=35

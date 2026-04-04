@@ -1,0 +1,45 @@
+# Build outputs
+build/
+proj.android/app/build/
+proj.android/.gradle/
+proj.android/build/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln
+*.vcxproj*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+*.pyc
+__pycache__/
+ax_debug.txt
+game_stdout.txt
+lua_debug.log
+capture_all.txt
+stdout_capture.txt
+log_client.log
+
+# Screenshots
+screenshot*.png
+ss_now.png
+pre_*.png
+post_*.png
+after_*.png
+final_*.png
+
+# Migration backup
+_migration_backup/
+
+# DLLs and binaries in root
+*.dll
+
+# Tools
+tools_external_axslcc/
+axmol/

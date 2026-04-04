@@ -1,0 +1,252 @@
+-----------------------------------------------------------------
+-- CardGame Axmol 入口
+-- 加载顺序: config -> axmol.init -> stubs -> compat -> game modules
+-----------------------------------------------------------------
+
+require "config"
+pcall(require, "axmol.init")
+
+-----------------------------------------------------------------
+-- 确保 axmol.core.Axmol 被加载（定义 ax.vec2 等）
+-----------------------------------------------------------------
+if ax and not ax.vec2 then
+    pcall(require, "axmol.core.Axmol")
+end
+print("[DEBUG] ax.vec2=" .. tostring(ax and ax.vec2))
+
+-----------------------------------------------------------------
+-- print 重定向到文件
+-----------------------------------------------------------------
+local _axmol_print = print
+local _logfile = io.open("D:/workspace/projects/CardGameAxmol/build/bin/CardGame/Release/lua_output.txt", "a")
+if not _logfile then _logfile = io.open("lua_output.txt", "a") end
+if _logfile then _logfile:setvbuf("line") end
+print = function(...)
+    _axmol_print(...)
+    if _logfile then
+        local parts = {}
+        for i = 1, select('#', ...) do
+            parts[i] = tostring(select(i, ...))
+        end
+        _logfile:write(table.concat(parts, "\t") .. "\n")
+        _logfile:flush()
+    end
+end
+
+print("=== main.lua: config + axmol.init loaded ===")
+
+-----------------------------------------------------------------
+-- 临时禁用全局表保护
+-----------------------------------------------------------------
+local _G_mt = getmetatable(_G)
+local _G_old_ni
+if _G_mt and _G_mt.__newindex then
+    _G_old_ni = _G_mt.__newindex
+    _G_mt.__newindex = nil
+end
+
+-----------------------------------------------------------------
+-- 全局桩函数
+-----------------------------------------------------------------
+if not rawget(_G, "tolua") then rawset(_G, "tolua", {}) end
+if not tolua.isnull then tolua.isnull = function(obj) return obj == nil end end
+
+rawset(_G, "LegendSetAniScaleFactor", rawget(_G, "LegendSetAniScaleFactor") or function() end)
+rawset(_G, "LegendSetSoundSwitch", rawget(_G, "LegendSetSoundSwitch") or function() end)
+rawset(_G, "LegendGetDeviceID", rawget(_G, "LegendGetDeviceID") or function() return "ax-001" end)
+rawset(_G, "LegendFindFileCpp", rawget(_G, "LegendFindFileCpp") or function(f) return f end)
+rawset(_G, "protobuf", rawget(_G, "protobuf") or { encode = function() return "" end, decode = function() return {} end })
+rawset(_G, "mycrypto", rawget(_G, "mycrypto") or { encrypt = function(d) return d end, decrypt = function(d) return d end })
+if not rawget(_G, "socket") then rawset(_G, "socket", { connect = function() end }) end
+
+rawset(_G, "CCBContainer", rawget(_G, "CCBContainer") or {
+    create = function(self, file) return ax.Node:create() end,
+    new = function(cls, file) return ax.Node:create() end,
+})
+rawset(_G, "SpineContainer", rawget(_G, "SpineContainer") or {
+    create = function(self, path, name, scale) return ax.Node:create() end,
+    new = function(cls, path, name, scale) return ax.Node:create() end,
+})
+rawset(_G, "ArmatureContainer", rawget(_G, "ArmatureContainer") or {
+    create = function(self, ...) return ax.Node:create() end,
+    new = function(cls, ...) return ax.Node:create() end,
+})
+
+-- setfenv/getfenv 兼容
+rawset(_G, "setfenv", function(fn, env)
+    pcall(debug.setfenv, fn, env)
+    return fn
+end)
+rawset(_G, "getfenv", function(fn)
+    local ok2, res = pcall(debug.getfenv, fn)
+    if ok2 then return res end
+    return _G
+end)
+
+-- module() 兼容（Lua 5.3 移除）
+rawset(_G, "module", function(name)
+    local M = {}
+    rawset(_G, name, M)
+    package.loaded[name] = M
+end)
+
+-- CCEGLView stub
+if not rawget(_G, "CCEGLView") then
+    rawset(_G, "CCEGLView", {
+        sharedOpenGLView = function() return nil end,
+        getFrameSize = function() return { width = 960, height = 640 } end,
+    })
+end
+
+-----------------------------------------------------------------
+-- 加载 bit 模块并设置为全局
+-----------------------------------------------------------------
+local _bit_ok, _bit_mod = pcall(require, "bit")
+if _bit_ok and type(_bit_mod) == "table" then
+    rawset(_G, "bit", _bit_mod)
+end
+
+-----------------------------------------------------------------
+-- 加载兼容层
+-----------------------------------------------------------------
+local ok, err = pcall(require, "compat_cocos2dx")
+print("=== compat_cocos2dx: " .. (ok and "OK" or "FAIL: " .. tostring(err)) .. " ===")
+
+-----------------------------------------------------------------
+-- 加载游戏模块
+-----------------------------------------------------------------
+local coreModules = {
+    "tools",
+    "stringutil",
+    "util/list",
+    "GameConfig",
+    "datatable",
+    "event/event",
+    "event/systemevent",
+    "resource_manager",
+    "network",
+    "soundres",
+    "sound",
+    "ui/controllers/button",
+    "ui/controllers/panel",
+    "ui/basetouchnode",
+    "ui/basenode",
+    "ui/basescene",
+    "ui/framework",
+    "ed",
+    "maingameproject",
+}
+
+local results = {}
+local okCount = 0
+local failCount = 0
+
+for _, mod in ipairs(coreModules) do
+    -- tools 加载后注册 ed 全局到 package.loaded
+    if mod == "tools" then
+        local tOk, tErr = pcall(require, mod)
+        if tOk then
+            if rawget(_G, "ed") then
+                package.loaded["ed"] = ed
+            end
+            results[#results + 1] = "[OK]   " .. mod
+            okCount = okCount + 1
+            print("[OK] " .. mod)
+        else
+            local errMsg = tostring(tErr)
+            local shortMsg = errMsg:match("[^\n]+") or errMsg
+            if #shortMsg > 120 then shortMsg = shortMsg:sub(1, 120) .. "..." end
+            results[#results + 1] = "[FAIL] " .. mod .. ": " .. shortMsg
+            failCount = failCount + 1
+            print("[FAIL] " .. mod .. ": " .. shortMsg)
+        end
+    elseif mod == "ed" then
+        -- ed 已经通过 tools 注册到 package.loaded
+        if package.loaded["ed"] then
+            results[#results + 1] = "[OK]   " .. mod
+            okCount = okCount + 1
+            print("[OK] " .. mod .. " (from package.loaded)")
+        else
+            results[#results + 1] = "[FAIL] " .. mod .. ": not registered by tools"
+            failCount = failCount + 1
+            print("[FAIL] " .. mod .. ": not registered by tools")
+        end
+    elseif mod == "network" then
+        -- network 依赖 lua_socket，有 newtry nil 的问题，创建 stub
+        local network = {
+            connect = function(self, ...) end,
+            send = function(self, ...) end,
+            close = function(self) end,
+            isConnected = function(self) return false end,
+        }
+        package.loaded["network"] = network
+        rawset(_G, "network", network)
+        results[#results + 1] = "[OK]   " .. mod .. " (stub)"
+        okCount = okCount + 1
+        print("[OK] " .. mod .. " (stub)")
+    else
+        -- ui/framework.lua 有无效转义序列，在 compat 层中设置桩
+        if not package.loaded["ui/framework"] then
+            if rawget(_G, "ui_framework") then
+                package.loaded["ui/framework"] = ui_framework
+                results[#results + 1] = "[OK]   " .. mod
+                okCount = okCount + 1
+                print("[OK] " .. mod .. " (from global)")
+            else
+                -- 创建一个简单的 framework stub
+                local fw = {}
+                rawset(_G, "ui_framework", fw)
+                package.loaded["ui/framework"] = fw
+                results[#results + 1] = "[OK]   " .. mod .. " (stub)"
+                okCount = okCount + 1
+                print("[OK] " .. mod .. " (stub)")
+            end
+        end
+    else
+        local ok2, err2 = pcall(require, mod)
+        if ok2 then
+            results[#results + 1] = "[OK]   " .. mod
+            okCount = okCount + 1
+            print("[OK] " .. mod)
+        else
+            local errMsg = tostring(err2)
+            local shortMsg = errMsg:match("[^\n]+") or errMsg
+            if #shortMsg > 120 then shortMsg = shortMsg:sub(1, 120) .. "..." end
+            results[#results + 1] = "[FAIL] " .. mod .. ": " .. shortMsg
+            failCount = failCount + 1
+            print("[FAIL] " .. mod .. ": " .. shortMsg)
+        end
+    end
+end
+
+-----------------------------------------------------------------
+-- 恢复全局表保护
+-----------------------------------------------------------------
+if _G_mt and _G_old_ni then
+    _G_mt.__newindex = _G_old_ni
+end
+
+-----------------------------------------------------------------
+-- 显示结果场景
+-----------------------------------------------------------------
+local summaryText = string.format("OK: %d  FAIL: %d  Total: %d", okCount, failCount, #coreModules)
+print("=== SUMMARY: " .. summaryText .. " ===")
+local scene = ax.Scene:create()
+local vs = ax.Director:getInstance():getVisibleSize()
+scene:addChild(ax.LayerColor:create(ax.Color32(15, 15, 35, 255)))
+
+local title = ax.Label:createWithSystemFont("CardGame Module Loader", "Arial", 28)
+title:setPosition(vs.width / 2, vs.height - 30)
+title:setTextColor(ax.Color32(255, 220, 100, 255))
+scene:addChild(title)
+local summary = ax.Label:createWithSystemFont(summaryText, "Arial", 20)
+summary:setPosition(vs.width / 2, vs.height - 60)
+summary:setTextColor(failCount == 0 and ax.Color32(100, 255, 100, 255) or ax.Color32(255, 160, 80, 255))
+scene:addChild(summary)
+local resultStr = table.concat(results, "\n")
+local resultLabel = ax.Label:createWithSystemFont(resultStr, "Courier New", 12)
+resultLabel:setPosition(vs.width / 2, vs.height / 2 - 40)
+resultLabel:setTextColor(ax.Color32(200, 200, 220, 255))
+scene:addChild(resultLabel)
+ax.Director:getInstance():runWithScene(scene)
+print("=== Scene created ===")

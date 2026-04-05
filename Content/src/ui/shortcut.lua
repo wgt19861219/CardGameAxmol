@@ -231,7 +231,6 @@ local function createButtons(self)
 		})
 	end
 	readnode:addNode(ui_info)
-	registerButtonTouchHandler(self)
 	if not isOpen then
 		for i = 1, #info do
 			ui[info[i].key]:setOpacity(0)

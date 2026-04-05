@@ -406,74 +406,33 @@ class.pushBoardWithoutAnim = pushBoardWithoutAnim
 local function pushBoard(self)
 	local ui = self.sc_ui
 	local board = ui.shortcut_board
-	if not self.shortcutBoardScheduler then
-		self.shortcutBoardScheduler = board:getScheduler()
-	end
 	self.isPushsb = true
-	local count = 0
-	local gap = res.shortcut_board_pop_time
-	local step = 1
-	local sMax = -1 * (res.shortcut_board_height_max - res.shortcut_board_height_min + res.shortcut_board_height_min / 5) / gap * 2
-	local as = -1 * sMax / gap
-	local bsMax = res.shortcut_board_height_min / 5 / gap * 2
-	local ms = bsMax / gap * 2
-	local speed = sMax
-	local ds = as
+	local dur = res.shortcut_board_pop_time
 	local size = board:getContentSize()
 	local bw = size.width
-	local bh = size.height
-	local height = bh
-	local currentScene = CCDirector:sharedDirector():getRunningScene()
-	local function handler(dt)
-		xpcall(function()
-			if CCDirector:sharedDirector():getRunningScene() ~= currentScene then
-				self:stopPushBoard()
-				return
-			end
-			if step == 1 and speed >= 0 then
-				step = 2
-				ds = ms
-				self:scDestroyShadeLayer()
-			end
-			if step == 2 and speed >= bsMax then
-				step = 3
-				ds = -1 * ms
-			end
-			local preHeight = height
-			height = height + speed * dt
-			speed = speed + ds * dt
-			if step == 1 then
-				local buttons = self:scGetButtons()
-				for i = 1, #buttons do
-					if preHeight > res.shortcutBoardButtonHeight[i] and height <= res.shortcutBoardButtonHeight[i] then
-						buttons[i]:setPosition(ccp(res.shortcut_pos_x, res.shortcutBoardButtonPosY[i]))
-						local fade = CCFadeOut:create(0.05)
-						local move = CCMoveTo:create(0.2, ccp(res.shortcut_pos_x, res.shortcut_pos_y))
-						move = CCEaseBackOut:create(move)
-						local spawn = CCSpawn:createWithTwoActions(fade, move)
-						buttons[i]:runAction(spawn)
-					end
-				end
-			end
-			if step == 1 and speed >= 0 then
-				height = res.shortcut_board_height_min
-				self:stopPushBoard()
-				local buttons = self:scGetButtons()
-				for i = 1, #buttons do
-					buttons[i]:setOpacity(0)
-				end
-				self:scDestroyShadeLayer()
-			end
-			if height < res.shortcut_board_height_min * 4 / 5 then
-				height = res.shortcut_board_height_min * 4 / 5
-			end
-			if step == 3 and height > res.shortcut_board_height_min then
-				height = res.shortcut_board_height_min
-			end
-			board:setContentSize(CCSizeMake(bw, height))
-			end, EDDebug)
+	local startH = size.height
+	local endH = res.shortcut_board_height_min
+	local elapsed = 0
+	-- Animate buttons disappearing
+	local buttons = self:scGetButtons()
+	for i = 1, #buttons do
+		buttons[i]:stopAllActions()
+		buttons[i]:runAction(CCFadeOut:create(dur * 0.4))
+	end
+	-- Simple linear resize via schedule
+	local function tick(dt)
+		elapsed = elapsed + dt
+		local t = math.min(elapsed / dur, 1.0)
+		t = t * t  -- easeIn curve
+		local h = startH + (endH - startH) * t
+		board:setContentSize(CCSizeMake(bw, h))
+		if elapsed >= dur then
+			board:setContentSize(CCSizeMake(bw, endH))
+			self:scDestroyShadeLayer()
+			self:stopPushBoard()
 		end
-		return handler
+	end
+	self:registerUpdateHandler("pushBoard", tick)
 end
 class.pushBoard = pushBoard
 
@@ -494,66 +453,50 @@ class.popBoardWithoutAnim = popBoardWithoutAnim
 local function popBoard(self)
 	local ui = self.sc_ui
 	local board = ui.shortcut_board
-	if not self.shortcutBoardScheduler then
-		self.shortcutBoardScheduler = board:getScheduler()
-	end
 	self.isPopsb = true
-	local count = 0
-	local gap = res.shortcut_board_pop_time
-	local step = 1
-	local sMax = (res.shortcut_board_height_max - res.shortcut_board_height_min) * 1.1111111111111112 / gap * 2
-	local as = -1 * sMax / gap
-	local ms = as / 10
-	local speed = sMax
-	local ds = as
+	local dur = res.shortcut_board_pop_time
 	local size = board:getContentSize()
 	local bw = size.width
-	local bh = size.height
-	local height = bh
-	local currentScene = CCDirector:sharedDirector():getRunningScene()
-	local function handler(dt)
-		xpcall(function()
-			if CCDirector:sharedDirector():getRunningScene() ~= currentScene then
-				self:stopPopBoard()
-				return
+	local startH = size.height
+	local endH = res.shortcut_board_height_max
+	local elapsed = 0
+	-- Animate buttons appearing with staggered timing
+	local buttons = self:scGetButtons()
+	for i = 1, #buttons do
+		local btn = buttons[i]
+		btn:stopAllActions()
+		btn:setPosition(ccp(res.shortcut_pos_x, res.shortcut_pos_y))
+		btn:setOpacity(0)
+	end
+	-- Simple linear resize via schedule
+	local function tick(dt)
+		elapsed = elapsed + dt
+		local t = math.min(elapsed / dur, 1.0)
+		-- easeOut curve
+		t = 1 - (1 - t) * (1 - t)
+		local h = startH + (endH - startH) * t
+		board:setContentSize(CCSizeMake(bw, h))
+		-- Show buttons at staggered thresholds
+		for i = 1, #buttons do
+			local threshold = res.shortcutBoardButtonHeight[i]
+			if h >= threshold and buttons[i]:getOpacity() == 0 then
+				buttons[i]:runAction(CCSpawn:createWithTwoActions(
+					CCFadeIn:create(dur * 0.5),
+					CCMoveTo:create(dur * 0.5, ccp(res.shortcut_pos_x, res.shortcutBoardButtonPosY[i]))
+				))
 			end
-			if step == 1 and speed <= 0 then
-				step = 2
-				ds = ms
-			end
-			if step == 2 and speed <= sMax / 10 then
-				step = 3
-				ds = -1 * ms
-			end
-			local preHeight = height
-			height = height + speed * dt
-			speed = speed + ds * dt
-			if step == 1 then
-				local buttons = self:scGetButtons()
-				for i = 1, #buttons do
-					if preHeight < res.shortcutBoardButtonHeight[i] and height >= res.shortcutBoardButtonHeight[i] then
-						buttons[i]:setPosition(ccp(res.shortcut_pos_x, res.shortcut_pos_y))
-						local fade = CCFadeIn:create(0.2)
-						local move = CCMoveTo:create(0.2, ccp(res.shortcut_pos_x, res.shortcutBoardButtonPosY[i]))
-						move = CCEaseBackOut:create(move)
-						local spawn = CCSpawn:createWithTwoActions(fade, move)
-						buttons[i]:runAction(spawn)
-					end
-				end
-			end
-			if step == 3 and speed >= 0 then
-				height = res.shortcut_board_height_max
-				self:stopPopBoard()
-			end
-			board:setContentSize(CCSizeMake(bw, height))
-			end, EDDebug)
 		end
-		return handler
+		if elapsed >= dur then
+			board:setContentSize(CCSizeMake(bw, endH))
+			self:stopPopBoard()
+		end
+	end
+	self:registerUpdateHandler("popBoard", tick)
 end
 class.popBoard = popBoard
 
 local registerPopBoard = function(self)
-	self:registerUpdateHandler("popBoard", self:popBoard())
+	self:popBoard()
 end
 class.registerPopBoard = registerPopBoard
 
@@ -569,7 +512,7 @@ end
 class.stopPopBoard = stopPopBoard
 
 local registerPushBoard = function(self)
-	self:registerUpdateHandler("pushBoard", self:pushBoard())
+	self:pushBoard()
 end
 class.registerPushBoard = registerPushBoard
 

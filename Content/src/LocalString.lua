@@ -24,7 +24,7 @@ tr-TR	土耳其语				LANG_TURKISH		kLanguageTurkish
 vi-VN	越南语					LANG_VIETNAMESE		kLanguageVietnamese
 	]]--
 	["en-US"] = require("language/en-US"),
-	["zh-CN"] = require("language/en-US"),
+	["zh-CN"] = require("language/zh-CN"),
 	["de-DE"] = require("language/de-DE"),
 	["es-ES"] = require("language/en-US"),
 	["fr-FR"] = require("language/en-US"),
@@ -98,10 +98,6 @@ function checkCurrentLanguage()
 		lang = getDeviceLanguage()
 	end
 	
-	--add by xinghui
-	if platformTag ~=3 and lang=="zh-CN" then
-		lang = "en-US"
-	end
 	
 	currentLang = lang	
 	saveCurrentLanguage()

@@ -1005,21 +1005,121 @@ M.handlers.sdk_login = function(data, obj, localdata)
 end
 
 -----------------------------------------------------------------------
--- 空响应的次要 handler（chat, guild, ladder 等不重要消息）
+-- 排行榜查询
+-----------------------------------------------------------------------
+M.handlers.query_ranklist = function(data, obj, localdata)
+    local rankType = obj._rank_type or "top_gs"
+    data._rank_type = rankType
+    data._ranklist_item = {}
+    data._self_ranking = 0
+    data._self_prev_pos = 0
+    data._self_item = {
+        _user_summary = {
+            _avatar = 1,
+            _vip = 0,
+            _name = localdata.player.name or "Player",
+            _level = localdata.player.level or 1,
+        },
+        _param1 = 0,
+    }
+end
+
+-----------------------------------------------------------------------
+-- 竞技场排行榜 (top_arena)
+-----------------------------------------------------------------------
+M.handlers.top_arena = function(data, obj, localdata)
+    data._rank_list = {}
+    data._pos = 0
+    data._prev_pos = 0
+    data._self_rank = {
+        _summary = {
+            _avatar = 1,
+            _vip = 0,
+            _name = localdata.player.name or "Player",
+            _level = localdata.player.level or 1,
+        },
+    }
+end
+
+-----------------------------------------------------------------------
+-- TBC (远征/十字军)
+-----------------------------------------------------------------------
+M.handlers.tbc = function(data, obj, localdata)
+    -- 返回空对手信息
+    data._query_oppo = data._query_oppo or {}
+    data._query_oppo._stage_id = obj._query_oppo and obj._query_oppo._stage_id or 1
+    data._query_oppo._formation = {}
+end
+
+-----------------------------------------------------------------------
+-- 回放查询
+-----------------------------------------------------------------------
+M.handlers.query_replay = function(data, obj, localdata)
+    data._record_index = obj._record_index or 0
+    data._record_svrid = obj._record_svrid or 0
+    data._replay_data = ""
+end
+
+-----------------------------------------------------------------------
+-- 邮件相关
+-----------------------------------------------------------------------
+M.handlers.get_maillist = function(data, obj, localdata)
+    data._mail_list = {}
+end
+
+M.handlers.read_mail = function(data, obj, localdata)
+    data._id = obj._id or 0
+    data._mail_content = ""
+    data._reward_list = {}
+end
+
+-----------------------------------------------------------------------
+-- 英雄分解
+-----------------------------------------------------------------------
+M.handlers.query_split_data = function(data, obj, localdata)
+    data._split_data = data._split_data or {}
+end
+
+M.handlers.query_split_return = function(data, obj, localdata)
+    data._split_return = data._split_return or {}
+end
+
+M.handlers.split_hero = function(data, obj, localdata)
+    local hid = obj._tid
+    if hid and localdata.heroes then
+        localdata.heroes[hid] = nil
+    end
+    data._reward_list = {}
+end
+
+-----------------------------------------------------------------------
+-- 公会日志
+-----------------------------------------------------------------------
+M.handlers.request_guild_log = function(data, obj, localdata)
+    data._guild_log_list = {}
+end
+
+-----------------------------------------------------------------------
+-- 充值返利
+-----------------------------------------------------------------------
+M.handlers.recharge_rebate = function(data, obj, localdata)
+    data._recharge_rebate = data._recharge_rebate or {}
+    data._recharge_rebate_info = data._recharge_rebate_info or {}
+end
+
+-----------------------------------------------------------------------
+-- 空响应的次要 handler
 -----------------------------------------------------------------------
 local EMPTY_HANDLERS = {
-    "chat", "guild", "ladder", "tbc", "excavate",
+    "chat", "guild", "ladder", "excavate",
     "change_server", "cdkey_gift", "worldcup",
-    "fb_attention", "get_maillist", "read_mail",
-    "get_vip_gift", "trigger_job", "job_rewards",
-    "ask_magicsoul", "split_hero", "query_split_data",
-    "query_split_return", "activity_info",
-    "activity_lotto_info", "activity_lotto_reward",
+    "fb_attention", "get_vip_gift", "trigger_job", "job_rewards",
+    "ask_magicsoul",
+    "activity_info", "activity_lotto_info", "activity_lotto_reward",
     "activity_bigpackage_info", "activity_bigpackage_reward",
     "activity_bigpackage_reset",
-    "continue_pay", "recharge_rebate", "every_day_happy",
+    "continue_pay", "every_day_happy",
     "charge", "ask_activity_info",
-    "query_ranklist", "query_replay",
     "suspend_report",
 }
 

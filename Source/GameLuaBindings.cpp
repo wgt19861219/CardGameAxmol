@@ -1,6 +1,7 @@
 #include "GameLuaBindings.h"
 #include "CCBContainer.h"
 #include "SpineContainer.h"
+#include "LegendAnimation.h"
 #include "axmol/axmol.h"
 
 extern "C" {
@@ -830,14 +831,9 @@ int register_game_bindings(lua_State* L)
             lua_setmetatable(L, -2);
             return 1;
         }
-        // Return fallback Node with SpineContainer_mt (methods use SAFE_SPINE for safety)
-        AXLOGW("SpineContainer::create(global) returning fallback Node for path={}, name={}", path, name);
-        auto* emptyNode = ax::Node::create();
-        emptyNode->retain();
-        void** ud = (void**)lua_newuserdata(L, sizeof(void*));
-        *ud = emptyNode;
-        luaL_getmetatable(L, "SpineContainer_mt");
-        lua_setmetatable(L, -2);
+        // Return nil so Lua fallback (createStaticSpriteFromSpineAtlas) can kick in
+        AXLOGW("SpineContainer::create(global) failed, returning nil for path={}, name={}", path, name);
+        lua_pushnil(L);
         return 1;
     });
     lua_setfield(L, -2, "create");
@@ -852,8 +848,115 @@ int register_game_bindings(lua_State* L)
         "useShader", "setActionElapsed", "setActionSpeeder", "setNextAction"
     });
 
-    // ---- LegendAnimation stub ----
-    register_stub_class(L, "LegendAnimation", {"create"});
+    // ---- LegendAnimation / LegendAminationEffect ----
+    // First create instance metatable
+    luaL_newmetatable(L, "LegendAnimationEffect_mt");
+
+    // __index table for instance methods
+    lua_newtable(L);  // methods table
+
+    // setAction(name)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        const char* name = luaL_checkstring(L, 2);
+        if (obj) obj->setAction(name, true);
+        return 0;
+    });
+    lua_setfield(L, -2, "setAction");
+
+    // setNextAction(name)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        const char* name = luaL_checkstring(L, 2);
+        if (obj) obj->setNextAction(name);
+        return 0;
+    });
+    lua_setfield(L, -2, "setNextAction");
+
+    // setLoop(bool)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        bool val = lua_toboolean(L, 2) != 0;
+        if (obj) obj->setLoop(val);
+        return 0;
+    });
+    lua_setfield(L, -2, "setLoop");
+
+    // getAniFileName()
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        if (obj) lua_pushstring(L, obj->getAniFileName().c_str());
+        else lua_pushstring(L, "");
+        return 1;
+    });
+    lua_setfield(L, -2, "getAniFileName");
+
+    // isTerminated()
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        lua_pushboolean(L, obj ? (obj->isTerminated() ? 1 : 0) : 0);
+        return 1;
+    });
+    lua_setfield(L, -2, "isTerminated");
+
+    // setLoopAction(name)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        const char* name = luaL_checkstring(L, 2);
+        if (obj) obj->setLoopAction(name);
+        return 0;
+    });
+    lua_setfield(L, -2, "setLoopAction");
+
+    // setStartAction(name)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        const char* name = luaL_checkstring(L, 2);
+        if (obj) obj->setStartAction(name);
+        return 0;
+    });
+    lua_setfield(L, -2, "setStartAction");
+
+    // Set methods as __index
+    lua_setfield(L, -2, "__index");  // set methods table as __index in metatable
+
+    // __gc
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        if (obj) obj->release();
+        return 0;
+    });
+    lua_setfield(L, -2, "__gc");
+
+    // metatable is now set up but still on stack
+
+    // Create the class table (static methods)
+    lua_newtable(L);
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        int argOffset = (lua_type(L, 1) != LUA_TSTRING) ? 1 : 0;  // skip self for colon call
+        const char* resource = luaL_checkstring(L, 1 + argOffset);
+        auto* obj = ax::LegendAnimationEffect::create(resource);
+        if (obj)
+        {
+            auto** ud = (ax::LegendAnimationEffect**)lua_newuserdata(L, sizeof(ax::LegendAnimationEffect*));
+            *ud = obj;
+            obj->retain();
+            luaL_getmetatable(L, "LegendAnimationEffect_mt");
+            lua_setmetatable(L, -2);
+            return 1;
+        }
+        lua_pushnil(L);
+        return 1;
+    });
+    lua_setfield(L, -2, "create");
+
+    // Register as global names
+    lua_pushvalue(L, -1);
+    lua_setglobal(L, "LegendAminationEffect");
+    lua_pushvalue(L, -1);
+    lua_setglobal(L, "LegendAnimation");
+
+    lua_pop(L, 2);  // pop class table and metatable
 
     // ---- libOS stub ----
     register_stub_class(L, "libOS", {

@@ -549,6 +549,10 @@ local function doResetElite(self, config)
   }
   ed.netreply.resetElite = self:doResetEliteLimit(pay)
   local type = pay and 1 or 0
+  if not ed.upmsg or not ed.upmsg.reset_elite then
+    self:doResetEliteLimit(pay)
+    return
+  end
   local msg = ed.upmsg.reset_elite()
   msg._type = type
   if pay then
@@ -1844,30 +1848,8 @@ local function create(stage, addition, mode)
   self:createEnemy()
   self:createReward()
   self:addGuildInstanceUI()
-  local dictionary = CCDictionary:create()
-  local rres = map_ui.route.res
-  local spr
-  if rres then
-    spr = ed.createSprite(rres)
-    spr:setPosition(ccp(map_ui.route.pos.x - 40, 480 - map_ui.route.pos.y - 80))
-    dictionary:setObject(spr, 1)
-  end
-  for i = 1, #(map_ui.stage or {}) do
-    local icon
-    local type, res = ed.ui.stageselect.getStageRes(map_ui.stage[i], map_ui.tag)
-    icon = ed.createSprite(res)
-    local pos = map_ui.stage[i].pos
-    icon:setPosition(ccp(map_ui.stage[i].pos.x - 40, 480 - map_ui.stage[i].pos.y - 80))
-    dictionary:setObject(icon, i + 1)
-  end
-  local frame1
-  if 0 < dictionary:count() then
-    frame1 = ed.createMultiSprite(map_ui.bg.res)
-    frame1:setBackgroundScale(ed.getSpriteOriginalScale(map_ui.bg.res))
-    frame1:setMultiSprite(dictionary)
-  else
-    frame1 = ed.createSprite(map_ui.bg.res)
-  end
+  -- Fallback: CCDictionary/CCMultiSprite not available in Axmol, use normal sprite
+  local frame1 = ed.createSprite(map_ui.bg.res)
   frame1:setPosition(map_ui.bg.pos)
   self.ui.frame1 = frame1
   stageContainer:addChild(frame1)

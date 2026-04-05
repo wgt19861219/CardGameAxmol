@@ -300,12 +300,12 @@ do
             local ok, spine = pcall(_spineCreate, path, name, scale)
             if not ok or spine == nil then
                 print("[WARN] SpineContainer.create failed: " .. tostring(path).."/"..tostring(name))
-                return ax.Node:create()
+                return nil
             end
             return spine
         else
-            print("[WARN] SpineContainer.create no C++ binding, using stub")
-            return ax.Node:create()
+            print("[WARN] SpineContainer.create no C++ binding, returning nil")
+            return nil
         end
     end
 

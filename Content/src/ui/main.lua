@@ -434,6 +434,22 @@ local function createMainFca(self)
 			end
 			if parent and parent.addChild and node.setScale then parent:addChild(node, v.fcaz or 5, 0) end
 			self.mainFcas[k] = node
+			-- Adjust title position for static sprite fallback
+			-- Static sprites from spine atlas have different sizes than original FCA (200x200)
+			-- Reposition title below the actual icon visual bottom edge
+			if parent == self.ui[k] then
+				local title = self.ui[k .. "_title"]
+				if title and not tolua.isnull(title) then
+					local cs = node:getContentSize()
+					local sc = v.scale or 1
+					local actualH = cs.height * sc
+					if actualH > 0 and actualH < 220 then
+						local titleX = v.pos.x + (v.titlePos and v.titlePos.x or 0)
+						local titleY = v.pos.y - actualH / 2 - 5
+						title:setPosition(ccp(titleX, titleY))
+					end
+				end
+			end
 			local gmin = v.gap_min or 0
 			local gmax = v.gap_max or 0
 			local lg = v.loop_gap or 0

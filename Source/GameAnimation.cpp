@@ -9,6 +9,6 @@ GameAnimation::~GameAnimation() {}
 
 GameAnimation* GameAnimation::create(const char* resource, double scale, AnimationType aniType)
 {
-    // 工厂方法，由子类实现
-    return nullptr;
+    // Factory delegates to concrete type
+    return nullptr;  // Should not be called directly
 }

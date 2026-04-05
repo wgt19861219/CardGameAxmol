@@ -955,6 +955,14 @@ if ax.Node then
         isTouchEnabled = function(self)
             return self._touchEnabled == true
         end,
+        numberOfRunningActions = function(self)
+            local ok, result = pcall(function()
+                return ax.Director:getInstance():getActionManager():getNumberOfRunningActionsInTarget(self)
+            end)
+            if ok and type(result) == 'number' then return result end
+            -- fallback: check _runningActionCount property
+            return self._runningActionCount or 0
+        end,
     }
     -- Hook into ax.Node's metatable __index
     local mt = getmetatable(ax.Node)
@@ -1180,5 +1188,80 @@ end
 if _G_mt and _G_old_newindex then
     _G_mt.__newindex = _G_old_newindex
 end
+
+
+-----------------------------------------------------------------
+-- numberOfRunningActions patch for all node types
+-----------------------------------------------------------------
+do
+    local function _numberOfRunningActions(self)
+        local ok, result = pcall(function()
+            local am = ax.Director:getInstance():getActionManager()
+            if am then
+                return am:getNumberOfRunningActionsInTarget(self)
+            end
+        end)
+        if ok and type(result) == "number" then return result end
+        return 0
+    end
+    
+    -- Patch all known node types
+    local typesToPatch = {
+        ax.Node, ax.Sprite, ax.Layer, ax.LayerColor, ax.LayerGradient,
+        ax.Scale9Sprite, ax.Menu, ax.Label, ax.ProgressTimer,
+        ax.ClippingNode, ax.DrawNode, ax.ParticleSystemQuad,
+    }
+    for _, cls in ipairs(typesToPatch) do
+        if cls then
+            local mt = getmetatable(cls)
+            if mt then
+                local oi = mt.__index
+                if type(oi) == "table" then
+                    rawset(oi, "numberOfRunningActions", _numberOfRunningActions)
+                elseif type(oi) == "function" then
+                    mt.__index = function(t, k)
+                        if k == "numberOfRunningActions" then return _numberOfRunningActions end
+                        return oi(t, k)
+                    end
+                end
+            end
+        end
+    end
+    print("[compat_cocos2dx] numberOfRunningActions patched")
+end
+
+-----------------------------------------------------------------
+-- CCDictionary compatibility (cocos2d-x 2.x -> Lua table wrapper)
+-----------------------------------------------------------------
+CCDictionary = {}
+CCDictionary.__index = CCDictionary
+function CCDictionary:create()
+    local obj = { _data = {} }
+    setmetatable(obj, self)
+    return obj
+end
+function CCDictionary:setObject(obj, key)
+    self._data[key] = obj
+end
+function CCDictionary:objectForKey(key)
+    return self._data[key]
+end
+function CCDictionary:count()
+    local c = 0
+    for _ in pairs(self._data) do c = c + 1 end
+    return c
+end
+function CCDictionary:removeObjectForKey(key)
+    self._data[key] = nil
+end
+function CCDictionary:allKeys()
+    local keys = {}
+    for k in pairs(self._data) do table.insert(keys, k) end
+    return keys
+end
+function CCDictionary:getDict()
+    return self._data
+end
+print("[compat_cocos2dx] CCDictionary compatibility added")
 
 print("[compat_cocos2dx] Compatibility layer loaded successfully")

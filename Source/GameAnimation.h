@@ -17,7 +17,11 @@ public:
 
     static GameAnimation* create(const char* resource, double scale = 1.0, AnimationType aniType = Type_LegendAnimation);
 
-    virtual bool setAction(const char* name, bool bRemoveQueue) = 0;
+    virtual bool setAction(const char* name, bool bRemoveQueue = true) = 0;
+    virtual void setNextAction(const char* actionName) {}
+    virtual void setActionElapsed(float elapsed) {}
+    virtual void setActionSpeeder(float speeder) {}
+    virtual void setLoop(bool val) {}
 
     AnimationType mAniType;
 };

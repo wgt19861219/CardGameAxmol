@@ -89,7 +89,8 @@ local function loadCSV(path)
   if not file_content then
     print(path)
   end
-  for line in gmatch(file_content, "[^\r\n]*") do
+  local lineSep = string.char(13) .. string.char(10)
+  for line in gmatch(file_content, "[^" .. lineSep .. "]*") do
     if line ~= "" then
       local value_list = csvLineSplit(line)
       if not type_list then

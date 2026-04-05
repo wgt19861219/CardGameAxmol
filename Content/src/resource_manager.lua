@@ -95,20 +95,107 @@ local function createMultiSprite(resource)
 	end
 end
 ed.createMultiSprite = createMultiSprite
+local function createStaticSpriteFromSpineAtlas(resource)
+	print('[staticSpine] trying resource=' .. tostring(resource))
+	local atlasPath = 'spine/' .. resource .. '/' .. resource .. '.atlas'
+	local pngPath = 'spine/' .. resource .. '/' .. resource .. '.png'
+	local fu = CCFileUtils:sharedFileUtils()
+	local atlasExist = fu:isFileExist(atlasPath)
+	local pngExist = fu:isFileExist(pngPath)
+	print('[staticSpine] atlas=' .. tostring(atlasExist) .. ' png=' .. tostring(pngExist))
+	if not atlasExist or not pngExist then
+		return nil
+	end
+	local atlasContent = fu:getStringFromFile(atlasPath)
+	if not atlasContent or atlasContent == "" then
+		print('[staticSpine] atlas content empty')
+		return nil
+	end
+	local rx, ry, rw, rh
+	local rotate = false
+	local foundXY = false
+	local foundSize = false
+	local lineSep = string.char(13) .. string.char(10)
+	for line in atlasContent:gmatch('[^' .. lineSep .. ']+') do
+		local l = line:match('^%s*(.-)%s*$')
+		if l:match('^xy:%s*(%d+)%s*,%s*(%d+)') then
+			rx, ry = l:match('xy:%s*(%d+)%s*,%s*(%d+)')
+			rx, ry = tonumber(rx), tonumber(ry)
+			foundXY = true
+		elseif l:match('^size:%s*(%d+)%s*,%s*(%d+)') then
+			rw, rh = l:match('size:%s*(%d+)%s*,%s*(%d+)')
+			rw, rh = tonumber(rw), tonumber(rh)
+			foundSize = true
+		elseif l:match('^rotate:%s*true') then
+			rotate = true
+		elseif foundXY and foundSize and l:match('^index:') then
+			break
+		end
+	end
+	if not foundXY or not foundSize or not rw or not rh or rw == 0 or rh == 0 then
+		print('[staticSpine] parse failed xy=' .. tostring(foundXY) .. ' size=' .. tostring(foundSize))
+		return nil
+	end
+	print('[staticSpine] parsed xy=' .. rx .. ',' .. ry .. ' size=' .. rw .. ',' .. rh .. ' rot=' .. tostring(rotate))
+	local texture = CCTextureCache:sharedTextureCache():addImage(pngPath)
+	if not texture then
+		print('[staticSpine] texture load failed')
+		return nil
+	end
+	local rect
+	if rotate then
+		rect = CCRectMake(rx, ry, rh, rw)
+	else
+		rect = CCRectMake(rx, ry, rw, rh)
+	end
+	local frame = CCSpriteFrame:createWithTexture(texture, rect)
+	if not frame then
+		print('[staticSpine] frame creation failed')
+		return nil
+	end
+	local sprite = CCSprite:createWithSpriteFrame(frame)
+	if sprite and rotate then
+		sprite:setRotation(90)
+	end
+	print('[staticSpine] success!')
+	-- stub方法使静态精灵兼容 SpineContainer/LegendAnimation 接口
+	sprite.setAction = function() end
+	sprite.setNextAction = function() end
+	sprite.setLoop = function() end
+	sprite.runAnimation = function() end
+	sprite.useShader = function() end
+	sprite.useDefaultShader = function() end
+	sprite.setComponent = function() end
+	sprite.registerLuaListener = function() end
+	sprite.unregisterLuaListener = function() end
+	sprite.stopAllAnimations = function() end
+	sprite.addEffect = function() return -1 end
+	sprite.removeEffectWithID = function() end
+	sprite.removeEffectWithName = function() end
+	sprite.tint = function() end
+	sprite.setActionElapsed = function() end
+	sprite.setActionSpeeder = function() end
+	sprite.setStartAction = function() end
+	sprite.setLoopAction = function() end
+	sprite.getAniFileName = function() return "" end
+	sprite.isTerminated = function() return true end
+	return sprite
+end
+ed.createStaticSpriteFromSpineAtlas = createStaticSpriteFromSpineAtlas
 local function createFcaNode(resource, aniType)
-	local isUI = string.match(resource, "^eff_UI")
+	local isUI = string.match(resource, '^eff_UI')
 	if isUI then
 		LegendSetAniScaleFactor(ed.cha_ui_scale)
 	else
 		LegendSetAniScaleFactor(ed.cha_scale)
 	end
-	print("[resource_manager.lua|createFcaNode] "..resource)
+	print('[resource_manager.lua|createFcaNode] '..resource)
 	local node = nil;
 	if aniType and aniType == Type_Spine then
 		node = ed.createAnimation(resource, 1.0, aniType);
 		if node then
-			node:setAction("Start");
-			node:setNextAction("Loop");
+			node:setAction('Start');
+			node:setNextAction('Loop');
 			node:setLoop(true);
 		end
 	else
@@ -118,8 +205,31 @@ local function createFcaNode(resource, aniType)
 	end
 	LegendSetAniScaleFactor(ed.cha_scale)
 	if not node then
-		LegendLog("[resource_manager] createFcaNode failed: " .. tostring(resource))
+		node = createStaticSpriteFromSpineAtlas(resource)
+	end
+	if not node then
+		LegendLog('[resource_manager] createFcaNode failed: ' .. tostring(resource))
 		node = CCNode:create()
+		node.setAction = function() end
+		node.setNextAction = function() end
+		node.setLoop = function() end
+		node.runAnimation = function() end
+		node.useShader = function() end
+		node.useDefaultShader = function() end
+		node.setComponent = function() end
+		node.registerLuaListener = function() end
+		node.unregisterLuaListener = function() end
+		node.stopAllAnimations = function() end
+		node.addEffect = function() return -1 end
+		node.removeEffectWithID = function() end
+		node.removeEffectWithName = function() end
+		node.tint = function() end
+		node.setActionElapsed = function() end
+		node.setActionSpeeder = function() end
+		node.setStartAction = function() end
+		node.setLoopAction = function() end
+		node.getAniFileName = function() return "" end
+		node.isTerminated = function() return true end
 	end
 	return node
 end
@@ -354,7 +464,13 @@ local resetSpriteShader = function(sprite)
 end
 ed.resetSpriteShader = resetSpriteShader
 local setSpriteBlur = function(sprite, radius)
+	if not CCShaderCache then
+		return
+	end
 	local shader = CCShaderCache:sharedShaderCache():programForKey("Blur")
+	if not shader then
+		return
+	end
 	sprite:setShaderProgram(shader)
 	sprite:getShaderProgram():use()
 	local size = sprite:getTexture():getContentSizeInPixels()

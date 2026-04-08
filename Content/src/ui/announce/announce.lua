@@ -346,11 +346,15 @@ local function create(param)
   local rotate = CCRotateBy:create(5, 370)
   ui.light:runAction(CCRepeatForever:create(rotate))
   local actor = ed.readhero.getActor(hid, "Move")
-  actor:setPosition(ccp(400, 160))
-  ed.getCurrentScene():addFca(actor)
-  container:addChild(actor, 5)
-  local sound = ed.getDataTable("Unit")[hid]["Voice Move"]
-  ed.playEffect(sound)
+  if actor then
+    actor:setPosition(ccp(400, 160))
+    ed.getCurrentScene():addFca(actor)
+    container:addChild(actor, 5)
+  end
+  pcall(function()
+    local sound = ed.getDataTable("Unit")[hid]["Voice Move"]
+    if sound then ed.playEffect(sound) end
+  end)
   self:registerTouchHandler(self:dookTouch())
   self:show()
   return self

@@ -663,7 +663,7 @@ function CCArray.create(...)
         for _, v in ipairs(args[1]) do table.insert(arr, v) end
         return arr
     end
-    return args
+    return makeCCArray()
 end
 function CCArray:createWithCapacity(n)
     return makeCCArray()
@@ -675,7 +675,7 @@ function CCArray:create(...)
         for _, v in ipairs(args[1]) do table.insert(arr, v) end
         return arr
     end
-    return args
+    return makeCCArray()
 end
 
 -----------------------------------------------------------------
@@ -1029,17 +1029,24 @@ if ax.Node then
     addSetClipRect(ax.Layer)
 
     -- removeAllChildrenWithCleanup 兼容（cocos2d-x 2.x → Axmol）
-    -- Axmol 中是 removeAllChildren()，无 cleanup 参数
     if not ax.Node.removeAllChildrenWithCleanup then
         function ax.Node:removeAllChildrenWithCleanup(cleanup)
             self:removeAllChildren()
         end
     end
     -- removeFromParentAndCleanup 兼容（cocos2d-x 2.x → Axmol）
-    -- Axmol 中是 removeFromParent()，无 cleanup 参数
+    -- cocos2d-x 2.x: removeFromParentAndCleanup(true) 会移除节点并清理所有事件监听器
+    -- Axmol: removeFromParent() 不会自动清理，需要手动 cleanup
     if not ax.Node.removeFromParentAndCleanup then
         function ax.Node:removeFromParentAndCleanup(cleanup)
-            self:removeFromParent()
+            if cleanup then
+                -- 先从父节点移除（触发 onExit，scene-graph 优先级的监听器会被标记删除）
+                self:removeFromParent()
+                -- 手动清理残留的触摸监听器
+                self:unregisterScriptTouchHandler()
+            else
+                self:removeFromParent()
+            end
         end
     end
 

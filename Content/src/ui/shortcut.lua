@@ -249,6 +249,7 @@ local function createButtons(self)
 			end
 		end
 	end)
+	registerButtonTouchHandler(self)
 	refreshTags(self)
 end
 

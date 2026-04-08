@@ -716,17 +716,33 @@ M.handlers.sweep_stage = function(data, obj, localdata)
     }
 end
 
+-- ========== ask_magicsoul ==========
+-- 查询魂匣英雄列表，返回英雄ID数组
+M.handlers.ask_magicsoul = function(data, obj, localdata)
+    -- 返回随机英雄ID列表（1-30范围）
+    local heroIds = {}
+    for i = 1, 6 do
+        table_insert(heroIds, math_random(1, 30))
+    end
+    -- 第一个是每日特别英雄
+    heroIds[1] = math_random(1, 15)
+    data._ask_magicsoul_reply = heroIds
+end
+
 -- ========== tavern_draw ==========
--- obj: { _draw_type = "single"/"combo"/"free"/"stone", _box_type = "green"/"blue"/"purple"/... }
+-- obj: { _draw_type = 0/1(draw_type enum), _box_type = 1-7(box_type enum) }
 M.handlers.tavern_draw = function(data, obj, localdata)
-    local drawType = obj._draw_type or "single"
-    local boxType = obj._box_type or "green"
+    local drawType = obj._draw_type or 0
+    local boxType = obj._box_type or 1
+    LegendLog("[local_server] tavern_draw: drawType=" .. tostring(drawType) .. " boxType=" .. tostring(boxType))
+    -- drawType: 0=single, 1=combo(10x)
+    -- boxType: 1=green(bronze), 2=blue(silver), 3=purple(gold), 4=magicsoul
     local itemIds = {}
     local newHeroes = {}
 
     -- 简单掉落模拟：根据箱子品质给不同品质的物品
     local drawCount = 1
-    if drawType == "combo" then
+    if drawType == 1 then
         drawCount = 10
     end
 
@@ -1132,6 +1148,75 @@ for _, msgType in ipairs(EMPTY_HANDLERS) do
 end
 
 -----------------------------------------------------------------------
+-- 简化 dispatch：处理本地模式下的服务器回复
+-- 只负责调用 ed.netreply 中注册的回调函数，重置状态
+-----------------------------------------------------------------------
+local function local_dispatch(msg)
+    local data = rawget(msg, ".data")
+    if type(data) ~= "table" then return end
+
+    -- tavern_draw_reply：处理酒馆抽取结果
+    -- 模拟 network.lua:1260-1321 的关键逻辑
+    if data._tavern_draw_reply then
+        local reply = data._tavern_draw_reply
+        local loot = reply._item_ids or {}
+        -- 处理掉落物品（安全调用，忽略错误）
+        for k, v in pairs(loot) do
+            pcall(function()
+                local id = ed.bits(v, 0, 10)
+                local amount = ed.bits(v, 10, 11)
+                local it = ed.itemType(id)
+                if it == "hero" then
+                    ed.player:addHero(id)
+                elseif it == "equip" then
+                    ed.player:addEquip(id, amount)
+                end
+            end)
+        end
+        -- 扣费处理
+        pcall(function()
+            local nd = ed.netdata
+            if nd and nd.tavern and nd.tavern.type ~= "stone" then
+                local td = nd.tavern
+                if not td.isFree then
+                    local pay = td.cost and td.cost.pay
+                    local number = td.cost and td.cost.number or 0
+                    if pay == "Gold" then
+                        ed.player._money = (ed.player._money or 0) - number
+                    elseif pay == "Diamond" then
+                        ed.player._rmb = (ed.player._rmb or 0) - number
+                    end
+                end
+                nd.tavern = nil
+            end
+        end)
+        -- 调用回调（这会重置 isTaverning）
+        LegendLog("[local_dispatch] tavern_draw_reply, calling netreply.tavern, loot_count=" .. tostring(#loot))
+        local handler = ed.netreply and ed.netreply.tavern
+        if handler then
+            local ok, err = pcall(handler, loot)
+            if not ok then
+                LegendLog("[local_dispatch] tavern callback ERROR: " .. tostring(err))
+            end
+            ed.netreply.tavern = nil
+        else
+            LegendLog("[local_dispatch] WARNING: no tavern callback registered!")
+        end
+    end
+
+    -- ask_magicsoul_reply：魂匣英雄列表
+    if data._ask_magicsoul_reply then
+        local ids = data._ask_magicsoul_reply
+        LegendLog("[local_dispatch] ask_magicsoul_reply, ids_count=" .. tostring(type(ids) == "table" and #ids or "non-table"))
+        local handler = ed.netreply and ed.netreply.askMagicsoul
+        if handler then
+            pcall(handler, ids)
+            ed.netreply.askMagicsoul = nil
+        end
+    end
+end
+
+-----------------------------------------------------------------------
 -- 初始化
 -----------------------------------------------------------------------
 function M.init()
@@ -1164,8 +1249,10 @@ function M.handle(msg_type, obj)
         handler(data, obj, M.data)
     end
 
-    -- 直接调用 dispatch
-    xpcall(function() ed.dispatch(msg) end, function(err) LegendLog("[local_server|dispatch ERROR] " .. tostring(err)) end)
+    -- 使用本地 dispatch 处理回复
+    xpcall(function() local_dispatch(msg) end, function(err)
+        LegendLog("[local_server|dispatch ERROR] " .. tostring(err))
+    end)
     return true
 end
 

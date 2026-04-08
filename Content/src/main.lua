@@ -37,6 +37,37 @@ rawset(_G, "LegendSetAniScaleFactor", function() end)
 rawset(_G, "LegendSetSoundSwitch", function() end)
 rawset(_G, "LegendGetDeviceID", function() return "ax-001" end)
 rawset(_G, "LegendFindFileCpp", function(f) return f end)
+rawset(_G, "LegendGetEncryptedFileData", function(path)
+    -- Read proto files from Content/src/ directory
+    -- path is "data/up.proto" -> resolve to "src/up.proto" relative to write dir
+    local fu = CCFileUtils:sharedFileUtils()
+    -- Try multiple search paths
+    local searchPaths = {
+        "src/" .. path:sub("^data/", ""),
+        "Content/src/" .. path:sub("^data/", ""),
+        path:sub("^data/", ""),
+        path,
+    }
+    for _, searchPath in ipairs(searchPaths) do
+        local fullPath = fu:fullPathForFilename(searchPath)
+        if fullPath and fullPath ~= "" then
+            local file = io.open(fullPath, "r")
+            if file then
+                local content = file:read("*a")
+                file:close()
+                return content
+            end
+        end
+    end
+    -- Fallback: try direct path
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*a")
+        file:close()
+        return content
+    end
+    return nil
+end)
 rawset(_G, "GetPlatformOS", function() return 3 end)  -- 3=Win32, stub
 rawset(_G, "EDFLAGWIN32", true)
 rawset(_G, "EDFLAGSVR", false)
@@ -153,7 +184,13 @@ if not ed.getUserid then ed.getUserid = function() return "ax-user-001" end end
 if not ed.getDeviceId then ed.getDeviceId = function() return "ax-device-001" end end
 if not ed.send then ed.send = function() end end
 if not ed.upmsg then
-    ed.upmsg = { login = function() return {} end }
+    ed.upmsg = setmetatable({ login = function() return {} end }, {
+        __index = function(t, key)
+            -- Auto-create message factory for any proto message type
+            t[key] = function() return {} end
+            return t[key]
+        end
+    })
 end
 if not ed.downmsg then 
     ed.downmsg = setmetatable({}, {
@@ -446,8 +483,7 @@ local coreModules = {
     "tools", "stringutil", "stringbuffer", "util/list", "GameConfig",
     "datatable", "event/event", "event/systemevent",
     "LocalString",
-    "resource_manager", "network", "soundres", "sound",
-    "pb",
+    "resource_manager", "pb", "network", "soundres", "sound",
     "ui/announce/announce",
     "ui/controllers/button", "ui/controllers/panel",
     "ui/basetouchnode", "ui/basenode", "ui/basescene",
@@ -465,6 +501,25 @@ end
 
 for _, mod in ipairs(coreModules) do
     if mod == "network" then
+        -- local_server 延迟加载（需要 pb_loader，等 pb 模块加载后再初始化）
+        local function getLocalServer()
+            local ls = rawget(_G, "local_server")
+            if ls then return ls end
+            local has_pb = rawget(_G, "pb_loader")
+            print("[STUB-NET] getLocalServer: has_pb_loader=" .. tostring(has_pb))
+            if has_pb then
+                local ok, err = pcall(function()
+                    ls = require("local_server")
+                    ls.init()
+                    rawset(_G, "local_server", ls)
+                    print("[STUB-NET] local_server loaded OK")
+                end)
+                if not ok then print("[STUB-NET] local_server load error: " .. tostring(err)) end
+            else
+                print("[STUB-NET] getLocalServer: pb_loader NOT available, cannot load local_server")
+            end
+            return ls
+        end
         -- 模拟网络层：localMode 下模拟服务器响应
         local function stubSend(obj, msgType)
             print("[STUB-NET] send: " .. tostring(msgType))
@@ -564,6 +619,89 @@ for _, mod in ipairs(coreModules) do
                 -- 活动信息请求，忽略
             elseif msgType == "job_rewards" then
                 -- 任务奖励，忽略
+            elseif msgType == "tavern_draw" then
+                -- 酒馆抽取：直接在 stubSend 中处理，不依赖 pb_loader/local_server
+                LegendLog("[STUB-NET] tavern_draw: handling directly")
+                local drawType = obj._draw_type or 0
+                local boxType = obj._box_type or 1
+                local drawCount = drawType == 1 and 10 or 1
+                -- 生成随机掉落
+                local loot = {}
+                for i = 1, drawCount do
+                    local equipId = math.random(100, 120)
+                    table.insert(loot, ed.makebits(11, 1, 10, equipId))
+                end
+                -- 小概率给英雄碎片
+                if math.random(1, 10) <= 3 then
+                    local heroId = math.random(1, 5)
+                    table.insert(loot, ed.makebits(11, math.random(1, 3), 10, heroId))
+                end
+                -- 处理掉落物品（添加到玩家背包）
+                for k, v in pairs(loot) do
+                    pcall(function()
+                        local id = ed.bits(v, 0, 10)
+                        local amount = ed.bits(v, 10, 11)
+                        local it = ed.itemType(id)
+                        if it == "hero" then
+                            if ed.player and ed.player.addHero then ed.player:addHero(id) end
+                        elseif it == "equip" then
+                            if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
+                        end
+                    end)
+                end
+                -- 扣费
+                pcall(function()
+                    local nd = ed.netdata
+                    if nd and nd.tavern and nd.tavern.type ~= "stone" then
+                        local td = nd.tavern
+                        if not td.isFree then
+                            local pay = td.cost and td.cost.pay
+                            local number = td.cost and td.cost.number or 0
+                            if pay == "Gold" then
+                                ed.player._money = (ed.player._money or 0) - number
+                            elseif pay == "Diamond" then
+                                ed.player._rmb = (ed.player._rmb or 0) - number
+                            end
+                        end
+                        nd.tavern = nil
+                    end
+                end)
+                -- 调用回调（重置 isTaverning）
+                LegendLog("[STUB-NET] tavern_draw: loot_count=" .. tostring(#loot) .. ", calling netreply.tavern")
+                local handler = ed.netreply and ed.netreply.tavern
+                if handler then
+                    local ok, err = pcall(handler, loot)
+                    if not ok then
+                        LegendLog("[STUB-NET] tavern callback ERROR: " .. tostring(err))
+                    end
+                    ed.netreply.tavern = nil
+                else
+                    LegendLog("[STUB-NET] WARNING: no tavern callback registered!")
+                end
+            elseif msgType == "ask_magicsoul" then
+                -- 魂匣英雄列表：返回随机英雄ID
+                LegendLog("[STUB-NET] ask_magicsoul: handling directly")
+                local ids = {}
+                for i = 1, 6 do
+                    table.insert(ids, math.random(1, 30))
+                end
+                ids[1] = math.random(1, 15)
+                local handler2 = ed.netreply and ed.netreply.askMagicsoul
+                if handler2 then
+                    pcall(handler2, ids)
+                    ed.netreply.askMagicsoul = nil
+                end
+            else
+                -- 其他消息转发给 local_server 处理（使用延迟加载）
+                print("[STUB-NET] forwarding to local_server: " .. tostring(msgType))
+                local ls = getLocalServer()
+                print("[STUB-NET] getLocalServer returned: " .. tostring(ls))
+                if ls and ls.handle then
+                    local ok_ls, err_ls = pcall(function() ls.handle(msgType, obj) end)
+                    if not ok_ls then print("[STUB-NET] local_server error: " .. tostring(err_ls)) end
+                else
+                    print("[STUB-NET] WARNING: local_server NOT available for msgType=" .. tostring(msgType))
+                end
             end
         end
         local nw = { connect = function() end, send = stubSend, close = function() end, isConnected = function() return false end }
@@ -678,25 +816,96 @@ local function ensureStubsAfterTools()
                     doLoginReply()
                 end
             elseif msgType == "ask_activity_info" then
+            elseif msgType == "tavern_draw" then
+                LegendLog("[ENSURE-SEND] tavern_draw: handling directly")
+                local drawType = obj._draw_type or 0
+                local drawCount = drawType == 1 and 10 or 1
+                local loot = {}
+                for i = 1, drawCount do
+                    local equipId = math.random(100, 120)
+                    table.insert(loot, ed.makebits(11, 1, 10, equipId))
+                end
+                if math.random(1, 10) <= 3 then
+                    table.insert(loot, ed.makebits(11, math.random(1, 3), 10, math.random(1, 5)))
+                end
+                -- 扣费
+                pcall(function()
+                    local nd = ed.netdata
+                    if nd and nd.tavern and nd.tavern.type ~= "stone" then
+                        local td = nd.tavern
+                        if not td.isFree then
+                            local pay = td.cost and td.cost.pay
+                            local number = td.cost and td.cost.number or 0
+                            if pay == "Gold" then
+                                ed.player._money = (ed.player._money or 0) - number
+                            elseif pay == "Diamond" then
+                                ed.player._rmb = (ed.player._rmb or 0) - number
+                            end
+                        end
+                        nd.tavern = nil
+                    end
+                end)
+                -- 调用回调
+                local cb = ed.netreply and ed.netreply.tavern
+                if cb then
+                    local ok, err = pcall(cb, loot)
+                    if not ok then LegendLog("[ENSURE-SEND] tavern cb error: " .. tostring(err)) end
+                    ed.netreply.tavern = nil
+                else
+                    LegendLog("[ENSURE-SEND] WARNING: no tavern callback!")
+                end
+            elseif msgType == "ask_magicsoul" then
+                LegendLog("[ENSURE-SEND] ask_magicsoul: handling directly")
+                local ids = {}
+                for i = 1, 6 do table.insert(ids, math.random(1, 30)) end
+                ids[1] = math.random(1, 15)
+                local cb2 = ed.netreply and ed.netreply.askMagicsoul
+                if cb2 then pcall(cb2, ids); ed.netreply.askMagicsoul = nil end
             end
         end
     end
     if not ed.proc_net then ed.proc_net = function() end end
     if not ed.netreply then ed.netreply = {} end
     if not ed.netdata then ed.netdata = {} end
-    if not ed.upmsg then
-        ed.upmsg = { login = function() return {} end }
-    elseif not ed.upmsg.login then
-        ed.upmsg.login = function() return {} end
+    -- 包装 ed.upmsg：保留 proto 已有的消息类型，缺失的自动创建空工厂
+    -- 这样 tavern_draw、ask_magicsoul 等即使 proto 加载不完整也能工作
+    do
+        local _origUpmsg = ed.upmsg
+        if not _origUpmsg then _origUpmsg = {} end
+        ed.upmsg = setmetatable({}, {
+            __index = function(t, key)
+                local val = _origUpmsg[key]
+                if val ~= nil then
+                    t[key] = val
+                    return val
+                end
+                -- proto 没有此消息类型，自动创建空工厂
+                print("[ENSURE] ed.upmsg." .. tostring(key) .. " auto-stub created")
+                t[key] = function() return {} end
+                return t[key]
+            end
+        })
     end
-    if not ed.downmsg then 
-    ed.downmsg = setmetatable({}, {
-        __index = function(t, key)
-            t[key] = function() return {} end
-            return t[key]
-        end
-    })
-end
+    -- 包装 ed.downmsg：同样保留 proto 已有类型，缺失的自动创建
+    do
+        local _origDownmsg = ed.downmsg
+        if not _origDownmsg then _origDownmsg = {} end
+        ed.downmsg = setmetatable({}, {
+            __index = function(t, key)
+                local val = _origDownmsg[key]
+                if val ~= nil then
+                    t[key] = val
+                    return val
+                end
+                print("[ENSURE] ed.downmsg." .. tostring(key) .. " auto-stub created")
+                t[key] = function() return setmetatable({[".data"]={}}, {
+                    __index = function(msg, name) return rawget(msg, ".data")[name] end,
+                    __newindex = function(msg, name, value) rawget(msg, ".data")[name] = value end,
+                }) end
+                return t[key]
+            end
+        })
+    end
     if not ed.getMillionTime then ed.getMillionTime = function() return os.time() * 1000 end end
     if not ed.tick_interval then ed.tick_interval = 0.1 end
 end
@@ -728,6 +937,46 @@ for _, mod in ipairs(gameModules) do
 end
 
 print("=== Core: " .. okCount .. "/" .. #coreModules .. "  Game: " .. extraOk .. "/" .. #gameModules .. " ===")
+
+-----------------------------------------------------------------
+-- 加载 ed.needLoadFiles 中列出的游戏模块
+-- 只加载关键模块，其余延迟加载避免阻塞
+-----------------------------------------------------------------
+do
+    local needFiles = ed.needLoadFiles
+    if needFiles and type(needFiles) == "table" then
+        -- 关键模块（教程、UI等必须先加载的）
+        local criticalModules = {
+            "tutorial/tutorialres",
+            "tutorial/tutorialmaker",
+            "tutorial/tutorial",
+            "tutorial/5v5",
+        }
+        local criticalSet = {}
+        for _, f in ipairs(criticalModules) do criticalSet[f] = true end
+
+        local nfOk, nfFail = 0, 0
+        -- 第一轮：只加载关键模块
+        for _, f in ipairs(needFiles) do
+            if type(f) == "string" and #f > 0 and criticalSet[f] then
+                local ok3, err3 = pcall(require, f)
+                if ok3 then
+                    nfOk = nfOk + 1
+                else
+                    nfFail = nfFail + 1
+                    print("[NEED-FILE-FAIL] " .. f .. ": " .. tostring(err3):match("[^\n]+"))
+                end
+            end
+        end
+        print("[NEED-FILES-CRITICAL] Loaded: " .. nfOk .. "/" .. (nfOk + nfFail))
+
+        -- 注册延迟加载：其他模块在首次 require 时自动加载
+        -- (Lua 的 require 机制已支持这一点，无需预加载)
+        print("[NEED-FILES] " .. #needFiles .. " total, " .. nfOk .. " critical loaded, rest lazy-loaded")
+    else
+        print("[NEED-FILES] ed.needLoadFiles not found or empty")
+    end
+end
 
 -----------------------------------------------------------------
 -- localMode: 标记所有教程已完成，跳过 5v5 教程直接进主场景

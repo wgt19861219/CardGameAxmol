@@ -39,12 +39,12 @@ SpineContainer* SpineContainer::create(const char* path, const char* name, float
     }
 
     // Pre-check Spine version: read "spine":"X.Y.Z" from JSON
-    // Spine runtime 4.x cannot load 2.x data - return nullptr instead of asserting
+    // Spine runtime 4.x cannot load 2.x data - return nullptr, Lua fallback will create static sprite
  {
         std::string jsonContent = fu->getStringFromFile(configFile);
         if (jsonContent.find("\"spine\":\"2.") != std::string::npos ||
             jsonContent.find("\"spine\": \"2.") != std::string::npos) {
-            AXLOGW("SpineContainer: skipping {} - spine 2.x data incompatible with 4.x runtime", filePath);
+            AXLOGI("SpineContainer: {} is spine 2.x data, falling back to static sprite (4.x runtime incompatible)", filePath);
             return nullptr;
         }
     }

@@ -746,15 +746,43 @@ M.handlers.tavern_draw = function(data, obj, localdata)
         drawCount = 10
     end
 
+    -- 收集有效的 equip ID 和 hero ID
+    local validEquipIds = {}
+    local validHeroIds = {}
+    pcall(function()
+        local equipTable = ed.getDataTable("equip")
+        if equipTable then
+            for k, v in pairs(equipTable) do
+                if type(k) == "number" and v.Icon then
+                    table_insert(validEquipIds, k)
+                end
+            end
+        end
+        local unitTable = ed.getDataTable("Unit")
+        if unitTable then
+            for k, v in pairs(unitTable) do
+                if type(k) == "number" and v.Portrait then
+                    table_insert(validHeroIds, k)
+                end
+            end
+        end
+    end)
+    -- fallback：如果数据表为空，用硬编码的安全ID
+    if #validEquipIds == 0 then
+        validEquipIds = {101}
+    end
+    if #validHeroIds == 0 then
+        validHeroIds = {1, 2, 3, 4, 5}
+    end
+
     for i = 1, drawCount do
-        -- 随机生成一个装备 ID（100-599 范围）
-        local equipId = math_random(100, 120)
+        local equipId = validEquipIds[math_random(1, #validEquipIds)]
         table_insert(itemIds, ed.makebits(11, 1, 10, equipId))
     end
 
     -- 小概率给英雄碎片
     if math_random(1, 10) <= 3 then
-        local heroId = math_random(1, 5)
+        local heroId = validHeroIds[math_random(1, #validHeroIds)]
         table_insert(itemIds, ed.makebits(11, math_random(1, 3), 10, heroId))
     end
 
@@ -1124,27 +1152,127 @@ M.handlers.recharge_rebate = function(data, obj, localdata)
 end
 
 -----------------------------------------------------------------------
--- 空响应的次要 handler
+-- 社交/活动/次要系统 handler
 -----------------------------------------------------------------------
-local EMPTY_HANDLERS = {
-    "chat", "guild", "ladder", "excavate",
-    "change_server", "cdkey_gift", "worldcup",
-    "fb_attention", "get_vip_gift", "trigger_job", "job_rewards",
-    "ask_magicsoul",
-    "activity_info", "activity_lotto_info", "activity_lotto_reward",
-    "activity_bigpackage_info", "activity_bigpackage_reward",
-    "activity_bigpackage_reset",
-    "continue_pay", "every_day_happy",
-    "charge", "ask_activity_info",
-    "suspend_report",
-}
 
-for _, msgType in ipairs(EMPTY_HANDLERS) do
-    if not M.handlers[msgType] then
-        M.handlers[msgType] = function(data, obj, localdata)
-            -- 返回空响应，不做任何处理
-        end
+-- chat: 聊天系统，返回 _say success 并触发 FireEvent("ChatRsp")
+M.handlers.chat = function(data, obj, localdata)
+    local reply = obj
+    if reply and (reply._contents or reply._channel) then
+        data._say = {
+            _result = "success",
+            _channel = reply._channel or 1,
+            _contents = reply._contents or "",
+        }
+    else
+        -- 聊天列表拉取，返回空列表
+        data._chat_list = {}
     end
+end
+
+-- guild: 公会系统，触发 FireEvent("GuildRsp")
+M.handlers.guild = function(data, obj, localdata)
+    data._guild_reply = data._guild_reply or {}
+end
+
+-- ladder: 天梯/PVP 系统，触发 FireEvent("pvpRsp")
+M.handlers.ladder = function(data, obj, localdata)
+    data._ladder_reply = data._ladder_reply or {}
+end
+
+-- excavate: 挖矿系统
+M.handlers.excavate = function(data, obj, localdata)
+    data._excavate_reply = data._excavate_reply or {}
+end
+
+-- change_server: 切换服务器
+M.handlers.change_server = function(data, obj, localdata)
+    data._change_server_reply = { _result = "success" }
+end
+
+-- cdkey_gift: CDKEY 兑换
+M.handlers.cdkey_gift = function(data, obj, localdata)
+    data._cdkey_gift_reply = { _result = "success" }
+end
+
+-- worldcup: 世界杯活动
+M.handlers.worldcup = function(data, obj, localdata)
+    data._worldcup_reply = data._worldcup_reply or {}
+end
+
+-- fb_attention: Facebook 关注
+M.handlers.fb_attention = function(data, obj, localdata)
+    data._fb_attention_reply = { _result = "success" }
+end
+
+-- get_vip_gift: VIP 礼包领取
+M.handlers.get_vip_gift = function(data, obj, localdata)
+    data._get_vip_gift_reply = { _result = "success" }
+end
+
+-- trigger_job: 触发任务
+M.handlers.trigger_job = function(data, obj, localdata)
+    data._trigger_job_reply = { _result = "success" }
+end
+
+-- job_rewards: 任务奖励
+M.handlers.job_rewards = function(data, obj, localdata)
+    data._job_rewards_reply = { _result = "success" }
+end
+
+-- activity_info: 活动信息
+M.handlers.activity_info = function(data, obj, localdata)
+    data._activity_info_reply = { _activities = {} }
+end
+
+-- activity_lotto_info: 活动抽奖信息
+M.handlers.activity_lotto_info = function(data, obj, localdata)
+    data._activity_lotto_info_reply = {}
+end
+
+-- activity_lotto_reward: 活动抽奖奖励
+M.handlers.activity_lotto_reward = function(data, obj, localdata)
+    data._activity_lotto_reward_reply = { _result = "success" }
+end
+
+-- activity_bigpackage_info: 大礼包信息
+M.handlers.activity_bigpackage_info = function(data, obj, localdata)
+    data._activity_bigpackage_info_reply = {}
+end
+
+-- activity_bigpackage_reward: 大礼包奖励
+M.handlers.activity_bigpackage_reward = function(data, obj, localdata)
+    data._activity_bigpackage_reward_reply = { _result = "success" }
+end
+
+-- activity_bigpackage_reset: 大礼包重置
+M.handlers.activity_bigpackage_reset = function(data, obj, localdata)
+    data._activity_bigpackage_reset_reply = { _result = "success" }
+end
+
+-- continue_pay: 连续充值
+M.handlers.continue_pay = function(data, obj, localdata)
+    data._continue_pay_reply = {}
+end
+
+-- every_day_happy: 每日惊喜
+M.handlers.every_day_happy = function(data, obj, localdata)
+    data._every_day_happy_reply = {}
+end
+
+-- charge: 充值
+M.handlers.charge = function(data, obj, localdata)
+    data._charge_reply = { _result = "success" }
+end
+
+-- ask_activity_info: 查询活动信息
+M.handlers.ask_activity_info = function(data, obj, localdata)
+    data._ask_activity_info_reply = { _activities = {} }
+end
+
+-- suspend_report: 暂停报告
+M.handlers.suspend_report = function(data, obj, localdata)
+    -- 无需回复
 end
 
 -----------------------------------------------------------------------
@@ -1202,6 +1330,32 @@ local function local_dispatch(msg)
         else
             LegendLog("[local_dispatch] WARNING: no tavern callback registered!")
         end
+    end
+
+    -- chat_reply: 聊天回复，触发 FireEvent("ChatRsp")
+    if data._say then
+        pcall(function()
+            if FireEvent then FireEvent("ChatRsp", data) end
+        end)
+        local handler = ed.netreply and ed.netreply.chatSay
+        if handler then
+            pcall(handler, data._say._result == "success")
+            ed.netreply.chatSay = nil
+        end
+    end
+
+    -- guild_reply: 公会回复，触发 FireEvent("GuildRsp")
+    if data._guild_reply then
+        pcall(function()
+            if FireEvent then FireEvent("GuildRsp", data._guild_reply) end
+        end)
+    end
+
+    -- ladder_reply: 天梯回复，触发 FireEvent("pvpRsp")
+    if data._ladder_reply then
+        pcall(function()
+            if FireEvent then FireEvent("pvpRsp", data._ladder_reply) end
+        end)
     end
 
     -- ask_magicsoul_reply：魂匣英雄列表

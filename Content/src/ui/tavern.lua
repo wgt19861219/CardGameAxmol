@@ -47,7 +47,9 @@ class.doTavernHandler = doTavernHandler
 
 
 local function doTavern(self, box, times)
+  LegendLog("[TAVERN] doTavern called: box=" .. tostring(box) .. " times=" .. tostring(times) .. " isTaverning=" .. tostring(self.isTaverning))
   if self.isTaverning then
+    LegendLog("[TAVERN] blocked by isTaverning")
     return
   end
 
@@ -66,21 +68,25 @@ local function doTavern(self, box, times)
   if box == "magic" then
       isFree = self:isShowFree(box)
   end
+  LegendLog("[TAVERN] isFree=" .. tostring(isFree))
 
   local cost = times == "one" and (isFree and 0 or self:getCost(box, times)) or self:getCost(box, times)
   if box == "magic" then
       cost = (isFree and 0 or self:getCost(box, times)) or self:getC6ost(box, times)
   end
+  LegendLog("[TAVERN] cost=" .. tostring(cost) .. " type=" .. type(cost))
 
   if (times ~= "one" and box ~= "magic") or not isFree then
     local pay = cost.pay
     local number = cost.number
     if pay == "Gold" then
       if number > ed.player._money then
+        LegendLog("[TAVERN] not enough gold: need=" .. tostring(number) .. " have=" .. tostring(ed.player._money))
         ed.showHandyDialog("useMidas")
         return
       end
     elseif pay == "Diamond" and number > ed.player._rmb then
+      LegendLog("[TAVERN] not enough diamond: need=" .. tostring(number) .. " have=" .. tostring(ed.player._rmb))
       ed.showHandyDialog("toRecharge")
       return
     end
@@ -119,8 +125,9 @@ local function doTavern(self, box, times)
   local msg = ed.upmsg.tavern_draw()
   msg._draw_type = drawType
   msg._box_type = box_index[box]
-  ed.send(msg, "tavern_draw")
   self.isTaverning = true
+  LegendLog("[TAVERN] sending tavern_draw: drawType=" .. tostring(drawType) .. " boxType=" .. tostring(box_index[box]))
+  ed.send(msg, "tavern_draw")
 end
 class.doTavern = doTavern
 
@@ -1469,6 +1476,7 @@ local function createTavernEnchTeach(self)
 end
 class.createTavernEnchTeach = createTavernEnchTeach
 local function createFirstTeach(self)
+  LegendLog("[TAVERN-TEACH] createFirstTeach called, ed.tutorial=" .. tostring(ed.tutorial and "exists" or "nil"))
   local okeys = {
     "FTBronzeOpen",
     "FTBronzeOne",
@@ -1618,19 +1626,22 @@ local function doOneTouch(self, key)
     local button = ui.one_buy
     local press = ui.one_buy_press
     if event == "began" then
-      if ed.containsPoint(button, x, y) then
+      local hit = button and ed.containsPoint(button, x, y)
+      if key == "bronze" or key == "gold" then
+        LegendLog("[TAVERN-1] key=" .. key .. " began x=" .. tostring(x) .. " y=" .. tostring(y) .. " hit=" .. tostring(hit))
+      end
+      if hit then
         isPress = true
-        press:setVisible(true)
+        if press then press:setVisible(true) end
       end
     elseif event == "ended" then
       if isPress then
-        press:setVisible(false)
-        if ed.containsPoint(button, x, y) then
-          lsr:report(report_event[key])
-          self:doTavern(key, "one")
-          if key == "bronze" then
-            ed.endTeach("tavernEnch")
-          end
+        if press then press:setVisible(false) end
+        LegendLog("[TAVERN] doOneTouch triggered: key=" .. tostring(key))
+        lsr:report(report_event[key])
+        self:doTavern(key, "one")
+        if key == "bronze" then
+          ed.endTeach("tavernEnch")
         end
       end
       isPress = nil
@@ -1653,17 +1664,16 @@ local function doTenTouch(self, key)
     local button = ui.ten_buy
     local press = ui.ten_buy_press
     if event == "began" then
-      if ed.containsPoint(button, x, y) then
+      if button and ed.containsPoint(button, x, y) then
         isPress = true
-        press:setVisible(true)
+        if press then press:setVisible(true) end
       end
     elseif event == "ended" then
       if isPress then
-        press:setVisible(false)
-        if ed.containsPoint(button, x, y) then
-          lsr:report(report_event[key])
-          self:doTavern(key, "ten")
-        end
+        if press then press:setVisible(false) end
+        LegendLog("[TAVERN] doTenTouch triggered: key=" .. tostring(key))
+        lsr:report(report_event[key])
+        self:doTavern(key, "ten")
       end
       isPress = nil
     end
@@ -1778,10 +1788,14 @@ local getMainTouchHandler = function(self)
     FTGoldOne = oneTouch.gold
   }
   local function handler(event, x, y)
+    LegendLog("[TAVERN-TOUCH] event=" .. tostring(event) .. " x=" .. string.format("%.0f",x) .. " y=" .. string.format("%.0f",y) .. " teachLimitType=" .. tostring(self.teachLimitType) .. " isTaverning=" .. tostring(self.isTaverning))
     xpcall(function()
-      local type = self.teachLimitType
-      if type then
-        self.teachLimit[type](event, x, y)
+      local tlt = self.teachLimitType
+      if tlt then
+        LegendLog("[TAVERN-TOUCH] teachLimit active: " .. tostring(tlt))
+        if self.teachLimit[tlt] then
+          self.teachLimit[tlt](event, x, y)
+        end
         return
       end
       for i = 1, #common_keys do

@@ -1225,10 +1225,22 @@ end
 class.refreshHeroCard = refreshHeroCard
 local function getActor(hid, name, notloop)
   local row = ed.getDataTable("Unit")[hid]
+  if not row or not row.Puppet then
+    LegendLog("[READHERO] getActor: no Puppet data for hid=" .. tostring(hid))
+    return nil, nil
+  end
   local cha = row.Puppet
   local chaName = cha
   local puppetInfo = ed.lookupDataTable("Puppet", nil, chaName);
+  if not puppetInfo or not puppetInfo.Resource then
+    LegendLog("[READHERO] getActor: no Puppet resource for " .. tostring(chaName))
+    return nil, nil
+  end
   local actor = ed.createAnimation(puppetInfo.Resource, 1.5, puppetInfo.AniType or 0);
+  if not actor then
+    LegendLog("[READHERO] getActor: createAnimation returned nil for " .. tostring(puppetInfo.Resource))
+    return nil, nil
+  end
   actor:setAction(name or "Idle")
   actor:setLoop(not notloop)
   return actor, chaName

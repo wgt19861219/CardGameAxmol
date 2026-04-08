@@ -109,11 +109,14 @@ class.registerLootsTouch = registerLootsTouch
 local registerTouchHandler = function(self)
   local mainLayer = self.mainLayer
   local ui = self.ui
+  LegendLog("[TAVERN-LOOT] registerTouchHandler: ok=" .. tostring(ui.ok and "yes" or "nil") .. " tavern=" .. tostring(ui.tavern and "yes" or "nil"))
   self:btRegisterButtonClick({
     button = ui.ok,
     press = ui.ok_press,
     key = "ok_button",
+    force = true,
     clickHandler = function()
+      LegendLog("[TAVERN-LOOT] ok_button CLICKED, calling doClickClose")
       self:doClickClose()
     end
   })
@@ -125,7 +128,9 @@ local registerTouchHandler = function(self)
       button = ui.tavern,
       press = ui.tavern_press,
       key = "tavern_button",
+      force = true,
       clickHandler = function()
+        LegendLog("[TAVERN-LOOT] tavern_button CLICKED, calling doClickTavern")
         self:doClickTavern()
       end
     })
@@ -133,6 +138,7 @@ local registerTouchHandler = function(self)
 end
 class.registerTouchHandler = registerTouchHandler
 local function doClickClose(self)
+  LegendLog("[TAVERN-LOOT] doClickClose called")
   lsr:report("clickCloseLoots")
   if self.teachKey then
   --add by xinghui:send dot when close the tarven result
@@ -149,6 +155,7 @@ local function doClickClose(self)
 end
 class.doClickClose = doClickClose
 local function doClickTavern(self)
+  LegendLog("[TAVERN-LOOT] doClickTavern called")
   lsr:report("clickTavernAgain")
   self.isDoTavern = true
   self:destroy()
@@ -247,6 +254,7 @@ local function show(self)
 end
 class.show = show
 local function destroy(self)
+  LegendLog("[TAVERN-LOOT] destroy called")
   lsr:report("closeLootsLayer")
   local s = CCScaleTo:create(0.2, 0)
   s = CCEaseBackIn:create(s)
@@ -472,21 +480,9 @@ local function createLootAnim(self, index, param)
   local type = ed.itemType(loot.id)
   local ih, ihid = isHero(loot)
   if not skipCheckHero and ih then
-    local handler = function(self, index)
-      local function hd()
-        self:playLootAnim(index, {skipCheckHero = true})
-      end
-      return hd
-    end
-    ed.announce({
-      type = "popHeroCard",
-      param = {
-        id = ihid,
-        amount = loot.amount,
-        callback = handler(self, index)
-      }
-    })
-    return
+    -- popHeroCard 弹窗依赖缺失的美术资源（动画、背景图）
+    -- 直接当普通物品显示，    -- TODO: 恢复美术资源后恢复 popHeroCard 流程
+    skipCheckHero = true
   end
   local icon, prop = ed.readequip.createIconWithAmount(loot.id, nil, loot.amount)
   self.container:addChild(icon)
@@ -1008,3 +1004,4 @@ local playButtonAnim = function(self)
   self:registerTouchHandler()
 end
 class.playButtonAnim = playButtonAnim
+LegendLog("[TAVERN-LOOT] playButtonAnim defined")

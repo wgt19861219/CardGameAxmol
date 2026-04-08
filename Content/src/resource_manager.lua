@@ -179,6 +179,13 @@ local function createStaticSpriteFromSpineAtlas(resource)
 	sprite.setLoopAction = function() end
 	sprite.getAniFileName = function() return "" end
 	sprite.isTerminated = function() return true end
+	-- 添加呼吸动画，让静态 fallback 不完全死板
+	local breatheScale = CCScaleBy:create(1.2, 0.95)
+	local breatheBack = breatheScale:reverse()
+	local breatheSeq = CCSequence:createWithTwoActions(breatheScale, breatheBack)
+	local breatheForever = CCRepeatForever:create(breatheSeq)
+	breatheForever:setTag(9999)
+	sprite:runAction(breatheForever)
 	return sprite
 end
 ed.createStaticSpriteFromSpineAtlas = createStaticSpriteFromSpineAtlas

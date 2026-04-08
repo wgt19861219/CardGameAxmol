@@ -260,6 +260,8 @@ local function destroy(self)
   s = CCEaseBackIn:create(s)
   local f = CCCallFunc:create(function()
     xpcall(function()
+      -- 先禁用触摸再移除，避免 touch 残留
+      self.mainLayer:setTouchEnabled(false)
       self.mainLayer:removeFromParentAndCleanup(true)
       if self.isDoTavern then
         self.tavernHandler()
@@ -485,6 +487,14 @@ local function createLootAnim(self, index, param)
     skipCheckHero = true
   end
   local icon, prop = ed.readequip.createIconWithAmount(loot.id, nil, loot.amount)
+  -- 安全检查：图标创建失败时使用占位图标，避免动画链中断卡住
+  if not icon or tolua.isnull(icon) then
+    icon = CCSprite:create("UI/alpha/HVGA/gocha.png")
+    if not icon then
+      self:playLootAnim(index + 1)
+      return
+    end
+  end
   self.container:addChild(icon)
   self.lootIcons[index] = icon
   if boxType ~= "magic" then
@@ -535,10 +545,20 @@ local function createLootAnim(self, index, param)
       local name
       local type = ed.itemType(loot.id)
       if type == "hero" then
-        name = ed.getDataTable("Unit")[loot.id]["Display Name"]
+        local unitRow = ed.getDataTable("Unit")[loot.id]
+        if unitRow and unitRow["Display Name"] then
+          name = unitRow["Display Name"]
+        else
+          self:playLootAnim(index + 1)
+          return
+        end
         playBurst(icon, 6)
       elseif type == "equip" then
         local row = ed.getDataTable("equip")[loot.id]
+        if not row then
+          self:playLootAnim(index + 1)
+          return
+        end
         name = row.Name
         local cg = row.Category
         local q = row.Quality

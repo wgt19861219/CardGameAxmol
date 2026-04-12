@@ -194,16 +194,20 @@ end
 local function gotoBattle(self)
   local function handler(enemyList, isBot, selfList, enemyDyna, guildInstanceData)
     xpcall(function()
+      LegendLog("[GOTO_BATTLE] enter, stage=" .. tostring(self.stage))
       if not self then
+        LegendLog("[GOTO_BATTLE] self is nil, abort")
         return
       end
       if tolua.isnull(self.mainLayer) then
+        LegendLog("[GOTO_BATTLE] mainLayer is null, abort")
         return
       end
       local stage_id = self.stage
       if self.pvpMode == "attack" then
         stage_id = pvp_stage
       end
+      LegendLog("[GOTO_BATTLE] stage_id=" .. tostring(stage_id))
       ed.stopMusic()
       if stage_id > 0 or self.mode == "excavateAttack" then
         local info = {}
@@ -213,8 +217,10 @@ local function gotoBattle(self)
         ed.player:addVitality(-(info.power - info.rpower))
       end
       local hero_list = getBattleHeros(self, selfList)
+      LegendLog("[GOTO_BATTLE] hero_list count=" .. tostring(#hero_list))
       local stage = ed.lookupDataTable("Stage", nil, stage_id)
       local battle = ed.lookupDataTable("Battle", nil, stage_id, 1)
+      LegendLog("[GOTO_BATTLE] stage=" .. tostring(stage ~= nil) .. " battle=" .. tostring(battle ~= nil))
       if self.pvpMode == "attack" and enemyList then
         ed.engine:enterArena(hero_list, enemyList, false, isBot)
       elseif self.mode == "crusade" then
@@ -228,6 +234,7 @@ local function gotoBattle(self)
         local selfHeroData = ed.player:collectExcavateData(hero_list)
         ed.engine:enterExcavate(hero_list, enemyList, isBot, selfHeroData, enemyDyna, stage_id, self.excavateTypeid)
       else
+        LegendLog("[GOTO_BATTLE] calling engine:enterStage")
         ed.engine:enterStage(stage, hero_list)
         ed.popScene()
       end
@@ -243,6 +250,7 @@ local function gotoBattle(self)
       elseif self.mode == "excavateAttack" then
         extraInfo.excavateInfo = {}
       end
+      LegendLog("[GOTO_BATTLE] calling scene:reset and replaceScene")
       ed.scene:reset(stage, battle, extraInfo)
       ed.replaceScene(ed.scene)
       ed.battleDataCache = {
@@ -250,7 +258,11 @@ local function gotoBattle(self)
         actType = self.actType,
         heroLimit = self.heroLimit
       }
-    end, EDDebug)
+      LegendLog("[GOTO_BATTLE] done")
+    end, function(err)
+      LegendLog("[GOTO_BATTLE] ERROR: " .. tostring(err))
+      EDDebug(err)
+    end)
   end
   return handler
 end
@@ -1255,7 +1267,9 @@ local function doGoButtonTouch(self)
     elseif event == "ended" and isPress then
       press:setVisible(false)
       if ed.containsPoint(button, x, y) then
+        LegendLog("[GOBTN] ended touch in button area")
         if not point then
+          LegendLog("[GOBTN] calling doNow (first click)")
           doNow(self)
           point = ed.getMillionTime()
         elseif ed.getMillionTime() - point >= 0.5 then
@@ -1275,6 +1289,9 @@ local doMainLayerTouch = function(self)
   local teamTouch = self:doTeamTouch()
   local function handler(event, x, y)
     xpcall(function()
+      if event == "began" or event == "ended" then
+        LegendLog("[TOUCH] mainLayer event=" .. tostring(event) .. " x=" .. string.format("%.0f", x) .. " y=" .. string.format("%.0f", y))
+      end
       if not self.hidePromt and event == "began" and ed.containsPoint(self.ui.bg, x, y) then
         local fade = CCFadeOut:create(0.2)
         local func = CCCallFunc:create(function()
@@ -1292,7 +1309,10 @@ local doMainLayerTouch = function(self)
       goTouch(event, x, y)
       changeListTouch(event, x, y)
       teamTouch(event, x, y)
-    end, EDDebug)
+    end, function(err)
+      LegendLog("[TOUCH] ERROR in mainLayer touch: " .. tostring(err))
+      EDDebug(err)
+    end)
     return true
   end
   return handler

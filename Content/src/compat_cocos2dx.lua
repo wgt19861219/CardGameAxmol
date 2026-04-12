@@ -492,8 +492,10 @@ else
                     local node = ax.Node:create()
                     node:setContentSize(size or CCSizeMake(200, 40))
                     -- stub 方法
-                    node.setText = function(self, text) end
-                    node.getString = function(self) return "" end
+                    node.setText = function(self, text) self._editText = tostring(text or "") end
+                    node.getText = function(self) return self._editText or "" end
+                    node.setString = function(self, text) self._editText = tostring(text or "") end
+                    node.getString = function(self) return self._editText or "" end
                     node.getStringValue = function(self) return "" end
                     node.setFont = function(self, ...) end
                     node.setFontSize = function(self, ...) end
@@ -814,12 +816,12 @@ CCLog = function(...) print("[CC]", ...) end
 -- �� ax.Node ������ registerScriptTouchHandler ���ݷ���
 -- �洢ÿ�� node �Ĵ������������ã������ظ�ע��
 local _nodeTouchListeners = setmetatable({}, {__mode = "k"})
+local _nodeTouchHandlers = setmetatable({}, {__mode = "k"})  -- save handler+params for re-register
 
 if ax.Node then
     -- registerScriptTouchHandler(handler, isMultiTouches, priority, swallows)
     -- handler(event, ...) where event is "began"/"moved"/"ended"/"cancelled"
     -- force install: always override, don't check for existing method
-    print("[COMPAT] Installing registerScriptTouchHandler on ax.Node (old=" .. tostring(ax.Node.registerScriptTouchHandler) .. ")")
     function ax.Node:registerScriptTouchHandler(handler, isMultiTouches, priority, swallows)
         if not handler then return end
         priority = priority or 0
@@ -863,7 +865,9 @@ if ax.Node then
                         local ok_loc, loc = pcall(function() return touch:getLocation() end)
                         if ok_loc and loc then
                             local ok_h, ret = pcall(handler, "began", loc.x, loc.y)
-                            if ok_h then return ret ~= false end
+                            if ok_h then
+                                return ret ~= false
+                            end
                         else
                             -- touch:getLocation() failed, try getLocationInView
                             local ok_loc2, loc2 = pcall(function() return touch:getLocationInView() end)
@@ -914,19 +918,17 @@ if ax.Node then
 
         local dispatcher = ax.Director:getInstance():getEventDispatcher()
         local ok_add, err_add
-        if priority == 0 then
-            ok_add, err_add = pcall(function()
-                dispatcher:addEventListenerWithSceneGraphPriority(listener, self)
-            end)
-        else
-            ok_add, err_add = pcall(function()
-                dispatcher:addEventListenerWithFixedPriority(listener, priority)
-            end)
-        end
+        -- Always use sceneGraphPriority: fixedPriority listeners don't receive
+        -- touch events on Android in this Axmol build.  The node's Z-order in
+        -- the scene tree determines dispatch order instead.
+        ok_add, err_add = pcall(function()
+            dispatcher:addEventListenerWithSceneGraphPriority(listener, self)
+        end)
         if not ok_add then
             print("[COMPAT-ERR] addEventListener failed: " .. tostring(err_add))
         end
         _nodeTouchListeners[self] = listener
+        _nodeTouchHandlers[self] = {handler, isMultiTouches, priority, swallows}
     end
 
     -- unregisterScriptTouchHandler - force install
@@ -948,7 +950,14 @@ if ax.Node then
     local _nodeMethods = {
         setTouchEnabled = function(self, enabled)
             self._touchEnabled = enabled
-            if not enabled and self.unregisterScriptTouchHandler then
+            if enabled then
+                -- Re-register if we have a saved handler but no active listener
+                local saved = _nodeTouchHandlers[self]
+                local listener = _nodeTouchListeners[self]
+                if saved and not listener and self.registerScriptTouchHandler then
+                    self:registerScriptTouchHandler(saved[1], saved[2], saved[3], saved[4])
+                end
+            elseif not enabled and self.unregisterScriptTouchHandler then
                 self:unregisterScriptTouchHandler()
             end
         end,

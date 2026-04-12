@@ -505,20 +505,65 @@ for _, mod in ipairs(coreModules) do
         local function getLocalServer()
             local ls = rawget(_G, "local_server")
             if ls then return ls end
-            local has_pb = rawget(_G, "pb_loader")
-            print("[STUB-NET] getLocalServer: has_pb_loader=" .. tostring(has_pb))
-            if has_pb then
-                local ok, err = pcall(function()
-                    ls = require("local_server")
-                    ls.init()
-                    rawset(_G, "local_server", ls)
-                    print("[STUB-NET] local_server loaded OK")
-                end)
-                if not ok then print("[STUB-NET] local_server load error: " .. tostring(err)) end
+            print("[STUB-NET] getLocalServer: attempting to load local_server directly")
+            -- 尝试多种方式加载
+            local ok, err
+            -- 方式1: 直接 require
+            ok, err = pcall(function()
+                ls = require("local_server")
+            end)
+            -- 方式2: 如果 require 失败，尝试手动 loadfile
+            if not ok or not ls then
+                print("[STUB-NET] require failed: " .. tostring(err) .. ", trying loadfile")
+                local paths_to_try = {
+                    "src/local_server.lua",
+                    "Content/src/local_server.lua",
+                    "local_server.lua",
+                }
+                for _, p in ipairs(paths_to_try) do
+                    local f = io.open(p, "r")
+                    if f then
+                        f:close()
+                        print("[STUB-NET] found file at: " .. p)
+                        local chunk, loadErr = loadfile(p)
+                        if chunk then
+                            ls = chunk()
+                        else
+                            print("[STUB-NET] loadfile error: " .. tostring(loadErr))
+                        end
+                        break
+                    end
+                end
+            end
+            if ls then
+                ok, err = pcall(function() ls.init() end)
+                if not ok then
+                    print("[STUB-NET] local_server.init error: " .. tostring(err))
+                    LegendLog("[STUB-NET] local_server.init ERROR: " .. tostring(err))
+                end
+                rawset(_G, "local_server", ls)
+                print("[STUB-NET] local_server loaded OK")
             else
-                print("[STUB-NET] getLocalServer: pb_loader NOT available, cannot load local_server")
+                print("[STUB-NET] local_server NOT found by any method")
+                LegendLog("[STUB-NET] local_server NOT found by any method: " .. tostring(err))
             end
             return ls
+        end
+        -- 辅助：addHero 后自动设置英雄等级为玩家等级（否则技能升级不可用）
+        local function addHeroWithLevel(tid)
+            if not ed.player or not ed.player.addHero then return end
+            local isNew = not ed.player.heroes[tid]
+            ed.player:addHero(tid)
+            if isNew and ed.player.heroes[tid] then
+                pcall(function()
+                    local hero = ed.player.heroes[tid]
+                    local playerLevel = ed.player._level or 30
+                    hero._level = playerLevel
+                    hero._rank = math.max(hero._rank or 1, 5)
+                    hero._stars = math.max(hero._stars or 1, 2)
+                    hero._gs = (hero._gs or 0) + playerLevel * 10
+                end)
+            end
         end
         -- 模拟网络层：localMode 下模拟服务器响应
         local function stubSend(obj, msgType)
@@ -538,7 +583,7 @@ for _, mod in ipairs(coreModules) do
                                     _last_set_name_time = 0,
                                     _avatar = 1,
                                 },
-                                _level = 1,
+                                _level = 30,
                                 _recharge_sum = 0,
                                 _exp = 0,
                                 _money = 100000,
@@ -561,7 +606,7 @@ for _, mod in ipairs(coreModules) do
                                 },
                                 _skill_level_up = {
                                     _skill_levelup_chance = 5,
-                                    _skill_levelup_cd = 0,
+                                    _skill_levelup_cd = os.time(),
                                     _reset_times = 0,
                                     _last_reset_date = 0,
                                 },
@@ -643,7 +688,7 @@ for _, mod in ipairs(coreModules) do
                         local amount = ed.bits(v, 10, 11)
                         local it = ed.itemType(id)
                         if it == "hero" then
-                            if ed.player and ed.player.addHero then ed.player:addHero(id) end
+                            addHeroWithLevel(id)
                         elseif it == "equip" then
                             if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
                         end
@@ -691,16 +736,880 @@ for _, mod in ipairs(coreModules) do
                     pcall(handler2, ids)
                     ed.netreply.askMagicsoul = nil
                 end
+            elseif msgType == "gm_cmd" then
+                -- GM 命令：直接处理，不依赖 local_server 模块
+                LegendLog("[STUB-NET] gm_cmd: handling directly, obj type=" .. type(obj))
+                -- 调试：遍历 obj 的所有字段
+                local fields = {}
+                for k, v in pairs(obj or {}) do
+                    table.insert(fields, tostring(k) .. "=" .. tostring(v))
+                end
+                LegendLog("[STUB-NET] gm_cmd obj fields: " .. table.concat(fields, ", "))
+
+                local function handleGmCmd(gmObj)
+                    LegendLog("[STUB-NET] gm_cmd obj: _set_money=" .. tostring(gmObj._set_money)
+                        .. " _unlock=" .. tostring(gmObj._unlock_all_stages)
+                        .. " _get_all_heroes=" .. tostring(gmObj._get_all_heroes)
+                        .. " _set_vitality=" .. tostring(gmObj._set_vitality)
+                        .. " _set_player_level=" .. tostring(gmObj._set_player_level))
+
+                    -- 解锁所有关卡
+                    if gmObj._unlock_all_stages and gmObj._unlock_all_stages > 0 then
+                        if ed.player and ed.player._userstage then
+                            ed.player._userstage._normal_stage_stars = ed.player._userstage._normal_stage_stars or {}
+                            -- 标记所有关卡为3星
+                        end
+                        LegendLog("[STUB-NET] gm_cmd: unlock_all_stages=" .. tostring(gmObj._unlock_all_stages))
+                    end
+
+                    -- 获取所有英雄（localMode 下自动设置英雄等级=玩家等级、rank>=5 以支持技能升级）
+                    if gmObj._get_all_heroes and gmObj._get_all_heroes > 0 then
+                        local ok_gah, err_gah = xpcall(function()
+                            local UnitTable = ed.getDataTable("Unit")
+                            if not UnitTable then return end
+                            if not ed.player then return end
+                            if not ed.player.addHero then return end
+                            if not ed.player.heroes then return end
+                            local playerLevel = ed.player._level or 30
+                            local count = 0
+                            for tid, unit in pairs(UnitTable) do
+                                if type(tid) == "number" and tid > 0 and unit.Name
+                                    and unit["Unit Type"] == "Hero" and unit.Portrait then
+                                    if not ed.player.heroes[tid] then
+                                        local ok_h = pcall(function() addHeroWithLevel(tid) end)
+                                        if ok_h then count = count + 1 end
+                                    else
+                                        -- 已有英雄也刷新等级（修复之前 addHero 默认 level=1 的英雄）
+                                        pcall(function()
+                                            local hero = ed.player.heroes[tid]
+                                            if hero and (hero._level or 0) < playerLevel then
+                                                hero._level = playerLevel
+                                                hero._rank = math.max(hero._rank or 1, 5)
+                                                hero._stars = math.max(hero._stars or 1, 2)
+                                                hero._gs = (hero._gs or 0) + playerLevel * 10
+                                            end
+                                        end)
+                                    end
+                                end
+                            end
+                            LegendLog("[GM] get_all_heroes: added " .. tostring(count) .. " heroes, level=" .. tostring(playerLevel))
+                            -- 清理非 Hero 类型的单位（旧存档可能混入了怪物/召唤物）
+                            local removed = 0
+                            for tid, hero in pairs(ed.player.heroes) do
+                                local u = UnitTable[tid]
+                                if u and (u["Unit Type"] ~= "Hero" or not u.Portrait) then
+                                    ed.player.heroes[tid] = nil
+                                    removed = removed + 1
+                                end
+                            end
+                            -- 同步清理 _heroes 数组
+                            for i = #ed.player._heroes, 1, -1 do
+                                local h = ed.player._heroes[i]
+                                local u = UnitTable[h._tid]
+                                if u and (u["Unit Type"] ~= "Hero" or not u.Portrait) then
+                                    table.remove(ed.player._heroes, i)
+                                    removed = removed + 1
+                                end
+                            end
+                            if removed > 0 then
+                                LegendLog("[GM] get_all_heroes: removed " .. tostring(removed) .. " non-hero units")
+                            end
+                        end, function(err) LegendLog("[GM] get_all_heroes ERROR: " .. tostring(err)) end)
+                        if not ok_gah then
+                            LegendLog("[STUB-NET] gm_cmd: get_all_heroes failed: " .. tostring(err_gah))
+                        end
+                    end
+
+                    -- 设置金币/钻石
+                    if gmObj._set_money then
+                        local sm = gmObj._set_money
+                        local mtype = sm._type
+                        local amount = sm._amount
+                        LegendLog("[STUB-NET] gm_cmd: _set_money type=" .. tostring(mtype) .. " amount=" .. tostring(amount))
+                        if mtype and amount then
+                            if mtype == "gold" then
+                                if ed.player then ed.player._money = amount end
+                                LegendLog("[STUB-NET] gm_cmd: set gold=" .. tostring(amount))
+                            elseif mtype == "diamond" then
+                                if ed.player then ed.player._rmb = amount end
+                                LegendLog("[STUB-NET] gm_cmd: set diamond=" .. tostring(amount))
+                            end
+                        end
+                        -- 兼容旧格式
+                        if sm._money and ed.player then ed.player._money = sm._money end
+                        if sm._rmb and ed.player then ed.player._rmb = sm._rmb end
+                    end
+
+                    -- 设置体力
+                    if gmObj._set_vitality then
+                        pcall(function()
+                            if ed.player and ed.player._vitality then
+                                ed.player._vitality._current = gmObj._set_vitality
+                            end
+                        end)
+                        LegendLog("[STUB-NET] gm_cmd: set_vitality=" .. tostring(gmObj._set_vitality))
+                    end
+
+                    -- 设置英雄信息
+                    if gmObj._set_hero_info then
+                        for _, heroMsg in ipairs(gmObj._set_hero_info) do
+                            local tid = heroMsg._tid
+                            if tid and ed.player and ed.player.heroes then
+                                for _, hero in pairs(ed.player.heroes) do
+                                    if hero._tid == tid then
+                                        if heroMsg._rank then hero._rank = heroMsg._rank end
+                                        if heroMsg._level then hero._level = heroMsg._level end
+                                        if heroMsg._stars then hero._stars = heroMsg._stars end
+                                        if heroMsg._exp then hero._exp = heroMsg._exp end
+                                        if heroMsg._gs then hero._gs = heroMsg._gs end
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    -- 设置充值总额
+                    if gmObj._set_recharge_sum and ed.player then
+                        ed.player._recharge_sum = gmObj._set_recharge_sum
+                    end
+
+                    -- 设置玩家等级
+                    if gmObj._set_player_level and ed.player then
+                        ed.player._level = gmObj._set_player_level
+                    end
+
+                    -- 设置玩家经验
+                    if gmObj._set_player_exp and ed.player then
+                        ed.player._exp = gmObj._set_player_exp
+                    end
+
+                    -- 设置物品
+                    if gmObj._set_items then
+                        pcall(function()
+                            for _, itemBits in ipairs(gmObj._set_items) do
+                                local id = ed.bits(itemBits, 0, 10)
+                                local amount = ed.bits(itemBits, 10, 11)
+                                -- 直接添加到背包
+                                if ed.player and ed.player.addEquip then
+                                    ed.player:addEquip(id, amount)
+                                end
+                            end
+                        end)
+                    end
+
+                    -- 刷UI
+                    pcall(function()
+                        if FireEvent then FireEvent("LoginSuc") end
+                    end)
+                    LegendLog("[STUB-NET] gm_cmd: done, LoginSuc fired")
+                end
+                handleGmCmd(obj)
             else
-                -- 其他消息转发给 local_server 处理（使用延迟加载）
-                print("[STUB-NET] forwarding to local_server: " .. tostring(msgType))
-                local ls = getLocalServer()
-                print("[STUB-NET] getLocalServer returned: " .. tostring(ls))
+                -- 其他消息：尝试 local_server，失败则直接构造 down_msg 并 dispatch
+                print("[STUB-NET] else branch for: " .. tostring(msgType))
+                local handled = false
+                local ls = rawget(_G, "local_server")
                 if ls and ls.handle then
                     local ok_ls, err_ls = pcall(function() ls.handle(msgType, obj) end)
-                    if not ok_ls then print("[STUB-NET] local_server error: " .. tostring(err_ls)) end
-                else
-                    print("[STUB-NET] WARNING: local_server NOT available for msgType=" .. tostring(msgType))
+                    if ok_ls then
+                        handled = true
+                    else
+                        LegendLog("[STUB-NET] local_server error: " .. tostring(err_ls))
+                    end
+                end
+                if not handled then
+                    -- 直接构造 down_msg 回复并通过 ed.dispatch 处理
+                    pcall(function()
+                        -- 直接构造 down_msg 消息对象（ed.downmsg.down_msg() 可能返回空表）
+                        local msg = setmetatable({[".data"]={}}, {
+                            __index = function(m, k) return rawget(m, ".data")[k] end,
+                            __newindex = function(m, k, v) rawget(m, ".data")[k] = v end,
+                        })
+                        local data = rawget(msg, ".data")
+
+                        -- 根据消息类型填充回复数据
+                        if msgType == "sync_skill_stren" then
+                            local slu = ed.player and ed.player._skill_level_up
+                            LegendLog("[STUB] sync_skill_stren: slu=" .. tostring(slu) .. " chance=" .. tostring(slu and slu._skill_levelup_chance))
+                            if slu then
+                                data._sync_skill_stren_reply = {
+                                    _skill_level_up = {
+                                        _skill_levelup_chance = slu._skill_levelup_chance or 5,
+                                        _skill_levelup_cd = slu._skill_levelup_cd or 0,
+                                        _reset_times = slu._reset_times or 0,
+                                        _last_reset_date = slu._last_reset_date or 0,
+                                    }
+                                }
+                            end
+                        elseif msgType == "buy_skill_stren_point" then
+                            local slu = ed.player and ed.player._skill_level_up
+                            if slu then
+                                slu._skill_levelup_chance = (slu._skill_levelup_chance or 0) + 10
+                                data._sync_skill_stren_reply = {
+                                    _skill_level_up = {
+                                        _skill_levelup_chance = slu._skill_levelup_chance,
+                                        _skill_levelup_cd = slu._skill_levelup_cd or 0,
+                                        _reset_times = (slu._reset_times or 0) + 1,
+                                        _last_reset_date = slu._last_reset_date or 0,
+                                    }
+                                }
+                            end
+                        elseif msgType == "skill_levelup" then
+                            -- 技能升级：只计算 _gs，不更新技能等级和技能点
+                            -- dealSkillLevelup 会通过 strenHeroSkill 和 addSkillPoint 处理
+                            local gs = 0
+                            pcall(function()
+                                local hid = obj._heroid or obj._tid
+                                local hero = ed.player and ed.player.heroes[hid]
+                                if hero then
+                                    -- 解析 _order 计算升级数量（用于 gs 增量）
+                                    local orders = obj._order or {}
+                                    local totalUpgrades = 0
+                                    for i, packed in ipairs(orders) do
+                                        local slot = ed.bits(packed, 4, 11)
+                                        local amount = ed.bits(packed, 0, 4)
+                                        totalUpgrades = totalUpgrades + (amount or 1)
+                                    end
+                                    if totalUpgrades == 0 and obj._skill_index then
+                                        totalUpgrades = 1
+                                    end
+                                    hero._gs = (hero._gs or 0) + totalUpgrades * 10
+                                    gs = hero._gs
+                                end
+                            end)
+                            data._skill_levelup_reply = {
+                                _result = "success",
+                                _gs = gs,
+                            }
+                        elseif msgType == "hero_upgrade" then
+                            -- 英雄进阶：rank+1，清空装备，填新装备
+                            local maxRank = (ed.parameter and ed.parameter.unit_max_rank) or 10
+                            local heroData = nil
+                            pcall(function()
+                                local hid = obj._hero_id
+                                local hero = ed.player and ed.player.heroes[hid]
+                                if hero and (hero._rank or 1) < maxRank then
+                                    -- 扣除旧 rank 的装备 GS 贡献（hero_equip 表的 GS 字段是满装备总贡献）
+                                    local oldRank = hero._rank or 1
+                                    local oldRankGs = 0
+                                    pcall(function()
+                                        oldRankGs = tonumber(ed.lookupDataTable("hero_equip", "GS", hero._tid, oldRank)) or 0
+                                    end)
+
+                                    hero._rank = oldRank + 1
+
+                                    -- 清空旧装备，填空槽位
+                                    hero._items = {}
+                                    for i = 1, 6 do
+                                        table.insert(hero._items, {_item_id = 0, _exp = 0, _index = i})
+                                    end
+                                    -- 填充新rank的初始装备（当前所有Init ID均为0，预留逻辑）
+                                    pcall(function()
+                                        for i = 1, 6 do
+                                            local init = ed.lookupDataTable("hero_equip", "Init" .. i .. " ID", hid, hero._rank)
+                                            if init and init ~= 0 then
+                                                hero._items[i] = {_item_id = init, _exp = 0, _index = i}
+                                            end
+                                        end
+                                    end)
+
+                                    -- 新 GS = 旧GS - 旧rank装备贡献 + 新rank初始装备贡献
+                                    local newInitGs = 0
+                                    pcall(function()
+                                        local newEquipLevel = tonumber(ed.lookupDataTable("hero_equip", "EquipLevel", hero._tid, hero._rank)) or 1
+                                        local equipDataTable = ed.getDataTable("equip")
+                                        for i = 1, 6 do
+                                            local iid = hero._items[i]._item_id
+                                            if iid and iid ~= 0 and equipDataTable and equipDataTable[iid] then
+                                                newInitGs = newInitGs + (tonumber(equipDataTable[iid]["GS"]) or 0)
+                                            end
+                                        end
+                                        newInitGs = newInitGs * newEquipLevel
+                                    end)
+
+                                    hero._gs = math.max(math.floor((hero._gs or 0) - oldRankGs + newInitGs), 0)
+                                    LegendLog("[UPGRADE] hero=" .. tostring(hid) .. " rank=" .. tostring(oldRank) .. "->" .. tostring(hero._rank)
+                                        .. " oldRankGs=" .. string.format("%.1f", oldRankGs)
+                                        .. " newInitGs=" .. string.format("%.1f", newInitGs)
+                                        .. " resultGs=" .. tostring(hero._gs))
+
+                                    heroData = hero
+                                end
+                            end)
+                            local heroReply = nil
+                            if heroData then
+                                heroReply = {
+                                    _tid = heroData._tid,
+                                    _rank = heroData._rank,
+                                    _level = heroData._level or 1,
+                                    _stars = heroData._stars or 1,
+                                    _exp = heroData._exp or 0,
+                                    _gs = heroData._gs or 0,
+                                    _state = heroData._state or "idle",
+                                    _skill_levels = heroData._skill_levels or {1,1,1,1},
+                                    _items = heroData._items or {},
+                                }
+                            end
+                            data._hero_upgrade_reply = {
+                                _result = "success",
+                                _hero = heroReply,
+                                _items = {},
+                            }
+                        elseif msgType == "hero_evolve" then
+                            -- 英雄进化：stars+1
+                            local heroData = nil
+                            pcall(function()
+                                local hid = obj._heroid
+                                local hero = ed.player and ed.player.heroes[hid]
+                                if hero then
+                                    hero._stars = (hero._stars or 1) + 1
+                                    hero._gs = (hero._gs or 0) + 100
+                                    -- 扣除金币
+                                    local nd = ed.netdata and ed.netdata.evolve
+                                    if nd and nd.cost then
+                                        ed.player._money = math.max(0, (ed.player._money or 0) - nd.cost)
+                                    end
+                                    -- 扣除灵魂石
+                                    if nd and nd.id and nd.amount then
+                                        pcall(function() ed.player:consumeEquip(nd.id, nd.amount) end)
+                                    end
+                                    heroData = hero
+                                end
+                            end)
+                            local heroReply = nil
+                            if heroData then
+                                heroReply = {
+                                    _tid = heroData._tid,
+                                    _rank = heroData._rank or 1,
+                                    _level = heroData._level or 1,
+                                    _stars = heroData._stars,
+                                    _exp = heroData._exp or 0,
+                                    _gs = heroData._gs or 0,
+                                    _state = heroData._state or "idle",
+                                    _skill_levels = heroData._skill_levels or {1,1,1,1},
+                                    _items = heroData._items or {},
+                                }
+                            end
+                            data._hero_evolve_reply = {
+                                _result = "success",
+                                _hero = heroReply,
+                            }
+                        elseif msgType == "enter_stage" then
+                            data._enter_stage_reply = {
+                                _rseed = math.random(1, 2147483647),
+                                _loots = {},
+                            }
+                        elseif msgType == "exit_stage" then
+                            data._exit_stage_reply = {
+                                _result = "known",
+                            }
+                        elseif msgType == "tavern_draw" then
+                            data._tavern_draw_reply = {
+                                _item_ids = {},
+                                _new_heroes = {},
+                                _smash_idx = {},
+                            }
+                        elseif msgType == "shop_refresh" then
+                            data._shop_refresh_reply = {
+                                _id = 1,
+                                _last_auto_refresh_time = os.time(),
+                                _expire_time = 0,
+                                _last_manual_refresh_time = os.time(),
+                                _today_times = 0,
+                                _current_goods = {},
+                            }
+                        elseif msgType == "open_shop" then
+                            data._open_shop_reply = {
+                                _result = "success",
+                                _shop = {
+                                    _id = 1,
+                                    _last_auto_refresh_time = os.time(),
+                                    _expire_time = 0,
+                                    _last_manual_refresh_time = os.time(),
+                                    _today_times = 0,
+                                    _current_goods = {},
+                                },
+                            }
+                        elseif msgType == "shop_consume" then
+                            data._shop_consume_reply = { _result = "success" }
+                        elseif msgType == "wear_equip" then
+                            -- 计算穿戴后的 GS：直接用 equip 表的 GS 字段 × EquipLevel
+                            local newGs = 0
+                            pcall(function()
+                                local heroId = obj._hero_id
+                                local slot = obj._item_pos
+                                if heroId and ed.player.heroes[heroId] then
+                                    local hero = ed.player.heroes[heroId]
+                                    local curGs = hero._gs or 0
+                                    local equipDataTable = ed.getDataTable("equip")
+                                    local heroEquipTable = ed.getDataTable("hero_equip")
+
+                                    -- 获取 hero_equip 的 EquipLevel 倍率
+                                    local equipLevel = 1
+                                    local newItemId = nil
+                                    if heroEquipTable and heroEquipTable[hero._tid]
+                                        and heroEquipTable[hero._tid][hero._rank] then
+                                        local rankEquip = heroEquipTable[hero._tid][hero._rank]
+                                        equipLevel = rankEquip.EquipLevel or 1
+                                        newItemId = rankEquip[string.format("Equip%d ID", slot)]
+                                    end
+
+                                    local oldItemId = nil
+                                    if hero._items and hero._items[slot] then
+                                        oldItemId = hero._items[slot]._item_id
+                                    end
+
+                                    -- 直接用 equip 表的 GS 字段（策划配置的综合 GS 值）
+                                    local oldSlotGs = 0
+                                    if oldItemId and equipDataTable and equipDataTable[oldItemId] then
+                                        oldSlotGs = tonumber(equipDataTable[oldItemId]["GS"]) or 0
+                                    end
+                                    local newSlotGs = 0
+                                    if newItemId and equipDataTable and equipDataTable[newItemId] then
+                                        newSlotGs = tonumber(equipDataTable[newItemId]["GS"]) or 0
+                                    end
+
+                                    local delta = (newSlotGs - oldSlotGs) * equipLevel
+
+                                    LegendLog("[WEAR] hero=" .. tostring(heroId) .. " slot=" .. tostring(slot)
+                                        .. " old=" .. tostring(oldItemId) .. " new=" .. tostring(newItemId)
+                                        .. " equipLv=" .. tostring(equipLevel) .. " delta=" .. string.format("%.1f", delta))
+
+                                    newGs = math.max(math.floor(curGs + delta), 0)
+                                    LegendLog("[WEAR] curGs=" .. tostring(curGs) .. " -> newGs=" .. tostring(newGs))
+                                end
+                            end)
+                            data._wear_equip_reply = { _result = "success", _gs = newGs }
+                        elseif msgType == "sell_item" then
+                            data._sell_item_reply = { _result = "success" }
+                        elseif msgType == "equip_synthesis" then
+                            data._equip_synthesis_reply = { _result = "success" }
+                        elseif msgType == "fragment_compose" then
+                            data._fragment_compose_reply = { _result = "success" }
+                        elseif msgType == "hero_equip_upgrade" then
+                            data._hero_equip_upgrade_reply = { _result = "success" }
+                        elseif msgType == "consume_item" then
+                            data._consume_item_reply = {}
+                        elseif msgType == "tutorial" then
+                            data._tutorial_reply = { _result = "success" }
+                        elseif msgType == "set_name" then
+                            data._set_name_reply = { _result = "success" }
+                        elseif msgType == "set_avatar" then
+                            data._set_avatar_reply = { _result = "success" }
+                        elseif msgType == "trigger_task" then
+                            data._trigger_task_reply = { _result = { "success" } }
+                        elseif msgType == "trigger_job" then
+                            data._trigger_job_reply = { _result = "success" }
+                        elseif msgType == "job_rewards" then
+                            data._job_rewards_reply = { _result = "success" }
+                        elseif msgType == "require_rewards" then
+                            data._require_rewards_reply = { _result = "success" }
+                        elseif msgType == "reset_elite" then
+                            data._reset_elite_reply = { _result = "success" }
+                        elseif msgType == "sweep_stage" then
+                            data._sweep_stage_reply = {
+                                _loot = { { _exp = 0, _money = 0, _items = {} } },
+                                _items = {},
+                            }
+                        elseif msgType == "midas" then
+                            data._midas_reply = { _acquire = {} }
+                        elseif msgType == "query_data" then
+                            data._query_data_reply = { heroes = {}, recharge_limit = {}, _month_card = {} }
+                        elseif msgType == "sync_vitality" then
+                            data._sync_vitality_reply = { _vitality = { _current = 120, _lastchange = 0, _todaybuy = 0, _lastbuy = 0 } }
+                        elseif msgType == "buy_vitality" then
+                            data._sync_vitality_reply = { _vitality = { _current = 240, _lastchange = 0, _todaybuy = 1, _lastbuy = 0 } }
+                        elseif msgType == "ask_daily_login" then
+                            data._ask_daily_login_reply = { _result = "success", _items = {}, _hero = {}, _diamond = 0 }
+                        elseif msgType == "sdk_login" then
+                            data._sdk_login_reply = { _result = "success", _uin = "1" }
+                        elseif msgType == "system_setting" then
+                            data._system_setting_reply = {}
+                        elseif msgType == "ask_magicsoul" then
+                            local ids = {}
+                            for i = 1, 6 do ids[i] = math.random(1, 30) end
+                            data._ask_magicsoul_reply = ids
+                        elseif msgType == "get_svr_time" then
+                            data._svr_time = os.time()
+                        elseif msgType == "get_maillist" then
+                            data._mail_list = {}
+                        elseif msgType == "change_server" then
+                            data._change_server_reply = { _result = "success" }
+                        elseif msgType == "cdkey_gift" then
+                            data._cdkey_gift_reply = { _result = "success" }
+                        elseif msgType == "charge" then
+                            data._charge_reply = { _result = "success" }
+                        elseif msgType == "suspend_report" then
+                            -- 无回复
+                            return
+                        end
+
+                        -- 直接处理回复（ed.dispatch 不可用，network.lua 未加载）
+                        -- 实现 network.lua dispatch 函数的核心逻辑
+                        LegendLog("[STUB] handling reply for: " .. tostring(msgType))
+                        pcall(function()
+                            -- sync_skill_stren / buy_skill_stren_point 回复
+                            if data._sync_skill_stren_reply then
+                                local reply = data._sync_skill_stren_reply
+                                ed.player._skill_level_up = reply._skill_level_up
+                                local handler, rdata = ed.getNetReply("sync_skill_stren_chance")
+                                LegendLog("[STUB] _sync_skill_stren_reply: handler=" .. tostring(handler ~= nil) .. " rdata=" .. tostring(rdata ~= nil) .. " cost=" .. tostring(rdata and rdata.cost))
+                                if rdata and rdata.cost then pcall(function() ed.player:addrmb(-rdata.cost) end) end
+                                if handler then
+                                    handler()
+                                else
+                                    -- handler 为 nil 时（buy_skill_stren_point 场景），手动刷新技能面板
+                                    pcall(function()
+                                        local sw = ed.getPopWindow and ed.getPopWindow("herodetailskill")
+                                        LegendLog("[STUB] manual UI refresh: sw=" .. tostring(sw ~= nil))
+                                        if sw and sw.createInformationBar then
+                                            sw:createInformationBar()
+                                            LegendLog("[STUB] createInformationBar called OK")
+                                        end
+                                    end)
+                                end
+                            end
+                            -- skill_levelup 回复
+                            if data._skill_levelup_reply then
+                                if ed.ui and ed.ui.herodetail and ed.ui.herodetail.dealSkillLevelup then
+                                    ed.ui.herodetail.dealSkillLevelup(data._skill_levelup_reply)
+                                end
+                            end
+                            -- hero_upgrade 回复
+                            if data._hero_upgrade_reply then
+                                local reply = data._hero_upgrade_reply
+                                local result = reply._result == "success"
+                                local hero = reply._hero
+                                local items = reply._items
+                                local props = {}
+                                for i = 1, #(items or {}) do
+                                    local item = items[i]
+                                    local id = ed.bits(item, 0, 10)
+                                    local amount = ed.bits(item, 10, 11)
+                                    pcall(function() ed.player:addEquip(id, amount) end)
+                                    props[i] = {id = id, amount = amount}
+                                end
+                                if result and hero then pcall(function() ed.player:resetHero(hero) end) end
+                                if ed.netreply.heroUpgradeReply then
+                                    ed.netreply.heroUpgradeReply(result, props)
+                                    ed.netreply.heroUpgradeReply = nil
+                                end
+                            end
+                            -- hero_evolve 回复
+                            if data._hero_evolve_reply then
+                                local reply = data._hero_evolve_reply
+                                local result = reply._result == "success"
+                                local hero = reply._hero
+                                local ndata = ed.netdata and ed.netdata.evolve
+                                if ndata and result then
+                                    pcall(function()
+                                        ed.player:addMoney(-(ndata.cost or 0))
+                                        ed.player:consumeEquip(ndata.id, ndata.amount)
+                                        if ed.player.heroes[ndata.hid] then
+                                            ed.player.heroes[ndata.hid]:evolve()
+                                        else
+                                            addHeroWithLevel(ndata.hid)
+                                        end
+                                        ed.player:resetHero(hero)
+                                    end)
+                                    ed.netdata.evolve = nil
+                                end
+                                if ed.netreply.evolve then
+                                    ed.netreply.evolve(result)
+                                    ed.netreply.evolve = nil
+                                end
+                            end
+                            -- wear_equip 回复
+                            if data._wear_equip_reply then
+                                local reply = data._wear_equip_reply
+                                local result = reply._result == "success"
+                                local gs = reply._gs
+                                if ed.netdata.putonReply then
+                                    pcall(function()
+                                        local rdata = ed.netdata.putonReply
+                                        ed.player:consumeEquip(rdata.eid, 1)
+                                        ed.player.heroes[rdata.hid]:equip(rdata.sid)
+                                        ed.player.heroes[rdata.hid]:resetgs(gs)
+                                    end)
+                                    ed.netdata.putonReply = nil
+                                end
+                                if ed.netreply.putonReply then
+                                    ed.netreply.putonReply(result)
+                                    ed.netreply.putonReply = nil
+                                end
+                            end
+                            -- enter_stage 回复
+                            if data._enter_stage_reply then
+                                if ed.netreply.enterStage then
+                                    ed.netreply.enterStage()
+                                    ed.netreply.enterStage = nil
+                                end
+                                pcall(function() ed.srand(data._enter_stage_reply._rseed) end)
+                                if ed.player then ed.player.loots = data._enter_stage_reply._loots or {} end
+                            end
+                            -- exit_stage 回复
+                            if data._exit_stage_reply then
+                                local result = data._exit_stage_reply._result == "known"
+                                if ed.netreply.exitStageReply then
+                                    ed.netreply.exitStageReply(result)
+                                    ed.netreply.exitStageReply = nil
+                                end
+                                ed.netdata.exitStageReply = nil
+                            end
+                            -- shop_refresh / shop_consume 回复
+                            if data._shop_refresh_reply then
+                                pcall(function() ed.ui.market.dealRefresh(data._shop_refresh_reply) end)
+                            end
+                            if data._shop_consume_reply then
+                                pcall(function() ed.ui.market.dealConsume(data._shop_consume_reply) end)
+                            end
+                            -- sell_item 回复
+                            if data._sell_item_reply then
+                                local result = data._sell_item_reply._result
+                                local handler, rdata = ed.getNetReply("sell_item")
+                                if result and rdata then
+                                    pcall(function()
+                                        ed.player._money = ed.player._money + rdata.income
+                                        for k, v in pairs(rdata.items) do
+                                            ed.player:consumeEquip(v.id, v.amount)
+                                        end
+                                    end)
+                                end
+                                if handler and rdata then handler(result, rdata.amount) end
+                            end
+                            -- equip_synthesis 回复
+                            if data._equip_synthesis_reply then
+                                local result = data._equip_synthesis_reply._result == "success"
+                                local rdata = ed.netdata.equipCraft
+                                if result and rdata then
+                                    pcall(function()
+                                        ed.player:addMoney(-rdata.expense)
+                                        local na = rdata.consume
+                                        for k, v in pairs(rdata.node) do
+                                            ed.player:consumeEquip(v, na[k] or 1)
+                                        end
+                                        ed.player:addEquip(rdata.id)
+                                    end)
+                                end
+                                if ed.netreply.craftReply then
+                                    ed.netreply.craftReply(result)
+                                    ed.netreply.craftReply = nil
+                                end
+                            end
+                            -- fragment_compose 回复
+                            if data._fragment_compose_reply then
+                                local result = data._fragment_compose_reply._result == "success"
+                                local info = ed.netdata.fragmentCompose
+                                if result and info then
+                                    pcall(function()
+                                        ed.player:addMoney(-info.cost)
+                                        ed.player:consumeEquip(info.id, info.fragmentAmount)
+                                        if info.makeId > 100 then
+                                            ed.player:addEquip(info.makeId)
+                                        else
+                                            addHeroWithLevel(info.makeId)
+                                        end
+                                    end)
+                                end
+                                if ed.netreply.composeFragmentReply then
+                                    ed.netreply.composeFragmentReply(result)
+                                    ed.netreply.composeFragmentReply = nil
+                                end
+                            end
+                            -- hero_equip_upgrade 回复
+                            if data._hero_equip_upgrade_reply then
+                                local result = data._hero_equip_upgrade_reply._result == "success"
+                                local hero = data._hero_equip_upgrade_reply._hero
+                                if result and hero then pcall(function() ed.player:resetHero(hero) end) end
+                                local handler = ed.netreply.equipUpgrade
+                                if handler then handler(result); ed.netreply.equipUpgrade = nil end
+                            end
+                            -- consume_item 回复
+                            if data._consume_item_reply then
+                                local hero = data._consume_item_reply._hero
+                                local handler, rdata = ed.getNetReply("eat_exp")
+                                if rdata then
+                                    pcall(function()
+                                        ed.player:consumeEquip(rdata.id, rdata.amount)
+                                        if hero then ed.player:resetHero(hero) end
+                                    end)
+                                end
+                                if handler then handler() end
+                            end
+                            -- sync_vitality / buy_vitality 回复
+                            if data._sync_vitality_reply then
+                                local reply = data._sync_vitality_reply
+                                ed.player._vitality = reply._vitality
+                                local rdata = ed.netdata.buyVitality
+                                if rdata and rdata.isBuy then
+                                    ed.player._rmb = ed.player._rmb - rdata.cost
+                                    if ed.netreply.buyVitalityReply then
+                                        ed.netreply.buyVitalityReply()
+                                        ed.netreply.buyVitalityReply = nil
+                                    end
+                                    ed.netdata.buyVitality = nil
+                                end
+                            end
+                            -- set_name 回复
+                            if data._set_name_reply then
+                                local result = data._set_name_reply._result
+                                local rdata = ed.netdata.setname
+                                if result == "success" and rdata then
+                                    pcall(function()
+                                        ed.player:setName(rdata.name or "")
+                                        ed.player:addrmb(-(rdata.cost or 0))
+                                        ed.player:refreshSetNameTime()
+                                    end)
+                                    ed.netdata.setname = nil
+                                end
+                                if ed.netreply.setname then
+                                    ed.netreply.setname(result)
+                                    ed.netreply.setname = nil
+                                end
+                            end
+                            -- set_avatar 回复
+                            if data._set_avatar_reply then
+                                local result = data._set_avatar_reply._result == "success"
+                                local rdata = ed.netdata.setAvatar
+                                if rdata and result then
+                                    pcall(function() ed.player:setAvatar(rdata.id) end)
+                                end
+                                if ed.netreply.setAvatar then ed.netreply.setAvatar(result) end
+                            end
+                            -- tutorial 回复
+                            if data._tutorial_reply then
+                                ed.netdata.tutorial = nil
+                                if ed.netreply.tutorial then
+                                    ed.netreply.tutorial()
+                                    ed.netreply.tutorial = nil
+                                end
+                            end
+                            -- trigger_task / trigger_job / job_rewards / require_rewards 回复
+                            if data._trigger_task_reply then
+                                if ed.netreply.triggerTask then
+                                    ed.netreply.triggerTask(data._trigger_task_reply._result)
+                                    ed.netreply.triggerTask = nil
+                                end
+                            end
+                            if data._require_rewards_reply then
+                                local result = data._require_rewards_reply._result == "success"
+                                if ed.netreply.requireRewards then
+                                    ed.netreply.requireRewards(result, ed.netdata.requireRewards)
+                                    ed.netreply.requireRewards = nil
+                                    ed.netdata.requireRewards = nil
+                                end
+                            end
+                            if data._job_rewards_reply then
+                                local result = data._job_rewards_reply._result == "success"
+                                if ed.netreply.jobRewards then
+                                    ed.netreply.jobRewards(result, ed.netdata.jobRewards)
+                                    ed.netreply.jobRewards = nil
+                                    ed.netdata.jobRewards = nil
+                                end
+                            end
+                            -- reset_elite 回复
+                            if data._reset_elite_reply then
+                                local result = data._reset_elite_reply._result == "success"
+                                if result then pcall(function() ed.player:refreshEliteResetTime() end) end
+                                if ed.netreply.resetElite then
+                                    ed.netreply.resetElite(result)
+                                    ed.netreply.resetElite = nil
+                                    ed.netdata.resetElite = nil
+                                end
+                            end
+                            -- sweep_stage 回复
+                            if data._sweep_stage_reply then
+                                local reply = data._sweep_stage_reply
+                                pcall(function()
+                                    local function addSweepLoot(info)
+                                        for k, v in pairs(info._loot or {}) do
+                                            ed.player:addExp(v._exp, "sweep")
+                                            ed.player:addMoney(v._money)
+                                            for ck, cv in pairs(v._items or {}) do
+                                                ed.player:addEquip(ed.bits(cv, 0, 10), ed.bits(cv, 10, 11))
+                                            end
+                                        end
+                                    end
+                                    addSweepLoot(reply)
+                                end)
+                                if ed.netreply.sweep then
+                                    ed.netreply.sweep(reply)
+                                    ed.netreply.sweep = nil
+                                end
+                                ed.netdata.sweep = nil
+                            end
+                            -- open_shop 回复
+                            if data._open_shop_reply then
+                                local reply = data._open_shop_reply
+                                local result = reply._result == "success"
+                                if reply._shop then pcall(function() ed.player:refreshShopData(reply._shop) end) end
+                                local rdata = ed.netdata.openShop
+                                if rdata then pcall(function() ed.player:addrmb(-rdata.cost) end) end
+                                if ed.netreply.openShop then
+                                    ed.netreply.openShop(result)
+                                    ed.netreply.openShop = nil
+                                end
+                            end
+                            -- ask_magicsoul 回复
+                            if data._ask_magicsoul_reply then
+                                local handler = ed.netreply.askMagicsoul
+                                if handler then handler(data._ask_magicsoul_reply) end
+                            end
+                            -- get_svr_time 回复
+                            if data._svr_time then
+                                pcall(function() ed.player:initNativeTimeDiff(data._svr_time) end)
+                                local handler = ed.netreply.syncTime
+                                if handler then handler(); ed.netreply.syncTime = nil end
+                            end
+                            -- ask_daily_login 回复
+                            if data._ask_daily_login_reply then
+                                local result = data._ask_daily_login_reply._result == "success"
+                                local rdata = ed.netdata.dailylogin
+                                if result and rdata then
+                                    pcall(function() ed.player:recievedDailyLoginReward(rdata.type) end)
+                                end
+                                if ed.netreply.dailylogin then
+                                    ed.netreply.dailylogin(result)
+                                    ed.netreply.dailylogin = nil
+                                end
+                            end
+                            -- system_setting 回复
+                            if data._system_setting_reply then
+                                FireEvent("SystemSettingReply", data._system_setting_reply)
+                            end
+                            -- cdkey_gift / change_server / sdk_login / charge / get_maillist 回复
+                            if data._cdkey_gift_reply then
+                                local handler = ed.netreply.cdkeyGift
+                                if handler then handler(data._cdkey_gift_reply._result, data._cdkey_gift_reply._pack) end
+                            end
+                            if data._change_server_reply then
+                                pcall(function()
+                                    if data._change_server_reply._result == "change_ok" then
+                                        LegendRestartApplication()
+                                    end
+                                end)
+                            end
+                            if data._sdk_login_reply then
+                                FireEvent("SDKLoginRsp", data._sdk_login_reply._result)
+                            end
+                            if data._charge_reply then
+                                FireEvent("chargeRsp", data._charge_reply)
+                            end
+                            if data._mail_list then
+                                pcall(function() ed.player:refreshMailData(data._mail_list._sys_mail_list) end)
+                                local handler = ed.netreply.getMail
+                                if handler then handler() end
+                            end
+                            -- query_data 回复
+                            if data._query_data_reply then
+                                local reply = data._query_data_reply
+                                for i = 1, #(reply.heroes or {}) do
+                                    pcall(function() ed.player:resetHero(reply.heroes[i]) end)
+                                end
+                            end
+                        end)
+                        LegendLog("[STUB] reply handled for: " .. tostring(msgType))
+                    end)
                 end
             end
         end
@@ -711,7 +1620,22 @@ for _, mod in ipairs(coreModules) do
         -- network.lua 会设置这些表，stub 也需要初始化
         if not ed.netreply then ed.netreply = {} end
         if not ed.netdata then ed.netdata = {} end
-        if not ed.registerNetReply then ed.registerNetReply = function() end end
+        if not ed.registerNetReply or ed.registerNetReply() == nil then
+            ed.registerNetReply = function(key, handler, data)
+                ed.netreply[key] = handler
+                ed.netdata[key] = data
+            end
+        end
+        if not ed.getNetReply or (function() local ok,_ = pcall(ed.getNetReply, "test"); return not ok end)() then
+            ed.getNetReply = function(key)
+                if not key then return nil, nil end
+                local handler = ed.netreply[key]
+                local data = ed.netdata[key]
+                ed.netreply[key] = nil
+                ed.netdata[key] = nil
+                return handler, data
+            end
+        end
         if not ed.upmsg then ed.upmsg = { login = function() return {} end } end
         if not ed.downmsg then 
     ed.downmsg = setmetatable({}, {
@@ -757,7 +1681,7 @@ local function ensureStubsAfterTools()
                             local mockUser = {
                                 _userid = 1,
                                 _name_card = {_name="Player",_last_set_name_time=0,_avatar=1},
-                                _level = 1, _recharge_sum = 0, _exp = 0,
+                                _level = 30, _recharge_sum = 0, _exp = 0,
                                 _money = 100000, _rmb = 5000,
                                 _vitality = {_current=120,_lastchange=0,_todaybuy=0,_lastbuy=0},
                                 _items = {}, _heroes = {},
@@ -771,7 +1695,7 @@ local function ensureStubsAfterTools()
                                 },
                                 _skill_level_up = {
                                     _skill_levelup_chance = 5,
-                                    _skill_levelup_cd = 0,
+                                    _skill_levelup_cd = os.time(),
                                     _reset_times = 0,
                                     _last_reset_date = 0,
                                 },

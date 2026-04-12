@@ -522,11 +522,12 @@ local btGetMainTouchHandler = function(self)
 				swallowPriority = nil
 			end
 			local isPress = self.btIsLocalPress
-				print("[TOUCH-EVT] "..tostring(event).." x="..tostring(x).." y="..tostring(y).." priorities="..tostring(#(self.btTouchPriority or {})))
 			for k, v in ipairs(self.btTouchPriority) do
 				isPress[v] = isPress[v] or {}
 				isPress = isPress[v]
 				if v <= (swallowPriority or v) then
+					local handlerCount = 0
+					for _ in pairs(self.btMainTouchHandlerList[v] or {}) do handlerCount = handlerCount + 1 end
 					for ck, cv in pairs(self.btMainTouchHandlerList[v] or {}) do
 						if event == "began" then
 							isPress[ck] = cv(event, x, y)

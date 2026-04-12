@@ -15,8 +15,10 @@ local getAllEquip = function(self)
   local heroEquips = ed.getDataTable("hero_equip")
   for rank = heroRank, 12 do
     local temp = {}
+    local rankEquip = heroEquips and heroEquips[heroId] and heroEquips[heroId][rank]
+    if not rankEquip then break end
     for index = 1, 6 do
-      local eid = ed.getDataTable("hero_equip")[heroId][rank]["Equip" .. index .. " ID"]
+      local eid = rankEquip["Equip" .. index .. " ID"] or 0
       table.insert(temp, eid)
     end
     table.insert(equip, temp)

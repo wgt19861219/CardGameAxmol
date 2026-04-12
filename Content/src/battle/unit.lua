@@ -109,7 +109,7 @@ function dump_log(object, label, nesting, nest)
 end
 
 local function UnitCreate(proto, camp, config, extraData)
-    dump_log(proto,"proto data is:");
+    -- dump_log(proto,"proto data is:")  -- 注释掉：大量数据dump导致卡顿
 	local self = base.create()
 	self.what = "Unit"
 	setmetatable(self, class.mt)

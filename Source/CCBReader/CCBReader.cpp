@@ -142,6 +142,7 @@ ax::Node* CCBReader::readNodeGraphFromData(CCData* pData, ax::Object* pOwner, co
     mData = pData;
     AX_SAFE_RETAIN(mData);
     mBytes = mData->getBytes();
+    mDataSize = mData->getSize();
     mCurrentByte = 0;
     mCurrentBit = 0;
     mOwner = pOwner;
@@ -207,7 +208,7 @@ ax::Node* CCBReader::readFileWithCleanUp(bool bCleanUp)
 
 bool CCBReader::readHeader()
 {
-    if (!mBytes)
+    if (!mBytes || mDataSize < 4)
         return false;
 
     // 读取魔术字节 "ccbi"
@@ -309,7 +310,7 @@ ax::Node* CCBReader::readNodeGraph(ax::Node* pParent)
         mActionManager->setRootNode(node);
 
     // 读取动画属性
-    mAnimatedProps = new set<string>();
+    mAnimatedProps.clear();
 
     int numSequence = readInt(false);
     for (int i = 0; i < numSequence; ++i)
@@ -322,7 +323,7 @@ ax::Node* CCBReader::readNodeGraph(ax::Node* pParent)
             auto* seqProp = CCBSequenceProperty::create();
             seqProp->setName(readCachedString().c_str());
             seqProp->setType(readInt(false));
-            mAnimatedProps->insert(seqProp->getName());
+            mAnimatedProps.insert(seqProp->getName());
 
             int numKeyframes = readInt(false);
             for (int k = 0; k < numKeyframes; ++k)
@@ -332,9 +333,6 @@ ax::Node* CCBReader::readNodeGraph(ax::Node* pParent)
             }
         }
     }
-
-    delete mAnimatedProps;
-    mAnimatedProps = nullptr;
 
     // 处理成员变量赋值
     if (memberVarAssignmentType != 0)
@@ -500,6 +498,7 @@ bool CCBReader::readSoundKeyframesForSeq(CCBSequence* seq)
 
 bool CCBReader::getBit()
 {
+    if (mCurrentByte >= mDataSize) return false;
     bool bit;
     unsigned char byte = *(mBytes + mCurrentByte);
     bit = (byte & (1 << mCurrentBit)) != 0;
@@ -561,6 +560,7 @@ int CCBReader::readInt(bool pSigned)
 
 unsigned char CCBReader::readByte()
 {
+    if (mCurrentByte >= mDataSize) return 0;
     unsigned char byte = mBytes[mCurrentByte];
     mCurrentByte++;
     return byte;
@@ -580,6 +580,12 @@ std::string CCBReader::readUTF8()
     if (numBytes <= 0)
         return "";
 
+    if (mCurrentByte + numBytes > mDataSize)
+    {
+        AXLOGW("CCBReader: readUTF8 out of bounds (need {}, have {})", numBytes, mDataSize - mCurrentByte);
+        return "";
+    }
+
     std::string ret((char*)(mBytes + mCurrentByte), numBytes);
     mCurrentByte += numBytes;
     return ret;
@@ -598,6 +604,11 @@ float CCBReader::readFloat()
     case 4: return (float)readInt(true);
     default:
     {
+        if (mCurrentByte + sizeof(float) > mDataSize)
+        {
+            AXLOGW("CCBReader: readFloat out of bounds");
+            return 0;
+        }
         float f = 0;
         memcpy(&f, mBytes + mCurrentByte, sizeof(float));
         mCurrentByte += sizeof(float);

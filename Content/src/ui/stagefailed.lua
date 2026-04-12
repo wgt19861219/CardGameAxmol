@@ -17,9 +17,13 @@ local function hasPropToEquip(self)
       else
         local hid = hero._tid
         local rank = hero._rank
-        local equipId = ed.getDataTable("hero_equip")[hid][rank]["Equip" .. i .. " ID"]
-        if ed.isEquipCraftable(equipId) then
-          return true
+        local heroEquipTable = ed.getDataTable("hero_equip")
+        local rankEquip = heroEquipTable and heroEquipTable[hid] and heroEquipTable[hid][rank]
+        if rankEquip then
+          local equipId = rankEquip["Equip" .. i .. " ID"]
+          if equipId and ed.isEquipCraftable(equipId) then
+            return true
+          end
         end
       end
     end

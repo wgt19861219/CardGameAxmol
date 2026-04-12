@@ -10,14 +10,18 @@ namespace ax {
 std::unordered_map<std::string, LegendAnimationFileInfo*> LegendAnimationFileInfo::_cache;
 
 // ---- Binary reader helpers ----
+static unsigned char* s_pdataEnd = nullptr;
+
 static void readInt(unsigned char*& data, unsigned int& out)
 {
+    if (data + sizeof(unsigned int) > s_pdataEnd) { out = 0; return; }
     memcpy(&out, data, sizeof(unsigned int));
     data += sizeof(unsigned int);
 }
 
 static void readFloat(unsigned char*& data, float& out)
 {
+    if (data + sizeof(float) > s_pdataEnd) { out = 0; return; }
     memcpy(&out, data, sizeof(float));
     data += sizeof(float);
 }
@@ -26,12 +30,14 @@ static void readString(unsigned char*& data, std::string& out)
 {
     unsigned int sz = 0;
     readInt(data, sz);
+    if (data + sz > s_pdataEnd) { out.clear(); return; }
     out.assign((char*)data, sz);
     data += sz;
 }
 
 static void readAffineTransform(unsigned char*& data, AffineTransform& out)
 {
+    if (data + sizeof(AffineTransform) > s_pdataEnd) { out = {1,0,0,1,0,0}; return; }
     memcpy(&out, data, sizeof(AffineTransform));
     data += sizeof(AffineTransform);
 }
@@ -72,11 +78,11 @@ LegendAnimationFileInfo* LegendAnimationFileInfo::getAniFileInfo(const std::stri
     if (obj->_elements.empty() && obj->_actions.empty())
     {
         delete obj;
-        _cache[name] = nullptr;
+        // 不缓存失败，允许文件修复后重新加载
         return nullptr;
     }
+    obj->retain();  // 缓存持有引用，避免 autorelease pool 释放
     _cache[name] = obj;
-    obj->autorelease();  // cache holds it via Ref
     return obj;
 }
 
@@ -177,7 +183,7 @@ SpriteFrame* LegendAnimationFileInfo::getSpriteFrame(const char* frameName)
 
 void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned char* data, unsigned long dataSize)
 {
-    unsigned char* pdataEnd = data + dataSize;
+    s_pdataEnd = data + dataSize;
     float factor = 1.0f / info->_scalefactor;
 
     readString(data, info->_name);
@@ -247,6 +253,7 @@ void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned
             for (unsigned int k = 0; k < felemCount; k++)
             {
                 LegendAnimationFrameElement& felem = frame.elements[k];
+                if (data + 3 > s_pdataEnd) break;
                 felem.index = *(unsigned short*)data;
                 data += 2;
                 felem.alpha = *data;
@@ -270,10 +277,10 @@ void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned
         }
     }
 
-    if (pdataEnd != data)
+    if (s_pdataEnd != data)
     {
         AXLOGW("LegendAnimationFileInfo: readFrames size mismatch for {}, remaining {} bytes",
-               info->_name, (int)(pdataEnd - data));
+               info->_name, (int)(s_pdataEnd - data));
     }
 }
 

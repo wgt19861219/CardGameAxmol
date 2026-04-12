@@ -69,7 +69,6 @@ local function getMainButtonTouchConfig(self, key)
 		end
 		local tc = ccpAdd(center, offset)
 			local _inCircle = ed.isPointInCircle(tc, radius * scale, x, y, parent)
-			if key == "pve" or key == "tavern" then print("[TOUCH-CHECK] key="..key.." x="..x.." y="..y.." tc="..tc.x..","..tc.y.." r="..(radius*scale).." in="..tostring(_inCircle)) end
 		if _inCircle then
 			return true
 		end

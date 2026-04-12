@@ -217,8 +217,11 @@ local createHeroEquips = function(self, hero, bg)
       equips[i].equip = equip
     else
       local grade = hero._rank
-      local eid = ed.getDataTable("hero_equip")[hero._tid][grade]["Equip" .. i .. " ID"]
-      if ed.isEquipCraftable(eid) then
+      local heroEquipTable = ed.getDataTable("hero_equip")
+      local heroEquip = heroEquipTable and heroEquipTable[hero._tid]
+      local rankEquip = heroEquip and heroEquip[grade]
+      local eid = rankEquip and rankEquip["Equip" .. i .. " ID"]
+      if eid and ed.isEquipCraftable(eid) then
         local sr = "UI/alpha/HVGA/herodetail-equipadd.png"
         if not ed.canWearEquip(hero._tid, eid) then
           sr = "UI/alpha/HVGA/herodetail_icon_plus_yellow.png"

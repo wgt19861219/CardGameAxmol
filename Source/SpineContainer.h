@@ -58,8 +58,7 @@ public:
     void setActionSpeeder(float speeder) {}
     void setLoop(bool val) { m_bIsLoop = val; }
 
-    // override base update
-    void update(float dt) override { SkeletonAnimation::update(dt); }
+    static int s_soundSwitch;
 
 protected:
     struct SAnimationInfo

@@ -702,11 +702,13 @@ class.getVitalityNextUpdate = getVitalityNextUpdate
 local addSkillPoint = function(self, add)
   add = add or 0
   local slu = self._skill_level_up
-  slu._skill_levelup_chance = slu._skill_levelup_chance + add
+  slu._skill_levelup_chance = math.max(slu._skill_levelup_chance + add, 0)
 end
 class.addSkillPoint = addSkillPoint
 local function getSkillLvupChance(self)
   local slu = self._skill_level_up
+  -- 修复：确保 chance 不为负数（之前的 batch 扣减可能导致负值）
+  slu._skill_levelup_chance = math.max(slu._skill_levelup_chance, 0)
   local chance = slu._skill_levelup_chance
   local isOverfull
   if chance >= self:getMaxSkillChance() then
@@ -1449,7 +1451,8 @@ local function addHero(self, tid)
     table.insert(hero._items, item)
   end
   for i = 1, 4 do
-    local level = ed.getDataTable("SkillGroup")[tid][i]["Init Level"]
+    local sg = ed.getDataTable("SkillGroup")
+    local level = (sg and sg[tid] and sg[tid][i]) and sg[tid][i]["Init Level"] or 1
     table.insert(hero._skill_levels, level)
   end
   table.insert(self._heroes, hero)
@@ -1887,8 +1890,14 @@ local resetgs = function(self, gs)
 end
 class.resetgs = resetgs
 local function equip(self, slot)
-  local eid = ed.getDataTable("hero_equip")[self._tid][self._rank][string.format("Equip%d ID", slot)]
-  self._items[slot]._item_id = eid
+  local equipTable = ed.getDataTable("hero_equip")
+  local heroEquip = equipTable and equipTable[self._tid]
+  local rankEquip = heroEquip and heroEquip[self._rank]
+  if not rankEquip then return end
+  local eid = rankEquip[string.format("Equip%d ID", slot)]
+  if eid then
+    self._items[slot]._item_id = eid
+  end
 end
 class.equip = equip
 local getItem = function(self, slot)

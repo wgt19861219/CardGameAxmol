@@ -1147,13 +1147,18 @@ local getEquipableHeroList = function(id)
     local hero = v
     local tid = hero._tid
     local rank = hero._rank
+    local heroEquipTable = ed.getDataTable("hero_equip")
+    local heroEquip = heroEquipTable and heroEquipTable[tid]
+    local rankEquip = heroEquip and heroEquip[rank]
+    if not rankEquip then goto _continue_hero end
     for i = 1, 6 do
-      local equip = ed.getDataTable("hero_equip")[tid][rank]["Equip" .. i .. " ID"]
+      local equip = rankEquip["Equip" .. i .. " ID"]
       if equip == eid and hero:getEquipid(i) == 0 then
         table.insert(hList, hero)
         break
       end
     end
+    ::_continue_hero::
   end
   return hList
 end

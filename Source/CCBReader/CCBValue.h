@@ -43,6 +43,7 @@ public:
     unsigned char getByteValue();
     const char* getStringValue();
     ax::Vector<ax::Object*>* getArrayValue();
+    ~CCBValue() { delete m_arrValue; }
     int getType() { return mType; }
 
 private:

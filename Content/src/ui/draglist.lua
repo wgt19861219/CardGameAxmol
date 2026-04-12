@@ -243,7 +243,18 @@ local update = function(self)
 end
 class.initParams = initParams
 local setClipRect = function(self, cliprect)
-	self.clipLayer:setClipRect(cliprect)
+	pcall(function() self.clipLayer:setClipRect(cliprect) end)
+	-- 同步更新 ClippingNode 的 stencil
+	if self.clipNode then
+		local cx, cy = cliprect.origin.x, cliprect.origin.y
+		local cw, ch = cliprect.size.width, cliprect.size.height
+		-- 用 LayerColor 做矩形 stencil
+		local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+		stencil:setContentSize(CCSizeMake(cw, ch))
+		stencil:setPosition(ccp(cx, cy))
+		self.clipNode:setStencil(stencil)
+	end
+	self.cliprect = cliprect
 end
 class.setClipRect = setClipRect
 local setLayerPos = function(self, pos)
@@ -279,7 +290,9 @@ local initClipRect = function(self, rect)
 	self.cliprect = rect
 	self.width = rect.size.width
 	self.height = rect.size.height
-	layer:setClipRect(rect)
+	-- 尝试 Layer:setClipRect（Axmol 原生裁剪）
+	local ok = pcall(function() layer:setClipRect(rect) end)
+	-- 如果 setClipRect 不可用或不生效，在 initLayer 中会用 ClippingNode 补充
 end
 class.initClipRect = initClipRect
 local function initShade(self, shadeRes, rect, noshade)
@@ -339,10 +352,24 @@ local initLayer = function(self, info)
 	local layer = CCLayer:create()
 	self.layer = layer
 	self.mainLayer = self.layer
+	-- 用 ClippingNode + DrawNode 矩形 stencil 实现列表裁剪
+	-- Axmol 的 Layer:setClipRect 可能不生效，需要 ClippingNode 替代
+	local clipNode = CCClippingNode:create()
+	clipNode:setInverted(false)
+	clipNode:setAlphaThreshold(0.5)
+	self.clipNode = clipNode
+	-- 创建矩形 stencil（用 CCLayerColor，兼容 Axmol API）
+	local cx, cy = cliprect.origin.x, cliprect.origin.y
+	local cw, ch = cliprect.size.width, cliprect.size.height
+	local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+	stencil:setContentSize(CCSizeMake(cw, ch))
+	stencil:setPosition(ccp(cx, cy))
+	clipNode:setStencil(stencil)
+	layer:addChild(clipNode, 10)
 	local clipLayer = CCLayer:create()
 	self.clipLayer = clipLayer
 	self:initClipRect(cliprect)
-	layer:addChild(clipLayer, 10)
+	clipNode:addChild(clipLayer)
 	local listLayer = CCLayer:create()
 	self.listLayer = listLayer
 	self.listScheduler = self.listLayer:getScheduler()

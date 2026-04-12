@@ -282,9 +282,6 @@ local game_update_handler_list = {}
 local _gu_tick = 0
 local function gameUpdate()
 	_gu_tick = _gu_tick + 1
-	if _gu_tick <= 600 or _gu_tick % 60 == 0 then
-		LegendLog("[gameUpdate] tick=" .. _gu_tick)
-	end
 	xpcall(function()
 		local time = ed.getMillionTime()
 		if not resume_timestamp then
@@ -292,28 +289,19 @@ local function gameUpdate()
 		end
 		local dt = update_timestamp ~= 0 and time - update_timestamp or 0
 		dt = math.min(dt, ed.tick_interval)
-		if _gu_tick <= 600 then LegendLog("[gu] proc_net BEFORE") end
 		ed.proc_net()
-		if _gu_tick <= 600 then LegendLog("[gu] proc_net DONE") end
 		local scene = scene_stack[#scene_stack] or {}
 		if scene.update then
-			if _gu_tick <= 600 then LegendLog("[gu] scene:update BEFORE") end
 			scene:update(dt)
-			if _gu_tick <= 600 then LegendLog("[gu] scene:update DONE") end
 		end
 		update_timestamp = time
-		if _gu_tick <= 600 then LegendLog("[gu] runScriptString BEFORE") end
 		runScriptString()
-		if _gu_tick <= 600 then LegendLog("[gu] UpdateEventSystem BEFORE") end
 		UpdateEventSystem(dt)
-		if _gu_tick <= 600 then LegendLog("[gu] memeryGC BEFORE") end
 		memeryGC(dt)
-		if _gu_tick <= 600 then LegendLog("[gu] handler_list BEFORE") end
 		for k, v in pairs(game_update_handler_list or {}) do
 			v(dt)
 		end
-		if _gu_tick <= 600 then LegendLog("[gu] ALL DONE") end
-		end, function(msg) LegendLog("[gameUpdate ERROR] " .. tostring(msg)) EDDebug(msg) end)
+			end, function(msg) LegendLog("[gameUpdate ERROR] " .. tostring(msg)) EDDebug(msg) end)
 end
 ed.gameUpdate = gameUpdate
 local function registerGameUpdateHandler(key, handler)

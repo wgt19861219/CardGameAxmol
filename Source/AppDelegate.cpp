@@ -44,10 +44,9 @@ static int lua_LegendLog(lua_State* L)
         if (g_dbgFile) { fprintf(g_dbgFile, "%s\n", msg); fflush(g_dbgFile); }
     }
     return 0;
- (void)0;
 }
 
- static void dbg(const char* fmt, ...)
+static void dbg(const char* fmt, ...)
 {
     char buf[1024];
     va_list ap;
@@ -65,7 +64,7 @@ static int lua_LegendLog(lua_State* L)
     if (g_dbgFile) { fprintf(g_dbgFile, "%s\n", buf); fflush(g_dbgFile); }
 }
 
- AppDelegate::AppDelegate() {}
+AppDelegate::AppDelegate() {}
 AppDelegate::~AppDelegate() {}
 
 void AppDelegate::initContextAttrs()
@@ -166,4 +165,13 @@ void AppDelegate::applicationWillEnterForeground()
 {
     Director::getInstance()->startAnimation();
 }
-void AppDelegate::applicationWillQuit() {}
+void AppDelegate::applicationWillQuit()
+{
+    std::lock_guard<std::mutex> lk(g_dbgMutex);
+    if (g_dbgFile)
+    {
+        fflush(g_dbgFile);
+        fclose(g_dbgFile);
+        g_dbgFile = nullptr;
+    }
+}

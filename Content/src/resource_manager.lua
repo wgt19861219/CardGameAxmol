@@ -409,7 +409,11 @@ local setLabelDimensions = function(label, dimensions)
 	if tolua.isnull(label) then
 		return
 	end
-	label:setDimensions(dimensions)
+	if type(dimensions) == "table" then
+		label:setDimensions(dimensions.width or 0, dimensions.height or 0)
+	else
+		label:setDimensions(dimensions or 0, 0)
+	end
 end
 ed.setLabelDimensions = setLabelDimensions
 local function createFrameAnim(list, delay)
@@ -459,15 +463,23 @@ function createAnimateWithFrameNames(name_list, delay)
 end
 ed.createAnimateWithFrameNames = createAnimateWithFrameNames
 local setSpriteGray = function(sprite)
-	local shader = CCShaderCache:sharedShaderCache():programForKey("GrayScalingShader")
-	sprite:setShaderProgram(shader)
-	sprite:getShaderProgram():use()
+	if not CCShaderCache then return end
+	local ok, shader = pcall(function()
+		return CCShaderCache:sharedShaderCache():programForKey("GrayScalingShader")
+	end)
+	if ok and shader then
+		pcall(function() sprite:setShaderProgram(shader) end)
+		pcall(function() sprite:getShaderProgram():use() end)
+	end
 end
 ed.setSpriteGray = setSpriteGray
 local resetSpriteShader = function(sprite)
-	local s = CCSprite:create()
-	sprite:setShaderProgram(s:getShaderProgram())
-	sprite:getShaderProgram():use()
+	if not CCShaderCache then return end
+	local ok, s = pcall(function() return CCSprite:create() end)
+	if ok and s then
+		pcall(function() sprite:setShaderProgram(s:getShaderProgram()) end)
+		pcall(function() sprite:getShaderProgram():use() end)
+	end
 end
 ed.resetSpriteShader = resetSpriteShader
 local setSpriteBlur = function(sprite, radius)

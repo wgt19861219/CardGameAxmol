@@ -13,12 +13,18 @@ local function getHeroAttByHero(hero)
     return
   end
   local attInfo = {}
-  local unit = ed.UnitCreate(hero)
+  local ok_unit, unit = pcall(ed.UnitCreate, hero)
+  if not ok_unit or not unit then
+    return attInfo
+  end
   local att = unit.attribs
   local oriAtt = unit.orig_attribs
+  if not att or not oriAtt then
+    return attInfo
+  end
   for k, v in pairs(att) do
     if v ~= 0 then
-      local base = math.floor(oriAtt[k] + 0.5)
+      local base = math.floor((oriAtt[k] or 0) + 0.5)
       local add = math.floor(v + 0.5) - base
       attInfo[k] = {
         base = base,
@@ -79,9 +85,15 @@ end
 class.getHeroEquiphp = getHeroEquiphp
 local function getHeroUpgradeInfo(hid)
   local hero = ed.readhero.getHero(hid)
-  local unit = ed.UnitCreate(hero)
-  local att = unit.attribs
-  local oriAtt = unit.orig_attribs
+  if not hero then
+    return {rank = 1, gs = 0, hp = 0, gsAdded = 0, hpAdded = 0}
+  end
+  local ok_unit, unit = pcall(ed.UnitCreate, hero)
+  if not ok_unit or not unit then
+    return {rank = hero._rank or 1, gs = hero._gs or 0, hp = 0, gsAdded = 0, hpAdded = 0}
+  end
+  local att = unit.attribs or {}
+  local oriAtt = unit.orig_attribs or {}
   local gsAdded = ed.readhero.getHeroEquipgs(hid)
   local hpAdded = ed.readhero.getHeroEquiphp(hid)
   gsAdded = math.floor(gsAdded)
@@ -718,15 +730,20 @@ local function orderMissListByLack(list)
 end
 class.orderMissListByLack = orderMissListByLack
 local function checkEquipableProp(list)
+  local equipTable = ed.getDataTable("hero_equip")
   for k, v in pairs(list or ed.player.heroes) do
     local id = v._tid
     local rank = v._rank
+    local heroEquip = equipTable and equipTable[id]
+    local rankEquip = heroEquip and heroEquip[rank]
+    if not rankEquip then goto _continue_hero end
     for i = 1, 6 do
-      local eid = ed.getDataTable("hero_equip")[id][rank]["Equip" .. i .. " ID"]
-      if not v:hasEquipment(i) and ed.isEquipCraftable(eid) and ed.canWearEquip(id, eid) then
+      local eid = rankEquip["Equip" .. i .. " ID"]
+      if eid and not v:hasEquipment(i) and ed.isEquipCraftable(eid) and ed.canWearEquip(id, eid) then
         return true
       end
     end
+    ::_continue_hero::
   end
   return false
 end
@@ -1226,19 +1243,16 @@ class.refreshHeroCard = refreshHeroCard
 local function getActor(hid, name, notloop)
   local row = ed.getDataTable("Unit")[hid]
   if not row or not row.Puppet then
-    LegendLog("[READHERO] getActor: no Puppet data for hid=" .. tostring(hid))
     return nil, nil
   end
   local cha = row.Puppet
   local chaName = cha
   local puppetInfo = ed.lookupDataTable("Puppet", nil, chaName);
   if not puppetInfo or not puppetInfo.Resource then
-    LegendLog("[READHERO] getActor: no Puppet resource for " .. tostring(chaName))
     return nil, nil
   end
   local actor = ed.createAnimation(puppetInfo.Resource, 1.5, puppetInfo.AniType or 0);
   if not actor then
-    LegendLog("[READHERO] getActor: createAnimation returned nil for " .. tostring(puppetInfo.Resource))
     return nil, nil
   end
   actor:setAction(name or "Idle")

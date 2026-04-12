@@ -3,7 +3,7 @@
 
 #define TIMES_SPINE_LOOP -1
 
-int g_soundSwitch = 1;
+int SpineContainer::s_soundSwitch = 1;
 
 SpineContainer::SpineContainer()
     : SkeletonAnimation()
@@ -159,7 +159,7 @@ void SpineContainer::onReceiveEventListener(int trackIndex, const std::string& a
     if (m_pEventListener)
         m_pEventListener->onSpineAnimationEvent(trackIndex, animationName, event);
 
-    if (event && g_soundSwitch)
+    if (event && s_soundSwitch)
     {
         // Spine 4.x Event API
         auto& data = event->getData();
@@ -258,29 +258,35 @@ void SpineContainer::removeEffectWithID(int eid)
 
 void SpineContainer::removeEffectWithName(const char* eff)
 {
+    if (!eff) return;
+    std::string effStr(eff);
     for (auto it = _effectArray.begin(); it != _effectArray.end(); ++it)
     {
-        // 简化：按文件名匹配（实际需要更精确的匹配）
-        _effectArray.erase(it);
-        this->removeChild(*it, true);
-        return;
+        if ((*it)->getName() == effStr)
+        {
+            this->removeChild(*it, true);
+            _effectArray.erase(it);
+            return;
+        }
     }
+    AXLOGW("SpineContainer::removeEffectWithName '{}' not found", eff);
 }
 
 void SpineContainer::update(float dt, bool isAuto)
 {
-    if (isAuto)
-    {
-        SkeletonAnimation::update(dt);
-        return;
-    }
+    // 无论自动/手动模式，骨骼动画都需要 update
+    SkeletonAnimation::update(dt);
 
-    for (int i = (int)_effectArray.size() - 1; i >= 0; --i)
+    // 手动模式下额外处理特效生命周期
+    if (!isAuto)
     {
-        auto* node = _effectArray.at(i);
-        if (node)
+        for (int i = (int)_effectArray.size() - 1; i >= 0; --i)
         {
-            // 检查是否需要移除（简化逻辑）
+            auto* node = _effectArray.at(i);
+            if (node && node->getReferenceCount() <= 1)
+            {
+                _effectArray.erase(_effectArray.begin() + i);
+            }
         }
     }
 }

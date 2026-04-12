@@ -613,8 +613,12 @@ local function isPropEquipable(id)
     local tid = hero._tid
     local rank = hero._rank
     local level = hero._level
+    local heroEquip = heroEquips and heroEquips[tid]
+    local rankEquip = heroEquip and heroEquip[rank]
+    if not rankEquip then goto _continue_isProp end
     for i = 1, 6 do
-      local eid = ed.getDataTable("hero_equip")[tid][rank]["Equip" .. i .. " ID"]
+      local eid = rankEquip["Equip" .. i .. " ID"]
+      if not eid then goto _continue_slot end
       local erow = ed.getDataTable("equip")[eid]
       if erow then
         local rl = erow["Level Requirement"]
@@ -622,7 +626,9 @@ local function isPropEquipable(id)
           return true
         end
       end
+      ::_continue_slot::
     end
+    ::_continue_isProp::
   end
   return false
 end

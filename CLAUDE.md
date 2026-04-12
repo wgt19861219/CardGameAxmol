@@ -2,52 +2,52 @@
 
 ## Project Overview
 
-卡牌手游项目，从 cocos2d-x 2.x 迁移到 **Axmol** 引擎。只保留 Android 端开发。
+卡牌手游项目，**用 Godot 4.5 重写为单机版**。原项目为 cocos2d-x 2.x 客户端 + PHP 服务端架构。
 
-## Build
+## 原项目路径
 
-- **项目路径**: `D:\workspace\projects\CardGameAxmol`
-- **构建**: `cd proj.android && ./gradlew assembleDebug`
-- **APK输出**: `proj.android/app/build/outputs/apk/debug/CardGame-debug.apk`
-- **安装**: `adb -s 192.168.1.16:5555 install -r <apk>`
-- **日志**: `adb -s 192.168.1.16:5555 logcat -d | grep axmol`
-- **包名**: `dev.axmol.cardgame`
-- **Activity**: `dev.axmol.app.AppActivity`
-- **模拟器**: MuMu (`adb connect 192.168.1.16:5555`)
-- **C++标准**: C++20 (Axmol要求)
-- **引擎**: Axmol 3.0.0
+- **客户端**: `D:\workspace\projects\HC\Client\Resource_Client\` (Lua + C++ + 资源)
+- **服务端**: `D:\workspace\projects\HC\Server\GameServer\server2\` (PHP, 51个API, 30+模块)
 
-## Architecture
+## Godot 项目
 
-### Source/ (C++)
-- `AppDelegate.cpp` — 应用入口，Lua引擎初始化
-- `GameLuaBindings.cpp` — C++到Lua的绑定（CCBContainer, SpineContainer, LegendAnimation等）
-- `CCBContainer.cpp` — CocoStudio CCB UI加载器
-- `SpineContainer.cpp` — Spine动画容器（4.x runtime，2.x数据不兼容会fallback）
-- `LegendAnimation.cpp` — FCA格式帧动画系统（LegendAnimation + LegendAnimationEffect）
-- `LegendAnimationFileInfo.cpp` — FCA二进制格式解析器（ZIP内含sheet.plist/sheet.png/sheet.key）
-- `GameAnimation.cpp` — 动画基类
+- **项目路径**: `D:\workspace\projects\CardGameAxmol\godot\`
+- **引擎**: Godot 4.5.1 (gl_compatibility)
+- **分辨率**: 960x640 (横屏HVGA)
+- **语言**: GDScript
+- **实施计划**: `docs/superpowers/plans/2026-04-10-godot-rewrite.md`
 
-### Content/src/ (Lua)
-- `main.lua` — 入口
-- `compat_cocos2dx.lua` — cocos2d-x兼容层
-- `local_server.lua` — 本地服务器模拟（拦截ed.send，处理所有网络请求）
-- `network.lua` — 网络层
-- `resource_manager.lua` — 资源管理（createFcaNode, createFcaActor等）
-- `ui/` — UI模块（framework.lua, main.lua, shortcut.lua等）
-- `ui/parameter/uires.lua` — UI参数配置
+## Architecture (Godot)
 
-### Content/res/
-- `UI/alpha/HVGA/` — UI图片资源（含.pvr.ccz打包的合图）
-- `anim/` — FCA动画文件（.ani格式，ZIP包含sprite+key数据）
-- `ccbi/` — CocoStudio二进制UI文件
-- `spine/` — Spine动画数据
-- `sound/` — 音效
+### scripts/core/ — 核心系统
+- `game_manager.gd` — Autoload全局管理器
+- `game_server.gd` — 本地服务器(替代PHP, 51个API)
+- `save_manager.gd` — JSON存档系统
+- `scene_manager.gd` — 场景切换管理
+
+### scripts/data/ — 数据层
+- `data_tables.gd` — JSON配置表加载器(从Lua转换的22个表)
+- `player_data.gd` — 玩家数据模型(对应63个DB表)
+
+### scripts/server/ — 业务模块 (GDScript重写PHP逻辑)
+- `hero_module.gd`, `item_module.gd`, `loot_module.gd`
+- `stage_module.gd`, `shop_module.gd`, `equip_module.gd`
+
+### scripts/battle/ — 战斗系统
+- `battle_engine.gd` — tick循环 + 实体管理
+- `battle_unit.gd`, `battle_skill.gd`, `battle_buff.gd`
+- 80+英雄AI脚本
+
+### assets/ — 资源 (从原项目复制)
+- `ui/` — 1394个PNG图片
+- `anim/` — 99个FCA动画(.ani, 需转SpriteFrames)
+- `sound/` — 362个MP3音效
+- `spine/` — 19个Spine动画(2.1.07格式, 待定方案)
 
 ## Important Notes
 
-- Lua绑定中 `LegendAminationEffect` (拼写错误) 是故意保留的，Lua脚本用的是这个名字
-- Spine 2.x数据与4.x runtime不兼容，会返回fallback空Node
-- local_server.lua 使用同步执行模式模拟服务器响应
-- FCA动画的 .ani 文件是ZIP格式，内含 sheet.plist + sheet.png + sheet.key
-- 占位图不要生成到 Content/res/UI/alpha/HVGA/ 下——原项目已有真实资源的会被覆盖
+- FCA动画 .ani 是ZIP格式，内含 sheet.plist + sheet.png + sheet.key，需要专门解析器
+- Spine 2.1.07数据与当前runtime不兼容，需要重新导出或用静态fallback
+- CCB (.ccbi) 文件不能直接用，需要根据原布局手动重建Godot场景
+- 原项目所有网络请求(ed.send)已被本地GameServer替代，无需网络层
+- 旧 Axmol 代码仍在根目录 (Source/, Content/, proj.android/)，作为参考保留

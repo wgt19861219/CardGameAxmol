@@ -10,6 +10,7 @@ local ettres = res.equip_tag_text
 local etires = res.equip_tag_icon
 local function createHeroFca(self)
   local puppet = herofca.create(self.hid)
+  if not puppet then return end
   puppet:setPosition(ccp(400, 265))
   self.container:addChild(puppet,12)
   self:addFca(puppet)
@@ -38,6 +39,7 @@ local playHeroCheer = function(self, param)
 end
 class.playHeroCheer = playHeroCheer
 local function checkFcaHandler(self, fca, duration)
+  duration = duration or 1.0
   local count = 0
   local function handler(dt)
     count = count + dt
@@ -706,7 +708,7 @@ local function doClickUpgrade(self)
       break
     end
   end
-  if self.hero._rank >= 12 then
+  if self.hero._rank >= (ed.parameter and ed.parameter.unit_max_rank or 10) then
     canUpgrade = false
     text = T(LSTR("HERODETAIL.THIS_HER_HAS_ENHANCED_TO_THE_TOP_LEVEL"))
   end
@@ -1280,7 +1282,12 @@ local function createInfoBoard(self)
   }
   local readNode = ed.readnode.create(newBoard, ui)
   readNode:addNode(ui_info)
-  self.prehp = math.floor(ed.UnitCreate(self.hero).attribs.HP)
+  local ok_unit, unit = pcall(ed.UnitCreate, self.hero)
+  if ok_unit and unit and unit.attribs then
+    self.prehp = math.floor(unit.attribs.HP)
+  else
+    self.prehp = 0
+  end
   self.pregs = self.hero._gs
   if not tolua.isnull(board) then
     newBoard:setOpacity(0)

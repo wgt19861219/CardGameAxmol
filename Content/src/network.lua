@@ -760,7 +760,6 @@ ed.getNetReply = getNetReply
 local function dispatch(msg)
 	local msgName = ""
 	for k, v in pairs(msg[".data"]) do
-		LegendLog("[netword.lua|dispatch]  down msg: " .. k)
 		msgName = msgName..k
 		--print_Log("Down Msg: "..k.." ")
 	end

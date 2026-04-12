@@ -179,11 +179,11 @@ end
 -- 构造 skilllevelup 子消息
 local function buildSkillLevelUp(skill_data)
     if not skill_data then
-        skill_data = { chance = 5, cd_time = 0, reset_times = 0, last_reset_date = 0 }
+        skill_data = { chance = 5, cd_time = 0, reset_times = 0, last_reset_date = 0 } -- cd_time 在 buildSkillLevelUp 中 fallback 到 os.time()
     end
     return {
         _skill_levelup_chance = skill_data.chance or 5,
-        _skill_levelup_cd = skill_data.cd_time or 0,
+        _skill_levelup_cd = skill_data.cd_time or os.time(),
         _reset_times = skill_data.reset_times or 0,
         _last_reset_date = skill_data.last_reset_date or 0,
     }
@@ -539,14 +539,22 @@ M.handlers.wear_equip = function(data, obj, localdata)
     local hero, idx = findHero(localdata, tid)
 
     if hero then
-        local gs = (hero.gs or 100) + 20
-        hero.gs = gs
-
-        if hero.equips then
-            -- 如果已有装备列表
-        else
-            hero.equips = {}
+        -- 从 hero_equip 数据表获取该槽位对应的装备ID
+        local equipTable = ed.getDataTable("hero_equip")
+        local rankEquip = equipTable and equipTable[tid] and equipTable[tid][hero.rank or 1]
+        local gsDelta = 0
+        if rankEquip and obj._slot then
+            local newItemId = rankEquip[string.format("Equip%d ID", obj._slot)]
+            if newItemId then
+                local equipDataTable = ed.getDataTable("equip")
+                local row = equipDataTable and equipDataTable[newItemId]
+                if row then
+                    gsDelta = (row["+GS"] or 0) * 1  -- 新装备等级为1
+                end
+            end
         end
+        local gs = (hero.gs or 100) + gsDelta
+        hero.gs = gs
 
         LocalData.save(localdata)
 
@@ -600,15 +608,30 @@ M.handlers.open_shop = function(data, obj, localdata)
 end
 
 -- ========== skill_levelup ==========
--- obj: { _tid = hero_tid, _skill_index = N }
+-- 实际消息格式: _heroid = hero_tid, _order = packed skill orders
+-- packed order: ed.makebits(11, amount, 4, slot)
 M.handlers.skill_levelup = function(data, obj, localdata)
-    local tid = obj._tid
+    local tid = obj._heroid or obj._tid
     local hero, idx = findHero(localdata, tid)
 
     if hero then
-        local skillIdx = (obj._skill_index or 1)
-        if skillIdx >= 1 and skillIdx <= #(hero.skill_levels or {}) then
-            hero.skill_levels[skillIdx] = (hero.skill_levels[skillIdx] or 1) + 1
+        -- 解析 _order（packed 格式）
+        local orders = obj._order or {}
+        local totalUpgrades = 0
+        for i, packed in ipairs(orders) do
+            local slot = ed.bits(packed, 4, 11)
+            local amount = ed.bits(packed, 0, 4)
+            if slot >= 1 and slot <= #(hero.skill_levels or {}) then
+                hero.skill_levels[slot] = (hero.skill_levels[slot] or 1) + (amount or 1)
+                totalUpgrades = totalUpgrades + (amount or 1)
+            end
+        end
+        -- 也兼容旧的 _skill_index 格式
+        if totalUpgrades == 0 and obj._skill_index then
+            local skillIdx = obj._skill_index
+            if skillIdx >= 1 and skillIdx <= #(hero.skill_levels or {}) then
+                hero.skill_levels[skillIdx] = (hero.skill_levels[skillIdx] or 1) + 1
+            end
         end
         hero.gs = (hero.gs or 100) + 10
         LocalData.save(localdata)
@@ -761,7 +784,7 @@ M.handlers.tavern_draw = function(data, obj, localdata)
         local unitTable = ed.getDataTable("Unit")
         if unitTable then
             for k, v in pairs(unitTable) do
-                if type(k) == "number" and v.Portrait then
+                if type(k) == "number" and v.Portrait and v["Unit Type"] == "Hero" then
                     table_insert(validHeroIds, k)
                 end
             end
@@ -893,6 +916,14 @@ end
 -- ========== gm_cmd ==========
 -- obj: GM 命令，包含各种 _set_* / _unlock_* / _get_* 字段
 M.handlers.gm_cmd = function(data, obj, localdata)
+    LegendLog("[gm_cmd] === START ===")
+    LegendLog("[gm_cmd] obj type: " .. type(obj))
+    LegendLog("[gm_cmd] obj._set_money: " .. tostring(obj._set_money))
+    LegendLog("[gm_cmd] obj._unlock_all_stages: " .. tostring(obj._unlock_all_stages))
+    LegendLog("[gm_cmd] obj._get_all_heroes: " .. tostring(obj._get_all_heroes))
+    LegendLog("[gm_cmd] obj._set_vitality: " .. tostring(obj._set_vitality))
+    LegendLog("[gm_cmd] obj._set_player_level: " .. tostring(obj._set_player_level))
+
     -- 解锁所有关卡
     if obj._unlock_all_stages and obj._unlock_all_stages > 0 then
         localdata.stage.max_normal = 9999
@@ -907,7 +938,8 @@ M.handlers.gm_cmd = function(data, obj, localdata)
                 existingTids[h.tid] = true
             end
             for tid, unit in pairs(UnitTable) do
-                if type(tid) == "number" and tid > 0 and not existingTids[tid] then
+                if type(tid) == "number" and tid > 0 and not existingTids[tid]
+                    and unit["Unit Type"] == "Hero" and unit.Portrait then
                     table_insert(localdata.heroes, {
                         tid = tid,
                         rank = 1,
@@ -945,8 +977,27 @@ M.handlers.gm_cmd = function(data, obj, localdata)
         localdata.vitality.current = obj._set_vitality
     end
 
-    -- 设置金币
+    -- 设置金币/钻石/远征币/竞技场币
+    -- GM 发送格式: _type="gold"/"diamond"/"crusadepoint"/"arenapoint", _amount=N
     if obj._set_money then
+        local sm = obj._set_money
+        LegendLog("[gm_cmd] _set_money present, _type=" .. tostring(sm._type) .. " _amount=" .. tostring(sm._amount))
+        local moneyType = sm._type
+        local amount = sm._amount
+        if moneyType and amount then
+            if moneyType == "gold" then
+                localdata.player.gold = amount
+                LegendLog("[gm_cmd] set gold = " .. tostring(amount))
+            elseif moneyType == "diamond" then
+                localdata.player.diamond = amount
+                LegendLog("[gm_cmd] set diamond = " .. tostring(amount))
+            elseif moneyType == "crusadepoint" then
+                localdata.player.crusade_point = amount
+            elseif moneyType == "arenapoint" then
+                localdata.player.arena_point = amount
+            end
+        end
+        -- 兼容旧格式 _money / _rmb
         if obj._set_money._money then
             localdata.player.gold = obj._set_money._money
         end
@@ -1000,12 +1051,31 @@ M.handlers.gm_cmd = function(data, obj, localdata)
         localdata.daily_login.frequency = obj._set_dailylogin_days
     end
 
+    -- 清理非 Hero 类型的英雄（旧存档可能混入了怪物/召唤物）
+    local UnitTable = ed.getDataTable("Unit")
+    if UnitTable then
+        local i = 1
+        while i <= #localdata.heroes do
+            local h = localdata.heroes[i]
+            local u = UnitTable[h.tid]
+            if u and (u["Unit Type"] ~= "Hero" or not u.Portrait) then
+                table.remove(localdata.heroes, i)
+            else
+                i = i + 1
+            end
+        end
+    end
+
     LocalData.save(localdata)
 
     -- GM 命令返回 _reset（完整 user 数据）
+    local user = buildUser(localdata)
+    LegendLog("[gm_cmd] built user: _money=" .. tostring(user._money) .. " _rmb=" .. tostring(user._rmb) .. " _level=" .. tostring(user._level))
     data._reset = {
-        _user = buildUser(localdata),
+        _user = user,
     }
+    LegendLog("[gm_cmd] data._reset set, _reset._user=" .. tostring(data._reset and data._reset._user))
+    LegendLog("[gm_cmd] === END ===")
 end
 
 -- ========== ask_daily_login ==========
@@ -1020,7 +1090,8 @@ end
 
 -- ========== buy_skill_stren_point ==========
 M.handlers.buy_skill_stren_point = function(data, obj, localdata)
-    localdata.skill.chance = (localdata.skill.chance or 0) + 1
+    localdata.skill.chance = (localdata.skill.chance or 0) + 10
+    localdata.skill.reset_times = (localdata.skill.reset_times or 0) + 1
     LocalData.save(localdata)
 
     data._sync_skill_stren_reply = {
@@ -1368,6 +1439,309 @@ local function local_dispatch(msg)
             ed.netreply.askMagicsoul = nil
         end
     end
+
+    -- _reset: GM 命令或删号重练返回的完整玩家数据
+    if data._reset then
+        LegendLog("[local_dispatch] _reset: refreshing player data")
+        local user = data._reset._user
+        LegendLog("[local_dispatch] user=" .. tostring(user) .. " ed.player=" .. tostring(ed.player))
+        if user and ed.player and ed.player.setup then
+            LegendLog("[local_dispatch] calling ed.player:setup, user._money=" .. tostring(user._money) .. " user._rmb=" .. tostring(user._rmb))
+            local ok_s, err_s = pcall(function() ed.player:setup(user) end)
+            if not ok_s then
+                LegendLog("[local_dispatch] player:setup ERROR: " .. tostring(err_s))
+            else
+                LegendLog("[local_dispatch] player:setup OK, ed.player._money=" .. tostring(ed.player._money))
+            end
+        else
+            LegendLog("[local_dispatch] MISSING: user=" .. tostring(user ~= nil) .. " player=" .. tostring(ed.player ~= nil) .. " setup=" .. tostring(ed.player and ed.player.setup ~= nil))
+        end
+        -- 刷新主界面显示
+        pcall(function()
+            if FireEvent then
+                LegendLog("[local_dispatch] firing LoginSuc")
+                FireEvent("LoginSuc")
+            else
+                LegendLog("[local_dispatch] WARNING: FireEvent not found!")
+            end
+        end)
+    end
+
+    -- ========== 以下为 stubSend 回退路径中的回复处理 ==========
+    -- 当 local_server.handle() 成功但 ed.dispatch 不可用时，
+    -- local_dispatch 必须处理所有回复类型，否则回调不会被触发
+
+    -- sync_skill_stren / buy_skill_stren_point 回复
+    if data._sync_skill_stren_reply then
+        local reply = data._sync_skill_stren_reply
+        local newChance = reply._skill_level_up and reply._skill_level_up._skill_levelup_chance
+        LegendLog("[LD] _sync_skill_stren_reply: newChance=" .. tostring(newChance))
+        if reply._skill_level_up and ed.player then
+            ed.player._skill_level_up = reply._skill_level_up
+        end
+        local handler, rdata = ed.getNetReply("sync_skill_stren_chance")
+        LegendLog("[LD] getNetReply: handler=" .. tostring(handler ~= nil) .. " rdata=" .. tostring(rdata and rdata.cost))
+        if rdata and rdata.cost then pcall(function() ed.player:addrmb(-rdata.cost) end) end
+        if handler then
+            handler()
+        else
+            -- 购买技能点时 handler 为 nil，需要手动刷新技能面板的 times bar
+            LegendLog("[LD] no handler, trying manual UI refresh for skill panel")
+            pcall(function()
+                local sw = ed.getPopWindow and ed.getPopWindow("herodetailskill")
+                LegendLog("[LD] getPopWindow result: " .. tostring(sw ~= nil) .. " hasCreateInfoBar=" .. tostring(sw and sw.createInformationBar ~= nil))
+                if sw and sw.createInformationBar then
+                    sw:createInformationBar()
+                    LegendLog("[LD] createInformationBar called OK")
+                end
+            end)
+        end
+    end
+
+    -- skill_levelup 回复
+    if data._skill_levelup_reply then
+        LegendLog("[LD] _skill_levelup_reply: result=" .. tostring(data._skill_levelup_reply._result) .. " gs=" .. tostring(data._skill_levelup_reply._gs))
+        if ed.ui and ed.ui.herodetail and ed.ui.herodetail.dealSkillLevelup then
+            ed.ui.herodetail.dealSkillLevelup(data._skill_levelup_reply)
+        end
+    end
+
+    -- hero_upgrade 回复（英雄进阶）
+    if data._hero_upgrade_reply then
+        local reply = data._hero_upgrade_reply
+        local result = reply._result == "success"
+        local hero = reply._hero
+        local items = reply._items
+        local props = {}
+        for i = 1, #(items or {}) do
+            local item = items[i]
+            local id = ed.bits(item, 0, 10)
+            local amount = ed.bits(item, 10, 11)
+            pcall(function() ed.player:addEquip(id, amount) end)
+            props[i] = {id = id, amount = amount}
+        end
+        if result and hero then pcall(function() ed.player:resetHero(hero) end) end
+        if ed.netreply and ed.netreply.heroUpgradeReply then
+            ed.netreply.heroUpgradeReply(result, props)
+            ed.netreply.heroUpgradeReply = nil
+        end
+    end
+
+    -- hero_evolve 回复（英雄进化）
+    if data._hero_evolve_reply then
+        local reply = data._hero_evolve_reply
+        local result = reply._result == "success"
+        local hero = reply._hero
+        local ndata = ed.netdata and ed.netdata.evolve
+        if ndata and result then
+            pcall(function()
+                ed.player:addMoney(-(ndata.cost or 0))
+                ed.player:consumeEquip(ndata.id, ndata.amount)
+                if ed.player.heroes[ndata.hid] then
+                    ed.player.heroes[ndata.hid]:evolve()
+                end
+                ed.player:resetHero(hero)
+            end)
+            ed.netdata.evolve = nil
+        end
+        if ed.netreply and ed.netreply.evolve then
+            ed.netreply.evolve(result)
+            ed.netreply.evolve = nil
+        end
+    end
+
+    -- wear_equip 回复（穿戴装备）
+    if data._wear_equip_reply then
+        local reply = data._wear_equip_reply
+        local result = reply._result == "success"
+        local gs = reply._gs
+        if ed.netdata and ed.netdata.putonReply then
+            pcall(function()
+                local rdata = ed.netdata.putonReply
+                ed.player:consumeEquip(rdata.eid, 1)
+                ed.player.heroes[rdata.hid]:equip(rdata.sid)
+                ed.player.heroes[rdata.hid]:resetgs(gs)
+            end)
+            ed.netdata.putonReply = nil
+        end
+        if ed.netreply and ed.netreply.putonReply then
+            ed.netreply.putonReply(result)
+            ed.netreply.putonReply = nil
+        end
+    end
+
+    -- enter_stage 回复
+    if data._enter_stage_reply then
+        if ed.netreply and ed.netreply.enterStage then
+            ed.netreply.enterStage()
+            ed.netreply.enterStage = nil
+        end
+        pcall(function() ed.srand(data._enter_stage_reply._rseed) end)
+        if ed.player then ed.player.loots = data._enter_stage_reply._loots or {} end
+    end
+
+    -- exit_stage 回复
+    if data._exit_stage_reply then
+        local result = data._exit_stage_reply._result == "known"
+        if ed.netreply and ed.netreply.exitStageReply then
+            ed.netreply.exitStageReply(result)
+            ed.netreply.exitStageReply = nil
+        end
+        if ed.netdata then ed.netdata.exitStageReply = nil end
+    end
+
+    -- shop_refresh / shop_consume 回复
+    if data._shop_refresh_reply then
+        pcall(function() ed.ui.market.dealRefresh(data._shop_refresh_reply) end)
+    end
+    if data._shop_consume_reply then
+        pcall(function() ed.ui.market.dealConsume(data._shop_consume_reply) end)
+    end
+
+    -- sell_item 回复
+    if data._sell_item_reply then
+        local result = data._sell_item_reply._result
+        local handler, rdata = ed.getNetReply("sell_item")
+        if result and rdata then
+            pcall(function()
+                ed.player._money = ed.player._money + rdata.income
+                for k, v in pairs(rdata.items) do
+                    ed.player:consumeEquip(v.id, v.amount)
+                end
+            end)
+        end
+        if handler and rdata then handler(result, rdata.amount) end
+    end
+
+    -- equip_synthesis 回复（装备合成）
+    if data._equip_synthesis_reply then
+        local result = data._equip_synthesis_reply._result == "success"
+        local rdata = ed.netdata and ed.netdata.equipCraft
+        if result and rdata then
+            pcall(function()
+                ed.player:addMoney(-rdata.expense)
+                local na = rdata.consume
+                for k, v in pairs(rdata.node) do
+                    ed.player:consumeEquip(v, na[k] or 1)
+                end
+                ed.player:addEquip(rdata.id)
+            end)
+        end
+        if ed.netreply and ed.netreply.craftReply then
+            ed.netreply.craftReply(result)
+            ed.netreply.craftReply = nil
+        end
+    end
+
+    -- fragment_compose 回复（碎片合成）
+    if data._fragment_compose_reply then
+        local result = data._fragment_compose_reply._result == "success"
+        local info = ed.netdata and ed.netdata.fragmentCompose
+        if result and info then
+            pcall(function()
+                ed.player:addMoney(-info.cost)
+                ed.player:consumeEquip(info.id, info.fragmentAmount)
+                if info.makeId > 100 then
+                    ed.player:addEquip(info.makeId)
+                end
+            end)
+        end
+        if ed.netreply and ed.netreply.composeFragmentReply then
+            ed.netreply.composeFragmentReply(result)
+            ed.netreply.composeFragmentReply = nil
+        end
+    end
+
+    -- hero_equip_upgrade 回复（英雄装备升级）
+    if data._hero_equip_upgrade_reply then
+        local result = data._hero_equip_upgrade_reply._result == "success"
+        local hero = data._hero_equip_upgrade_reply._hero
+        if result and hero then pcall(function() ed.player:resetHero(hero) end) end
+        local handler = ed.netreply and ed.netreply.equipUpgrade
+        if handler then handler(result); ed.netreply.equipUpgrade = nil end
+    end
+
+    -- consume_item 回复（消耗品/吃经验）
+    if data._consume_item_reply then
+        local hero = data._consume_item_reply._hero
+        local handler, rdata = ed.getNetReply("eat_exp")
+        if rdata then
+            pcall(function()
+                ed.player:consumeEquip(rdata.id, rdata.amount)
+                if hero then ed.player:resetHero(hero) end
+            end)
+        end
+        if handler then handler() end
+    end
+
+    -- sync_vitality / buy_vitality 回复
+    if data._sync_vitality_reply then
+        local reply = data._sync_vitality_reply
+        ed.player._vitality = reply._vitality
+        local rdata = ed.netdata and ed.netdata.buyVitality
+        if rdata and rdata.isBuy then
+            ed.player._rmb = ed.player._rmb - rdata.cost
+            if ed.netreply and ed.netreply.buyVitalityReply then
+                ed.netreply.buyVitalityReply()
+                ed.netreply.buyVitalityReply = nil
+            end
+            ed.netdata.buyVitality = nil
+        end
+    end
+
+    -- set_name 回复
+    if data._set_name_reply then
+        local result = data._set_name_reply._result
+        local rdata = ed.netdata and ed.netdata.setname
+        if result == "success" and rdata then
+            pcall(function()
+                ed.player:setName(rdata.name or "")
+                ed.player:addrmb(-(rdata.cost or 0))
+                ed.player:refreshSetNameTime()
+            end)
+            ed.netdata.setname = nil
+        end
+        if ed.netreply and ed.netreply.setname then
+            ed.netreply.setname(result)
+            ed.netreply.setname = nil
+        end
+    end
+
+    -- set_avatar 回复
+    if data._set_avatar_reply then
+        local result = data._set_avatar_reply._result == "success"
+        local rdata = ed.netdata and ed.netdata.setAvatar
+        if rdata and result then
+            pcall(function() ed.player:setAvatar(rdata.id) end)
+        end
+        if ed.netreply and ed.netreply.setAvatar then ed.netreply.setAvatar(result) end
+    end
+
+    -- tutorial 回复
+    if data._tutorial_reply then
+        if ed.netdata then ed.netdata.tutorial = nil end
+        if ed.netreply and ed.netreply.tutorial then
+            ed.netreply.tutorial()
+            ed.netreply.tutorial = nil
+        end
+    end
+
+    -- trigger_task / require_rewards 回复
+    if data._trigger_task_reply then
+        if ed.netreply and ed.netreply.triggerTask then
+            ed.netreply.triggerTask(data._trigger_task_reply._result)
+            ed.netreply.triggerTask = nil
+        end
+    end
+    if data._require_rewards_reply then
+        local result = data._require_rewards_reply._result == "success"
+        if ed.netreply and ed.netreply.requireRewards then
+            ed.netreply.requireRewards(result)
+            ed.netreply.requireRewards = nil
+        end
+    end
+
+    end
 end
 
 -----------------------------------------------------------------------
@@ -1377,7 +1751,15 @@ function M.init()
     M.data = LocalData.load()
     -- 确保 down 模块已加载
     if not down then
-        pb_loader("down")()
+        local ok, err = pcall(function() pb_loader("down")() end)
+        if ok then
+            LegendLog("[local_server] init: pb_loader('down') OK, down=" .. tostring(down ~= nil))
+        else
+            LegendLog("[local_server] init: pb_loader('down') FAILED: " .. tostring(err))
+        end
+    end
+    if not down then
+        LegendLog("[local_server] init: WARNING: 'down' is still nil after loading attempt!")
     end
 end
 
@@ -1386,27 +1768,66 @@ end
 -- msg_type: 消息类型字符串（如 "login", "enter_stage" 等）
 -- obj: 客户端发送的消息对象（up_msg 中的对应字段）
 -----------------------------------------------------------------------
-local _handle_diag_count = 0
 function M.handle(msg_type, obj)
     obj = obj or {}
-    _handle_diag_count = (_handle_diag_count or 0) + 1
-    if _handle_diag_count % 50 == 0 then
-        LegendLog("[local_server] Handled " .. tostring(msg_type) .. " (count=" .. _handle_diag_count .. ")")
+
+    -- 诊断日志：关键消息类型始终记录
+    local alwaysLog = { gm_cmd = true, login = true, tavern_draw = true }
+    if alwaysLog[msg_type] then
+        LegendLog("[local_server] >>> handle: " .. tostring(msg_type))
     end
 
     -- 创建 down_msg 对象并获取 .data 表
-    local msg = down.down_msg()
+    local ok_down, msg = pcall(function() return down.down_msg() end)
+    if not ok_down or not msg then
+        LegendLog("[local_server] ERROR: down.down_msg() failed: " .. tostring(msg))
+        return false
+    end
     local data = rawget(msg, ".data")
+    if not data then
+        LegendLog("[local_server] ERROR: rawget(msg, '.data') returned nil")
+        return false
+    end
 
     local handler = M.handlers[msg_type]
     if handler then
-        handler(data, obj, M.data)
+        local ok_h, err_h = pcall(handler, data, obj, M.data)
+        if not ok_h then
+            LegendLog("[local_server] handler '" .. tostring(msg_type) .. "' ERROR: " .. tostring(err_h))
+        end
+    else
+        LegendLog("[local_server] WARNING: no handler for '" .. tostring(msg_type) .. "'")
     end
 
-    -- 使用本地 dispatch 处理回复
-    xpcall(function() local_dispatch(msg) end, function(err)
-        LegendLog("[local_server|dispatch ERROR] " .. tostring(err))
-    end)
+    -- 使用 network.lua 的 dispatch 处理所有回复类型（40+ 消息类型）
+    -- 注意：proc_net 在 localMode 下是空操作，必须直接调用 dispatch
+    if ed.dispatch then
+        local ok_d, err_d = xpcall(function() ed.dispatch(msg) end, function(err)
+            LegendLog("[local_server|dispatch ERROR] " .. tostring(err))
+        end)
+        if not ok_d then
+            LegendLog("[local_server] dispatch failed: " .. tostring(err_d))
+        end
+    else
+        -- fallback: 使用 local_dispatch（仅处理部分回复类型）
+        local ok_d, err_d = xpcall(function() local_dispatch(msg) end, function(err)
+            LegendLog("[local_server|dispatch ERROR] " .. tostring(err))
+        end)
+        if not ok_d then
+            LegendLog("[local_server] dispatch failed: " .. tostring(err_d))
+        end
+    end
+
+    -- GM 命令 (_reset) 后刷新主界面（ed.dispatch 只做 player:setup，不触发 UI 刷新）
+    local data = rawget(msg, ".data")
+    if data and data._reset then
+        pcall(function()
+            if FireEvent then
+                LegendLog("[local_server] _reset: firing LoginSuc to refresh UI")
+                FireEvent("LoginSuc")
+            end
+        end)
+    end
     return true
 end
 

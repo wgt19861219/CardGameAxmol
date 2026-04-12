@@ -124,7 +124,9 @@ local function playAttAnim(self, id)
 end
 class.playAttAnim = playAttAnim
 local function doLvup(self, callback)
+  LegendLog("[SKILL-DOLVUP] sendSkillLvup called")
   return herodetail.sendSkillLvup(function(result)
+    LegendLog("[SKILL-DOLVUP] callback result=" .. tostring(result))
     if not result then
       ed.showToast(T(LSTR("HERODETAILSKILL.SKILLS_ENHANCEMENT_FAILURE")))
     else
@@ -145,16 +147,21 @@ local function doClickLvupButton(self, id)
   ed.tutorial.tell("SUcomplete", nil, {z = 150})
   ed.endTeach("SUcomplete")
   local cost = self:getCost(id)
-  if herodetail.getCacheSkillLevel(id, self.hid) >= self.hero._level then
+  local skl = herodetail.getCacheSkillLevel(id, self.hid)
+  local hlv = self.hero._level
+  local chance = ed.player:getSkillLvupChance()
+  local point = herodetail.getCacheSkillPoint()
+  LegendLog("[SKILL-CLICK] id=" .. id .. " skl=" .. skl .. " hlv=" .. hlv .. " cost=" .. cost .. " chance=" .. chance .. " point=" .. point .. " money=" .. tostring(ed.player._money))
+  if skl >= hlv then
     ed.showToast(T(LSTR("HERODETAILSKILL.YOU_HAVE_REACHED_CURRENT_LEVEL_CAP")))
   elseif cost > ed.player._money then
     self:doLvup()
     ed.showHandyDialog("useMidas", {
       refreshHandler = self:checkMoneyHandler()
     })
-  elseif ed.player:getSkillLvupChance() < 1 then
+  elseif chance < 1 then
     self:doClickcdButton()
-  elseif 1 > herodetail.getCacheSkillPoint() then
+  elseif point < 1 then
     ed.showToast(T(LSTR("herodetailskill.1.10.1.002")))
   else
     ed.player:addMoney(-cost)
@@ -163,6 +170,10 @@ local function doClickLvupButton(self, id)
     self:refreshLvupTimes()
     self:playAttAnim(id)
     self:refreshCostColor()
+    -- 技能点用完时自动发送批量升级（不再通过 refreshLvupTimes 级联）
+    if herodetail.getCacheSkillPoint() < 1 then
+      self:doLvup()
+    end
   end
 end
 class.doClickLvupButton = doClickLvupButton
@@ -176,6 +187,7 @@ class.checkMoneyHandler = checkMoneyHandler
 local doBuyChance = function(self, cost)
   local function handler()
     xpcall(function()
+      LegendLog("[SKILL-BUY] cost=" .. cost .. " rmb=" .. tostring(ed.player._rmb))
       if ed.player._rmb < cost then
         ed.showHandyDialog("toRecharge")
         return
@@ -183,6 +195,7 @@ local doBuyChance = function(self, cost)
       ed.registerNetReply("sync_skill_stren_chance", nil, {cost = cost})
       local msg = ed.upmsg.buy_skill_stren_point()
       ed.send(msg, "buy_skill_stren_point")
+      LegendLog("[SKILL-BUY] send done, chance after send=" .. tostring(ed.player._skill_level_up and ed.player._skill_level_up._skill_levelup_chance))
     end, EDDebug)
   end
   return handler
@@ -287,6 +300,7 @@ local refreshSkillAdd = function(self)
 end
 class.refreshSkillAdd = refreshSkillAdd
 local function createSkillLevelBoard(self, i)
+  print("[SKILL-DIAG] createSkillLevelBoard: i=" .. tostring(i) .. " isLvupOpen=" .. tostring(self.isLvupOpen) .. " heroLv=" .. tostring(self.hero and self.hero._level))
   local lui = self.levelui[i] or {}
   local lb = lui.board
   if not tolua.isnull(lb) then
@@ -337,6 +351,7 @@ local function createSkillLevelBoard(self, i)
         position = ccp(495, ori_height-13 - 2 - bd_height * (i - 1))
       }
     }, board)
+    print("[SKILL-DIAG] button " .. i .. " created: " .. tostring(lui.button) .. " size=" .. tostring(lui.button and lui.button:getContentSize().width))
     lui.buttonPress = ed.createNode({
       t = "Sprite",
       base = {
@@ -386,7 +401,9 @@ local function createSkillLevelBoard(self, i)
       if self.isSyncSkillChance then
         return false
       end
-      if herodetail.getCacheSkillLevel(i, self.hid) >= self.hero._level then
+      local skl = herodetail.getCacheSkillLevel(i, self.hid)
+      local hlv = self.hero._level
+      if skl >= hlv then
         return false
       end
       return true
@@ -395,17 +412,7 @@ local function createSkillLevelBoard(self, i)
       self:doClickLvupButton(i)
     end,
     priority = -2,
-    freeDelay = 0.3,
-    lockHandler = function()
-      if not tolua.isnull(lui.buttonPress) then
-        lui.buttonPress:setVisible(true)
-      end
-    end,
-    freeHandler = function()
-      if not tolua.isnull(lui.buttonPress) then
-        lui.buttonPress:setVisible(false)
-      end
-    end
+    force = true
   })
 end
 class.createSkillLevelBoard = createSkillLevelBoard
@@ -460,7 +467,10 @@ local getResetCost = function(self)
 end
 class.getResetCost = getResetCost
 local function getCost(self, slot)
-  return ed.getDataTable("SkillLevels")[herodetail.getCacheSkillLevel(slot, self.hid)].Price
+  local level = herodetail.getCacheSkillLevel(slot, self.hid)
+  local t = ed.getDataTable("SkillLevels")
+  local entry = t[level] or t[#t] or t[1]
+  return entry and entry.Price or 0
 end
 class.getCost = getCost
 local createInformationBar = function(self)
@@ -505,6 +515,7 @@ class.clearInformationBar = clearInformationBar
 local function refreshLvupTimes(self)
   local container = self.timesui.container
   if tolua.isnull(container) then
+    LegendLog("[SKILL-REFRESH] container is null, skipping")
     return
   end
   local ui = self.timesui
@@ -513,13 +524,13 @@ local function refreshLvupTimes(self)
   local suffix = ui.suffix
   local times = herodetail.getCacheSkillPoint()
   local chance = ed.player:getSkillLvupChance()
-  if times < 1 then
-    self:doLvup()
-  end
+  LegendLog("[SKILL-REFRESH] times=" .. times .. " chance=" .. chance)
+  -- 不在 refreshLvupTimes 中自动 doLvup()，避免离线模式同步回调级联
+  -- 批量发送由 exitHeroSkin handler 和 doClickLvupButton 触发
   if chance < 1 then
     self:createcdBar()
   else
-    ed.setString(label, times)
+    ed.setString(label, math.max(times, 0))
     ed.setString(suffix, self:getcdTextSuffix())
     self:refreshTimesLabelPos()
   end
@@ -897,6 +908,8 @@ local function create(hero, addition)
     self:doLvup()
   end)
   self.parent:addChild(self.mainLayer)
+  print("[SKILL-DIAG] mainLayer added to parent, touchEnabled=" .. tostring(self.mainLayer:isTouchEnabled()))
+  print("[SKILL-DIAG] mainLayer parent=" .. tostring(self.mainLayer:getParent()) .. " parent.parent=" .. tostring(self.mainLayer:getParent() and self.mainLayer:getParent():getParent()))
   return self
 end
 class.create = create
@@ -929,6 +942,7 @@ local popBack = function(self, param)
 end
 class.popBack = popBack
 local pop = function(self, param)
+  print("[SKILL-DIAG] pop called, skipAnim=" .. tostring(param.skipAnim))
   self.mainLayer:setTouchEnabled(false)
   if not param.skipAnim then
     self.container:setPosition(param.oriPos)
@@ -936,6 +950,7 @@ local pop = function(self, param)
     local func = CCCallFunc:create(function()
       xpcall(function()
         self.mainLayer:setTouchEnabled(true)
+        print("[SKILL-DIAG] pop animation done, touchEnabled=" .. tostring(self.mainLayer:isTouchEnabled()))
       end, EDDebug)
     end)
     self.container:runAction(ed.readaction.create({
@@ -946,6 +961,7 @@ local pop = function(self, param)
   else
     self.container:setPosition(param.endPos)
     self.mainLayer:setTouchEnabled(true)
+    print("[SKILL-DIAG] pop skipAnim, touchEnabled=true")
   end
 end
 class.pop = pop

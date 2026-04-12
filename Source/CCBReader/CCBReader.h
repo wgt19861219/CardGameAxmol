@@ -83,7 +83,7 @@ public:
     CCBMemberVariableAssigner* getCCBMemberVariableAssigner() { return mCCBMemberVariableAssigner; }
     CCBSelectorResolver* getCCBSelectorResolver() { return mCCBSelectorResolver; }
 
-    std::set<std::string>* getAnimatedProperties() { return mAnimatedProps; }
+    std::set<std::string>& getAnimatedProperties() { return mAnimatedProps; }
     std::set<std::string>& getLoadedSpriteSheet() { return mLoadedSpriteSheets; }
     ax::Object* getOwner() { return mOwner; }
 
@@ -116,7 +116,8 @@ public:
     // 数据成员（CCNodeLoader 需要直接访问）
     CCData* mData = nullptr;
     unsigned char* mBytes = nullptr;
-    int mCurrentByte = 0;
+    unsigned long mDataSize = 0;
+    unsigned long mCurrentByte = 0;
     int mCurrentBit = 0;
     std::vector<std::string> mStringCache;
     bool jsControlled = false;
@@ -142,7 +143,7 @@ private:
     std::set<std::string> mLoadedSpriteSheets;
     ax::Object* mOwner = nullptr;
     CCBAnimationManager* mActionManager = nullptr;
-    std::set<std::string>* mAnimatedProps = nullptr;
+    std::set<std::string> mAnimatedProps;
 
     CCNodeLoaderLibrary* mCCNodeLoaderLibrary = nullptr;
     CCBMemberVariableAssigner* mCCBMemberVariableAssigner = nullptr;

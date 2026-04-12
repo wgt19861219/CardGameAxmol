@@ -444,14 +444,8 @@ int register_game_bindings(lua_State* L)
     lua_setglobal(L, "CCBContainer");
 
     // ---- SpineContainer 真正绑定 ----
-    luaL_newmetatable(L, "SpineContainer_mt");
-
-    // 方法表
-    lua_newtable(L);
-
-    // create(path, name, scale=1.0) -> SpineContainer
-    // 支持 SpineContainer:create(...) 冒号调用（self 是 table）和 . 点调用
-    lua_pushcfunction(L, [](lua_State* L) -> int {
+    // 提取公共 create 函数，避免代码重复（I1 修复）
+    static const auto lua_SpineContainer_create = [](lua_State* L) -> int {
         int argOffset = 0;
         if (lua_type(L, 1) != LUA_TSTRING) argOffset = 1; // 冒号调用，跳过 self
         const char* path = luaL_checkstring(L, 1 + argOffset);
@@ -470,12 +464,17 @@ int register_game_bindings(lua_State* L)
             lua_setmetatable(L, -2);
             return 1;
         }
-        // SpineContainer::create failed (missing files or incompatible version)
-        // Return nil so Lua-side wrapper can provide a safe stub
-        AXLOGW("SpineContainer::create returning nil for path={}, name={}", path, name);
         lua_pushnil(L);
         return 1;
-    });
+    };
+
+    luaL_newmetatable(L, "SpineContainer_mt");
+
+    // 方法表
+    lua_newtable(L);
+
+    // create(path, name, scale=1.0) -> SpineContainer
+    lua_pushcfunction(L, lua_SpineContainer_create);
     lua_setfield(L, -2, "create");
 
     // Helper: safely get SpineContainer* from userdata, returns nullptr for fallback Nodes
@@ -810,32 +809,8 @@ int register_game_bindings(lua_State* L)
 
     // SpineContainer 全局表（含 create 静态方法）
     lua_newtable(L);
-    // 把 create 也放到全局表上，因为原版 tolua 是 SpineContainer.create()
-    // 支持冒号调用 SpineContainer:create(...) 和点调用 SpineContainer.create(...)
-    lua_pushcfunction(L, [](lua_State* L) -> int {
-        int argOffset = 0;
-        if (lua_type(L, 1) != LUA_TSTRING) argOffset = 1; // 冒号调用，跳过 self
-        const char* path = luaL_checkstring(L, 1 + argOffset);
-        const char* name = luaL_checkstring(L, 2 + argOffset);
-        float scale = (float)luaL_optnumber(L, 3 + argOffset, 1.0f);
-        SpineContainer* obj = nullptr;
-        try { obj = SpineContainer::create(path, name, scale); } catch (...) {
-            AXLOGW("SpineContainer::create(global) failed for path={}, name={}", path, name);
-            obj = nullptr;
-        }
-        if (obj) {
-            obj->retain();
-            void** ud = (void**)lua_newuserdata(L, sizeof(void*));
-            *ud = obj;
-            luaL_getmetatable(L, "SpineContainer_mt");
-            lua_setmetatable(L, -2);
-            return 1;
-        }
-        // Return nil so Lua fallback (createStaticSpriteFromSpineAtlas) can kick in
-        AXLOGW("SpineContainer::create(global) failed, returning nil for path={}, name={}", path, name);
-        lua_pushnil(L);
-        return 1;
-    });
+    // 把 create 也放到全局表上，复用公共函数
+    lua_pushcfunction(L, lua_SpineContainer_create);
     lua_setfield(L, -2, "create");
     lua_setglobal(L, "SpineContainer");
 
@@ -1025,7 +1000,10 @@ int register_game_bindings(lua_State* L)
     // LegendSetAniScaleFactor / LegendSetSoundSwitch
     lua_pushcfunction(L, [](lua_State* L) -> int { return 0; });
     lua_setglobal(L, "LegendSetAniScaleFactor");
-    lua_pushcfunction(L, [](lua_State* L) -> int { return 0; });
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        SpineContainer::s_soundSwitch = (int)luaL_checkinteger(L, 1);
+        return 0;
+    });
     lua_setglobal(L, "LegendSetSoundSwitch");
 
     AXLOGI("Game Lua bindings registered successfully");

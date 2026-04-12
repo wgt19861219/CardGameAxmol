@@ -1,4 +1,5 @@
 #include "LegendAnimation.h"
+#include "axmol/2d/SpriteBatchNode.h"
 #include "axmol/axmol.h"
 
 namespace ax {
@@ -11,6 +12,7 @@ LegendAnimation::LegendAnimation()
 
 LegendAnimation::~LegendAnimation()
 {
+    AX_SAFE_RELEASE(_batchNode);
     AX_SAFE_RELEASE(_aniFileInfo);
 }
 
@@ -42,10 +44,19 @@ bool LegendAnimation::init(LegendAnimationFileInfo* info, double scale)
     _aniFileInfo->retain();
     _aniFileName = info->_name;
 
-    // Create child sprites for each element
+    // Create child sprites for each element using SpriteBatchNode
+    // (matches original architecture where all elements share one texture atlas)
     int count = (int)info->_elements.size();
-    _childSprites.resize(count, nullptr);
+    _elementSprites.resize(count, nullptr);
 
+    Texture2D* texture = info->getTexture();
+    if (!texture)
+    {
+        AXLOGW("LegendAnimation init: no texture for {}", info->_name);
+        return false;
+    }
+
+    int spriteOk = 0, spriteFail = 0;
     for (int i = 0; i < count; i++)
     {
         auto& ele = info->_elements[i];
@@ -55,13 +66,46 @@ bool LegendAnimation::init(LegendAnimationFileInfo* info, double scale)
             auto* child = Sprite::createWithSpriteFrame(frame);
             if (child)
             {
-                child->setAnchorPoint(Vec2(0, 1));  // top-left origin
-                addChild(child, i);
+                // Create batch node on first sprite (same texture for all)
+                if (!_batchNode)
+                {
+                    _batchNode = SpriteBatchNode::createWithTexture(texture, count);
+                    if (_batchNode)
+                    {
+                        _batchNode->retain();
+                        addChild(_batchNode, 0);
+                    }
+                }
+
+                // Match original: anchor (0,0) for direct transform application
+                child->setAnchorPoint(Vec2(0, 0));
+                child->setPosition(Vec2(0, 0));
                 child->setVisible(false);
-                _childSprites[i] = child;
+                child->setTag(i);
+
+                if (_batchNode)
+                    _batchNode->addChild(child);
+                else
+                    addChild(child, i);
+
+                _elementSprites[i] = child;
+                spriteOk++;
+            }
+            else
+            {
+                spriteFail++;
             }
         }
+        else
+        {
+            spriteFail++;
+            if (i < 3)
+                AXLOGW("LegendAnimation init: sprite frame not found for '{}'", ele.resouceName);
+        }
     }
+
+    AXLOGW("LegendAnimation init: name={} elements={} sprites_ok={} sprites_fail={} actions={}",
+           info->_name, count, spriteOk, spriteFail, info->_actions.size());
 
     setContentSize(Size(200, 200));
     scheduleUpdate();
@@ -90,7 +134,7 @@ bool LegendAnimation::setAction(const char* name, bool bRemoveQueue)
 
     _currentAction = action;
     _currentActionName = name;
-    _currentFrame = 0;
+    _currentFrame = -1;
     _curActionElapsed = 0;
     _frameDuration = 1.0f / action->fps;
     _isTerminated = false;
@@ -98,7 +142,9 @@ bool LegendAnimation::setAction(const char* name, bool bRemoveQueue)
     if (bRemoveQueue)
         _nextActionName.clear();
 
+    // Apply first frame
     applyFrame(action->frames[0]);
+    _currentFrame = 0;
     return true;
 }
 
@@ -131,7 +177,7 @@ void LegendAnimation::update(float dt)
 
     _curActionElapsed += dt * _speeder;
 
-    int newFrame = (int)(_curActionElapsed / _frameDuration);
+    int newFrame = (int)(_curActionElapsed * _currentAction->fps);
     int totalFrames = (int)_currentAction->frames.size();
 
     if (newFrame >= totalFrames)
@@ -175,33 +221,46 @@ void LegendAnimation::applyFrame(const LegendAnimationFrame& frame)
 {
     if (!_aniFileInfo) return;
 
-    // Hide all children
-    for (size_t i = 0; i < _childSprites.size(); i++)
+    // Hide all element sprites
+    for (size_t i = 0; i < _elementSprites.size(); i++)
     {
-        if (_childSprites[i])
-            _childSprites[i]->setVisible(false);
+        if (_elementSprites[i])
+            _elementSprites[i]->setVisible(false);
     }
 
-    // Apply frame elements
+    // Apply frame elements with FULL affine transform
+    // (matches original pSpr->setTransform(felem.transform))
+    bool needReorder = false;
     for (size_t i = 0; i < frame.elements.size(); i++)
     {
         const LegendAnimationFrameElement& felem = frame.elements[i];
         int idx = felem.index - 1;  // 1-based to 0-based
-        if (idx >= 0 && idx < (int)_childSprites.size())
-        {
-            auto* child = _childSprites[idx];
-            if (child)
-            {
-                child->setVisible(true);
-                child->setOpacity(felem.alpha);
+        if (idx < 0 || idx >= (int)_elementSprites.size())
+            continue;
 
-                // Apply affine transform
-                const auto& t = felem.transform;
-                child->setPosition(t.tx, -t.ty);  // flip Y for axmol coords
-                child->setScaleX(t.a);
-                child->setScaleY(t.d);
-            }
-        }
+        auto* child = _elementSprites[idx];
+        if (!child)
+            continue;
+
+        child->setVisible(true);
+        child->setOpacity(felem.alpha);
+
+        // Check if z-order needs updating
+        if (child->getLocalZOrder() != (int)i)
+            needReorder = true;
+        child->setLocalZOrder((int)i);
+
+        // Apply full affine transform via setAdditionalTransform.
+        // Anchor is (0,0) so the base transform is identity,
+        // making final = identity * additional = additional.
+        // This matches original CCSprite::setTransform() behavior.
+        child->setAdditionalTransform(felem.transform);
+    }
+
+    // Update batch rendering order if needed
+    if (_batchNode && needReorder)
+    {
+        _batchNode->reorderBatch(needReorder);
     }
 }
 
@@ -256,12 +315,11 @@ void LegendAnimationEffect::onEnter()
 {
     LegendAnimation::onEnter();
 
-    // Start with "Start" action, then auto-switch to "Loop"
     if (!_loopActionName.empty())
     {
         setAction(_startActionName.c_str(), true);
         setNextAction(_loopActionName.c_str());
-        setLoop(false);  // Start plays once
+        setLoop(false);
     }
     else
     {

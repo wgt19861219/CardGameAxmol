@@ -34,7 +34,8 @@ function class.mt:__tostring()
 end
 local logbuffer
 function btlog(...)
-	local s = string.format(...)
+	local ok, s = pcall(string.format, ...)
+	if not ok then s = tostring(...) end
 	if print_battle_log then
 		print(s)
 	end

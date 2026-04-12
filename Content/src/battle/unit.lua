@@ -241,7 +241,7 @@ function class.mt:__tostring()
 	for i, skill in ipairs(self.skill_list or {}) do
 		cdesc = string.format("%s|%.1f", cdesc, skill.cd_remaining)
 	end
-	return string.format("%s*%dL%d\tHP:%d/%d\tMP:%d\t(%d, %d)\t%s\t@%s:%.1f [%s] %s%s%s%s%s%s\n", self:display(), self.stars or 0, self.level or 0, self.hp or 0, self.attribs.HP or 0, self.mp or 0, self.position[1], self.position[2], state_to_string[self.state] or "nil", self.action_name or "nil", self.action_elapsed or 0, cdesc, self.buff_effects.silence and "S" or "", self.buff_effects.disarm and "D" or "", self.buff_effects.immoblilize and "I" or "", self.buff_effects.building and "B" or "", self.buff_effects.stable and "ST" or "", self.buff_effects.fix and "F" or "")
+	return string.format("%s*%dL%d\tHP:%.0f/%.0f\tMP:%.0f\t(%.0f, %.0f)\t%s\t@%s:%.1f [%s] %s%s%s%s%s%s\n", self:display(), self.stars or 0, self.level or 0, self.hp or 0, self.attribs.HP or 0, self.mp or 0, self.position[1], self.position[2], state_to_string[self.state] or "nil", self.action_name or "nil", self.action_elapsed or 0, cdesc, self.buff_effects.silence and "S" or "", self.buff_effects.disarm and "D" or "", self.buff_effects.immoblilize and "I" or "", self.buff_effects.building and "B" or "", self.buff_effects.stable and "ST" or "", self.buff_effects.fix and "F" or "")
 end
 
 local attrib_names = {
@@ -1441,7 +1441,7 @@ class.usePuppet = usePuppet
 
 local function getUnitScale(self)
 	local ret = ed.lookupDataTable("Puppet", "Scale", self.puppet_stack[#self.puppet_stack])
-	ret = ret * self.config.size_mod
+	ret = (ret or 1) * self.config.size_mod
 	return ret
 end
 class.getUnitScale = getUnitScale
@@ -1553,8 +1553,36 @@ local function usePuppet(self)
 	model.actor = self
 	self.puppetName = model.puppet_stack[#model.puppet_stack]
 	local info = ed.lookupDataTable("Puppet", nil, self.puppetName)
-	--self.puppet = LegendAnimation:create(info.Resource, model:getUnitScale())
-	self.puppet = ed.createAnimation(info.Resource, model:getUnitScale(), info.AniType or 0)
+	if not info then
+		print("[UNIT] usePuppet: Puppet info is NIL for '" .. tostring(self.puppetName) .. "'")
+		info = {Resource = self.puppetName or "unknown"}
+	end
+	print("[UNIT] usePuppet: puppet=" .. tostring(self.puppetName) .. " res=" .. tostring(info.Resource) .. " scale=" .. tostring(model:getUnitScale()) .. " aniType=" .. tostring(info.AniType or 0))
+	local ok_create, puppet = pcall(function()
+		return ed.createAnimation(info.Resource, model:getUnitScale(), info.AniType or 0)
+	end)
+	self.puppet = ok_create and puppet or nil
+	if not self.puppet then
+		print("[UNIT] usePuppet: createAnimation failed for " .. tostring(info.Resource) .. (not ok_create and (" err=" .. tostring(puppet)) or ""))
+		local camp = model.camp or 0
+		local label = tostring(info.Resource or "?")
+		local clr = camp > 0 and ccc3(0, 220, 0) or ccc3(220, 50, 50)
+		self.puppet = CCLabelTTF:create(label, "Arial", 20)
+		if self.puppet and self.puppet.setColor then
+			self.puppet:setColor(clr)
+		end
+		local s = (model:getUnitScale() or 1.0) * 0.8
+		if self.puppet and self.puppet.setScale then
+			self.puppet:setScale(s)
+		end
+		print("[UNIT] usePuppet: fallback label for " .. tostring(info.Resource))
+		for _, m in ipairs({"setComponent", "addEffect", "setAction", "setLoop",
+			"setActionElapsed", "removeEffect", "clearAllEffects", "useShader",
+			"useDefaultShader", "setActionSpeeder", "update", "removeNodeWithID",
+			"tint", "setColor"}) do
+			if self.puppet then self.puppet[m] = function() end end
+		end
+	end
 	local isFlipX = model:getUnitFlipX()
 	if isFlipX then
 		self.puppet:setScaleX(-1)
@@ -1575,9 +1603,190 @@ local function usePuppet(self)
 		old:removeFromParentAndCleanup(true)
 	end
 	local actionName = self:getActionName(model.action_name)
-	self.puppet:setAction(actionName)
-	self.puppet:setLoop(model.action_loop)
-	self.puppet:setActionElapsed(model.action_elapsed)
+	if actionName then
+		self.puppet:setAction(actionName)
+	end
+	self.puppet:setLoop(model.action_loop or false)
+	if model.action_elapsed then
+		self.puppet:setActionElapsed(model.action_elapsed)
+	end
+	for i, buff in ipairs(model.buff_list) do
+		buff:onAddedClient()
+	end
+end
+class.usePuppet = usePuppet
+
+local function getUnitScale(self)
+	local ret = ed.lookupDataTable("Puppet", "Scale", self.puppet_stack[#self.puppet_stack])
+	ret = (ret or 1) * self.config.size_mod
+	return ret
+end
+class.getUnitScale = getUnitScale
+
+local getRuntimeScale = function(self)
+	if self.isScaleActionRunning then
+		local dt = self.dt_action
+		self.scaleActionRunningTime = self.scaleActionRunningTime + dt
+		if self.scaleActionRunningTime > self.scaleActionDuration then
+			local scale = self.scaleActionScaleValue
+			return self.direction * scale, scale
+		else
+			local scale = self.scaleActionRunningTime / self.scaleActionDuration * (self.scaleActionScaleValue - 1) + 1
+			return self.direction * scale, scale
+		end
+	end
+	if not self.isScaleActionRunning then
+		local m = self.manually_casting
+		return self.direction * (m and 1.35 or 1), m and 1.35 or 1
+	end
+end
+class.getRuntimeScale = getRuntimeScale
+
+local startScalingAction = function(self, scaleX, duration)
+	local actor = self.actor
+	if actor then
+		local node = actor.node
+		if node then
+			self.isScaleActionRunning = true
+			self.scaleActionDuration = duration
+			self.scaleActionRunningTime = 0
+			self.scaleActionScaleValue = scaleX
+		end
+	else
+	end
+end
+class.startScalingAction = startScalingAction
+
+local endScalingAction = function(self)
+	self.isScaleActionRunning = false
+	self.scaleActionDuration = 0
+	self.scaleActionRunningTime = 0
+	self.scaleActionScaleValue = 0
+end
+class.endScalingAction = endScalingAction
+
+local function getUnitFlipX(self)
+	local ret = ed.lookupDataTable("Puppet", "ScaleX Inverse", self.puppet_stack[#self.puppet_stack])
+	return ret
+end
+class.getUnitFlipX = getUnitFlipX
+
+
+local class = {
+	mt = {}
+}
+ed.UnitActor = UnitActor
+class.mt.__index = class
+
+local function UnitActorCreate(model)
+	local self = {
+		puppet = nil,
+		node = CCNode:create(),
+		model = model,
+		bar_hp = nil,
+		bar_shield = nil,
+		bar_group = nil,
+		puppetName = nil,
+		tick = 0,
+		position = {0, 0},
+		velocity = {0, 0},
+		speeder = 1,
+		height = 0,
+		zSpeed = nil,
+		offline = false,
+		actor_scale = 1,
+		shader_stack = {},
+		puppetInfo = nil
+	}
+	setmetatable(self, class.mt)
+	self:usePuppet()
+	self.bar_group = ed.FloatingBarGroup.create()
+	if not self.model.hpLayer or 0 == self.model.hpLayer then
+		self.bar_hp = ed.FloatingBar.create(model, "HP")
+		self.node:addChild(self.bar_hp.node, 999)
+		self.bar_hp.node:setPosition(0, 114.5)
+		self.bar_hp.node:setScale(0.6666666666666666)
+		self.bar_group:AddBar("HP", self.bar_hp)
+		self.bar_shield = ed.FloatingBar.create(model, "Shield")
+		self.node:addChild(self.bar_shield.node, 999)
+		self.bar_shield.node:setPosition(0, 110)
+		self.bar_shield.node:setScale(0.6666666666666666)
+		self.bar_group:AddBar("Shield", self.bar_shield)
+	else
+		self.bar_shield = ed.FloatingBar.create(model, "ShieldBoss")
+		self.bar_shield.node:setPosition(ccp(355, 426))
+		self.bar_shield.node:setScaleX(-1)
+		ed.scene.ui_layer:addChild(self.bar_shield.node, -1)
+		self.bar_group:AddBar("ShieldBoss", self.bar_shield)
+	end
+	return self
+end
+class.create = UnitActorCreate
+ed.UnitActorCreate = UnitActorCreate
+
+local function usePuppet(self)
+	local old = self.puppet
+	local model = self.model
+	model.actor = self
+	self.puppetName = model.puppet_stack[#model.puppet_stack]
+	local info = ed.lookupDataTable("Puppet", nil, self.puppetName)
+	if not info then
+		print("[UNIT] usePuppet: Puppet info is NIL for '" .. tostring(self.puppetName) .. "'")
+		info = {Resource = self.puppetName or "unknown"}
+	end
+	print("[UNIT] usePuppet: puppet=" .. tostring(self.puppetName) .. " res=" .. tostring(info.Resource) .. " scale=" .. tostring(model:getUnitScale()) .. " aniType=" .. tostring(info.AniType or 0))
+	local ok_create, puppet = pcall(function()
+		return ed.createAnimation(info.Resource, model:getUnitScale(), info.AniType or 0)
+	end)
+	self.puppet = ok_create and puppet or nil
+	if not self.puppet then
+		print("[UNIT] usePuppet: createAnimation failed for " .. tostring(info.Resource) .. (not ok_create and (" err=" .. tostring(puppet)) or ""))
+		local camp = model.camp or 0
+		local label = tostring(info.Resource or "?")
+		local clr = camp > 0 and ccc3(0, 220, 0) or ccc3(220, 50, 50)
+		self.puppet = CCLabelTTF:create(label, "Arial", 20)
+		if self.puppet and self.puppet.setColor then
+			self.puppet:setColor(clr)
+		end
+		local s = (model:getUnitScale() or 1.0) * 0.8
+		if self.puppet and self.puppet.setScale then
+			self.puppet:setScale(s)
+		end
+		print("[UNIT] usePuppet: fallback label for " .. tostring(info.Resource))
+		for _, m in ipairs({"setComponent", "addEffect", "setAction", "setLoop",
+			"setActionElapsed", "removeEffect", "clearAllEffects", "useShader",
+			"useDefaultShader", "setActionSpeeder", "update", "removeNodeWithID",
+			"tint", "setColor"}) do
+			if self.puppet then self.puppet[m] = function() end end
+		end
+	end
+	local isFlipX = model:getUnitFlipX()
+	if isFlipX then
+		self.puppet:setScaleX(-1)
+	end
+	self.puppetInfo = info
+	local comps = info["Change Components"]
+	if comps then
+		for i = 1, #comps, 2 do
+			self.puppet:setComponent(comps[i], comps[i + 1])
+		end
+	end
+	if model.config.is_boss and (model.isBossCreateWithEffect or model.isBossCreateWithEffect == nil) then
+		self.puppet:addEffect("eff_buff_boss", -1)
+	end
+	self.node:addChild(self.puppet, 0)
+	if old then
+		self.shader_stack = {}
+		old:removeFromParentAndCleanup(true)
+	end
+	local actionName = self:getActionName(model.action_name)
+	if actionName then
+		self.puppet:setAction(actionName)
+	end
+	self.puppet:setLoop(model.action_loop or false)
+	if model.action_elapsed then
+		self.puppet:setActionElapsed(model.action_elapsed)
+	end
 	for i, buff in ipairs(model.buff_list) do
 		buff:onAddedClient()
 	end
@@ -1704,7 +1913,7 @@ local function update(self, dt)
 		pos[2] = pos[2] + v[2] * dt
 	end
 	if not tolua.isnull(self.puppet) then
-		self.puppet:update(dt, false)
+		pcall(function() self.puppet:update(dt, false) end)
 	end
 	local h = 0
 	if self.zSpeed then

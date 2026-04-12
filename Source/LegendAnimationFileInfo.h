@@ -48,8 +48,10 @@ struct LegendAnimationElement
 };
 
 // ---- Cached animation file info ----
-
-class SpriteFrameCache;
+// Each instance owns a PRIVATE sprite frame map (matching original cocos2d-x
+// architecture where each character had its own CCSpriteFrameCache instance).
+// This prevents frame name collisions between different .ani files that share
+// generic names like "1.png", "Eyes.png", etc.
 
 class LegendAnimationFileInfo : public Object
 {
@@ -58,6 +60,7 @@ public:
     virtual ~LegendAnimationFileInfo();
 
     SpriteFrame* getSpriteFrame(const char* frameName);
+    Texture2D* getTexture() const { return _texture; }
 
     std::string _name;
     float _scalefactor = 1.0f;
@@ -67,8 +70,12 @@ public:
 private:
     LegendAnimationFileInfo(const std::string& name);
     static void readFrames(LegendAnimationFileInfo* info, unsigned char* data, unsigned long dataSize);
+    void parsePlistAndCreateFrames(const std::vector<unsigned char>& plistData, Texture2D* texture);
 
-    SpriteFrameCache* _spriteCache = nullptr;
+    // Private sprite frame storage — avoids global cache name collisions
+    std::unordered_map<std::string, SpriteFrame*> _spriteFrames;
+    Texture2D* _texture = nullptr;
+
     static std::unordered_map<std::string, LegendAnimationFileInfo*> _cache;
 };
 

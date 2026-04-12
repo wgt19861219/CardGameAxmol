@@ -1,4 +1,6 @@
 module("ed", package.seeall)
+FloatingBarType = {}
+ed.FloatingBarType = FloatingBarType
 local setLength = CCNode.setScaleX
 local setVisible = CCNode.setVisible
 local epsilon = epsilon
@@ -389,7 +391,28 @@ local floating_bar_settings = {
 }
 FloatingBar = {}
 FloatingBar.__index = FloatingBar
-function FloatingBar.create(unit, type)
+-- Safe wrapper: if creation fails, return a minimal stub bar
+local _origFloatingBarCreate
+local function FloatingBarCreateSafe(unit, type)
+  local ok, bar = pcall(function()
+    return _origFloatingBarCreate(unit, type)
+  end)
+  if ok and bar then return bar end
+  -- Fallback: return a minimal bar with just a node
+  local stub = {
+    what = "FloatingBar",
+    unit = unit,
+    type = type or "HP",
+    percent = 1,
+    fore_length = 1,
+    mid_length = 1,
+    hide_timer = 0,
+    node = CCNode:create(),
+  }
+  setmetatable(stub, FloatingBar)
+  return stub
+end
+local function FloatingBarCreateFull(unit, type)
   local bar = {
     what = "FloatingBar",
     unit = unit,
@@ -402,7 +425,7 @@ function FloatingBar.create(unit, type)
     hide_timer = 0
   }
   setmetatable(bar, FloatingBar)
-  bar.proto = FloatingBarType[type]
+  bar.proto = (FloatingBarType or ed.FloatingBarType)[type]
   if bar.proto == nil then
     EDDebug("FloatingBar type '" .. tostring(type) .. "' not found!")
     return nil
@@ -426,7 +449,11 @@ function FloatingBar.create(unit, type)
   bar.foreground:setPosition(floating_bar_settings[type].foreground_pos)
   return bar
 end
+_origFloatingBarCreate = FloatingBarCreateFull
+ed.FloatingBar = FloatingBar
+ed.FloatingBar.create = FloatingBarCreateSafe
 function FloatingBar:CallInterface(func_name, ...)
+  if not self.proto then return nil end
   local func = self.proto[func_name]
   if func ~= nil and type(func) == "function" then
     return func(self, ...)
@@ -434,6 +461,7 @@ function FloatingBar:CallInterface(func_name, ...)
 end
 local hide_delay = 1.5
 function FloatingBar:update(dt)
+  if not self.foreground then return 0 end
   local node = self.node
   local unit = self.unit
   if not unit:isAlive() then

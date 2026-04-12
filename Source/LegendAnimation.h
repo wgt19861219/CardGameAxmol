@@ -5,6 +5,8 @@
 
 namespace ax {
 
+class SpriteBatchNode;
+
 class LegendAnimation : public Sprite
 {
 public:
@@ -30,7 +32,11 @@ protected:
     LegendAnimationFileInfo* _aniFileInfo = nullptr;
     std::string _aniFileName;
 
-    int _currentFrame = 0;
+    // Batch rendering (matches original CCSpriteBatchNode architecture)
+    SpriteBatchNode* _batchNode = nullptr;
+    std::vector<Sprite*> _elementSprites;
+
+    int _currentFrame = -1;
     std::string _currentActionName;
     const LegendAnimationAction* _currentAction = nullptr;
     std::string _nextActionName;
@@ -39,8 +45,6 @@ protected:
     float _speeder = 1.0f;
     float _frameDuration = 0;
     bool _isTerminated = false;
-
-    std::vector<Sprite*> _childSprites;
 };
 
 // ---- LegendAnimationEffect (Start → Loop auto-switch) ----

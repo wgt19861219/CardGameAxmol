@@ -1,4 +1,5 @@
 --����ս����ѡ��Ӣ�ۣ�ս��ǰ�����һ��ҳ��
+require("battle/battle_engine")
 local base = ed.ui.basescene
 local class = newclass(base.mt)
 ed.ui.battleprepare = class
@@ -236,7 +237,6 @@ local function gotoBattle(self)
       else
         LegendLog("[GOTO_BATTLE] calling engine:enterStage")
         ed.engine:enterStage(stage, hero_list)
-        ed.popScene()
       end
       local extraInfo = {}
       if self.mode == "crusade" then
@@ -252,6 +252,7 @@ local function gotoBattle(self)
       end
       LegendLog("[GOTO_BATTLE] calling scene:reset and replaceScene")
       ed.scene:reset(stage, battle, extraInfo)
+      ed.popScene()
       ed.replaceScene(ed.scene)
       ed.battleDataCache = {
         gwMode = self.GWMode,

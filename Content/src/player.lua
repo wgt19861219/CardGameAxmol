@@ -1763,7 +1763,7 @@ local function tomd5(self)
     return a._tid < b._tid
   end)
   local itemlist = {}
-  for id, amount in pairs(self.equip_qunty) do
+  for id, amount in pairs(self.equip_qunty or {}) do
     if amount > 0 then
       table.insert(itemlist, {id = id, amount = amount})
     end
@@ -1774,6 +1774,10 @@ local function tomd5(self)
   msg._items = {}
   for i, v in ipairs(itemlist) do
     msg._items[i] = ed.makebits(11, v.amount, 10, v.id)
+  end
+  -- localMode 下 downmsg 是 stub（无 Serialize），返回占位 hash
+  if not msg.Serialize then
+    return "d41d8cd98f00b204e9800998ecf8427e"
   end
   local seriStr = msg:Serialize()
   local sum = ""

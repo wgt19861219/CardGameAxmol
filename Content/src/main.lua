@@ -910,11 +910,15 @@ for _, mod in ipairs(coreModules) do
                 local handled = false
                 local ls = rawget(_G, "local_server")
                 if ls and ls.handle then
-                    local ok_ls, err_ls = pcall(function() ls.handle(msgType, obj) end)
-                    if ok_ls then
+                    local ok_ls, result_ls = pcall(function() return ls.handle(msgType, obj) end)
+                    if ok_ls and result_ls then
                         handled = true
                     else
-                        LegendLog("[STUB-NET] local_server error: " .. tostring(err_ls))
+                        if not ok_ls then
+                            LegendLog("[STUB-NET] local_server error: " .. tostring(result_ls))
+                        else
+                            LegendLog("[STUB-NET] local_server returned false for: " .. tostring(msgType))
+                        end
                     end
                 end
                 if not handled then

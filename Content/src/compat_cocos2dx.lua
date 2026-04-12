@@ -187,8 +187,45 @@ end
 
 CCLabelBMFont    = ax.Label
 CCMenu           = ax.Menu
+-- CCMenu:createWithArray compat (cocos2d-x 2.x → Axmol)
+if ax.Menu and not ax.Menu.createWithArray then
+    function ax.Menu.createWithArray(self_or_items, items)
+        local arr
+        if type(self_or_items) == "table" and type(items) ~= "table" then
+            arr = self_or_items  -- dot call: Menu.createWithArray(table)
+        else
+            arr = items or self_or_items
+        end
+        local menu = ax.Menu:create()
+        if arr then
+            for _, item in ipairs(arr) do
+                if item then menu:addChild(item) end
+            end
+        end
+        return menu
+    end
+end
+-- CCMenu:createWithItem compat
+if ax.Menu and not ax.Menu.createWithItem then
+    function ax.Menu.createWithItem(self_or_item, item)
+        local menuItem = (type(self_or_item) ~= "table" or (item ~= nil)) and item or self_or_item
+        local menu = ax.Menu:create()
+        if menuItem then menu:addChild(menuItem) end
+        return menu
+    end
+end
 CCMenuItem       = ax.MenuItem
 CCMenuItemImage  = ax.MenuItemImage
+-- stub: cocos2d-x 2.x setTouchingArea (扩大触摸区域)，Axmol 无此 API
+if ax.MenuItemImage and not ax.MenuItemImage.setTouchingArea then
+    function ax.MenuItemImage:setTouchingArea(rect) end
+end
+if ax.MenuItemSprite and not ax.MenuItemSprite.setTouchingArea then
+    function ax.MenuItemSprite:setTouchingArea(rect) end
+end
+if ax.MenuItem and not ax.MenuItem.setTouchingArea then
+    function ax.MenuItem:setTouchingArea(rect) end
+end
 CCMenuItemLabel  = ax.MenuItemLabel
 CCMenuItemFont   = ax.MenuItemFont
 CCMenuItemToggle = ax.MenuItemToggle
@@ -1104,20 +1141,52 @@ if ax.Node then
         ax.Node.getZOrder = ax.Node.getLocalZOrder
     end
 
-    -- addChild compat: cocos2d-x 2.x uses addChild(child, zOrder)
-    -- Axmol: addChild(child), addChild(child, zOrder, name), addChild(child, zOrder, tag)
-    -- When called with 2 args (child, zOrder), auto-add tag=0
+    -- addChild compat: 测试 Axmol addChild 的实际签名
+    -- cocos2d-x 2.x 使用 addChild(child) / addChild(child, zOrder) / addChild(child, zOrder, tag)
+    -- 先探测 Axmol 原生支持的调用方式
     local _origAddChild = ax.Node.addChild
     if _origAddChild then
+        local _testNode = ax.Node:create()
+        local _testChild = ax.Node:create()
+        local _oneArg = false
+        local _twoArg = false
+        local _threeArgNum = false
+        local _threeArgStr = false
+
+        if pcall(_origAddChild, _testNode, _testChild) then _oneArg = true end
+        _testChild:removeFromParent()
+        if pcall(_origAddChild, _testNode, _testChild, 5) then _twoArg = true end
+        _testChild:removeFromParent()
+        if pcall(_origAddChild, _testNode, _testChild, 5, 10) then _threeArgNum = true end
+        _testChild:removeFromParent()
+        if pcall(_origAddChild, _testNode, _testChild, 5, "name") then _threeArgStr = true end
+
+        print("[COMPAT] addChild probe: 1arg=" .. tostring(_oneArg) .. " 2arg=" .. tostring(_twoArg) .. " 3num=" .. tostring(_threeArgNum) .. " 3str=" .. tostring(_threeArgStr))
+
         ax.Node.addChild = function(self, child, ...)
+            if not child then return end
             local args = {...}
+            local ok, err
             if #args == 0 then
-                _origAddChild(self, child)
+                ok, err = pcall(_origAddChild, self, child)
+                if not ok then ok, err = pcall(_origAddChild, self, child, 0, 0) end
             elseif #args == 1 then
-                -- addChild(child, zOrder) -> addChild(child, zOrder, 0)
-                _origAddChild(self, child, args[1], 0)
+                ok, err = pcall(_origAddChild, self, child, args[1])
+                if not ok then ok, err = pcall(_origAddChild, self, child, args[1], 0) end
+            elseif #args == 2 then
+                local tag = args[2]
+                if type(tag) == "string" then
+                    ok, err = pcall(_origAddChild, self, child, args[1], tag)
+                    if not ok then ok, err = pcall(_origAddChild, self, child, args[1], 0) end
+                else
+                    ok, err = pcall(_origAddChild, self, child, args[1], tag)
+                    if not ok then ok, err = pcall(_origAddChild, self, child, args[1]) end
+                end
             else
-                _origAddChild(self, child, ...)
+                ok, err = pcall(_origAddChild, self, child, ...)
+            end
+            if not ok then
+                print("[ADDCHILD-ERR] " .. tostring(err) .. " | types: self=" .. type(self) .. " child=" .. type(child) .. " #args=" .. #args)
             end
         end
     end
@@ -1165,6 +1234,13 @@ if ax.Sprite and not ax.Sprite.getTextureRect then
     function ax.Sprite:getTextureRect()
         local s = self:getContentSize()
         return {x=0, y=0, width=s.width, height=s.height, origin={x=0,y=0}, size={width=s.width,height=s.height}}
+    end
+end
+
+-- Sprite setDisplayFrame 兼容（cocos2d-x 2.x → Axmol setSpriteFrame）
+if ax.Sprite then
+    if not ax.Sprite.setDisplayFrame and ax.Sprite.setSpriteFrame then
+        ax.Sprite.setDisplayFrame = ax.Sprite.setSpriteFrame
     end
 end
 

@@ -892,8 +892,359 @@ int register_game_bindings(lua_State* L)
     });
     lua_setfield(L, -2, "setStartAction");
 
-    // Set methods as __index
-    lua_setfield(L, -2, "__index");  // set methods table as __index in metatable
+    // setActionElapsed(elapsed)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        float val = (float)luaL_checknumber(L, 2);
+        if (obj) obj->setActionElapsed(val);
+        return 0;
+    });
+    lua_setfield(L, -2, "setActionElapsed");
+
+    // setActionSpeeder(speeder)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        float val = (float)luaL_checknumber(L, 2);
+        if (obj) obj->setActionSpeeder(val);
+        return 0;
+    });
+    lua_setfield(L, -2, "setActionSpeeder");
+
+    // update(dt)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        float dt = (float)luaL_checknumber(L, 2);
+        if (obj) obj->update(dt);
+        return 0;
+    });
+    lua_setfield(L, -2, "update");
+
+    // addEffect(name, zOrder) - stub, LegendAnimation doesn't support overlay effects
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "addEffect");
+
+    // addEffectToComponent stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "addEffectToComponent");
+
+    // removeEffectWithID stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "removeEffectWithID");
+
+    // removeEffectWithName stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "removeEffectWithName");
+
+    // clearAllEffects stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "clearAllEffects");
+
+    // setComponent stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "setComponent");
+
+    // addNode stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "addNode");
+
+    // addNodeToComponent stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "addNodeToComponent");
+
+    // removeNodeWithID stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "removeNodeWithID");
+
+    // useShader stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "useShader");
+
+    // useDefaultShader stub
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        return 0;
+    });
+    lua_setfield(L, -2, "useDefaultShader");
+
+    // setColor(r, g, b)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        if (obj && lua_gettop(L) >= 4) {
+            obj->setColor(ax::Color32((uint8_t)luaL_checkinteger(L, 2),
+                (uint8_t)luaL_checkinteger(L, 3),
+                (uint8_t)luaL_checkinteger(L, 4)));
+        }
+        return 0;
+    });
+    lua_setfield(L, -2, "setColor");
+
+    // tint(r, g, b)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        if (obj && lua_gettop(L) >= 4) {
+            obj->setColor(ax::Color32((uint8_t)luaL_checkinteger(L, 2),
+                (uint8_t)luaL_checkinteger(L, 3),
+                (uint8_t)luaL_checkinteger(L, 4)));
+        }
+        return 0;
+    });
+    lua_setfield(L, -2, "tint");
+
+    // setNextAction stub (for compatibility - some code uses different name)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        return 0;
+    });
+    lua_setfield(L, -2, "interruptSound");
+
+    // ---- Node method forwards (bypass tolua++ type checking) ----
+    // These are needed because tolua++ checks metatable type, and our
+    // LegendAnimationEffect_mt doesn't match ax.Node/ax.Sprite.
+
+    // Helper macro to get the Node* from LegendAnimationEffect userdata
+    #define LAE_NODE(L) \
+        (*reinterpret_cast<ax::LegendAnimationEffect**>(lua_touserdata(L, 1)))
+
+    // addChild(child, zOrder, tag)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (!self) return 0;
+        // child might be any Node* userdata — we need to extract the pointer
+        // Try to get it as a generic userdata pointer
+        void** childPtr = (void**)lua_touserdata(L, 2);
+        if (!childPtr || !*childPtr) return 0;
+        auto* child = static_cast<ax::Node*>(*childPtr);
+        int top = lua_gettop(L);
+        if (top >= 4) {
+            self->addChild(child, (int)luaL_checkinteger(L, 3), (int)luaL_checkinteger(L, 4));
+        } else if (top >= 3) {
+            self->addChild(child, (int)luaL_checkinteger(L, 3));
+        } else {
+            self->addChild(child);
+        }
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "addChild");
+
+    // removeFromParent()
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->removeFromParent();
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "removeFromParent");
+
+    // removeFromParentAndCleanup(cleanup)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->removeFromParent();
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "removeFromParentAndCleanup");
+
+    // runAction(action)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (!self) return 0;
+        // action is a userdata — extract pointer
+        void** actionPtr = (void**)lua_touserdata(L, 2);
+        if (!actionPtr || !*actionPtr) return 0;
+        auto* action = static_cast<ax::Action*>(*actionPtr);
+        self->runAction(action);
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "runAction");
+
+    // stopAllActions()
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->stopAllActions();
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "stopAllActions");
+
+    // setPosition(x, y) or setPosition(vec2)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (!self) return 0;
+        if (lua_type(L, 2) == LUA_TNUMBER) {
+            float x = (float)luaL_checknumber(L, 2);
+            float y = (float)luaL_checknumber(L, 3);
+            self->setPosition(x, y);
+        } else if (lua_istable(L, 2)) {
+            lua_getfield(L, 2, "x");
+            float x = (float)luaL_optnumber(L, -1, 0);
+            lua_pop(L, 1);
+            lua_getfield(L, 2, "y");
+            float y = (float)luaL_optnumber(L, -1, 0);
+            lua_pop(L, 1);
+            self->setPosition(x, y);
+        }
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setPosition");
+
+    // getPosition() -> x, y
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (!self) { lua_pushnumber(L, 0); lua_pushnumber(L, 0); return 2; }
+        auto pos = self->getPosition();
+        lua_pushnumber(L, pos.x);
+        lua_pushnumber(L, pos.y);
+        return 2;
+    }, 0);
+    lua_setfield(L, -2, "getPosition");
+
+    // setScale(scale)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setScale((float)luaL_checknumber(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setScale");
+
+    // setScaleX(scaleX)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setScaleX((float)luaL_checknumber(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setScaleX");
+
+    // setScaleY(scaleY)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setScaleY((float)luaL_checknumber(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setScaleY");
+
+    // setOpacity(opacity)
+    // Note: already defined above with SAFE_SPINE, but we need one for LegendAnimationEffect too
+    // Actually it's already in the methods table above. Let's check...
+
+    // setVisible(visible)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setVisible(lua_toboolean(L, 2) != 0);
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setVisible");
+
+    // setContentSize(width, height)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (!self) return 0;
+        float w = (float)luaL_checknumber(L, 2);
+        float h = (float)luaL_checknumber(L, 3);
+        self->setContentSize(ax::Size(w, h));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setContentSize");
+
+    // getContentSize() -> width, height
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (!self) { lua_pushnumber(L, 0); lua_pushnumber(L, 0); return 2; }
+        auto s = self->getContentSize();
+        lua_pushnumber(L, s.width);
+        lua_pushnumber(L, s.height);
+        return 2;
+    }, 0);
+    lua_setfield(L, -2, "getContentSize");
+
+    // setAnchorPoint(x, y)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (!self) return 0;
+        float x = (float)luaL_checknumber(L, 2);
+        float y = (float)luaL_checknumber(L, 3);
+        self->setAnchorPoint(ax::Vec2(x, y));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setAnchorPoint");
+
+    // setRotation(rotation)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setRotation((float)luaL_checknumber(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setRotation");
+
+    // setLocalZOrder(z) / setZOrder(z)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setLocalZOrder((int)luaL_checkinteger(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setLocalZOrder");
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setLocalZOrder((int)luaL_checkinteger(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setZOrder");
+
+    #undef LAE_NODE
+
+    // Save methods table as __methods for reference
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -3, "__methods");
+
+    // Set methods table as __index
+    lua_setfield(L, -2, "__index");
+
+    // Register type in tolua++ type system so addChild accepts LegendAnimationEffect as ax.Node
+    // 1. registry[metatable] = "LegendAnimationEffect" (type name lookup)
+    lua_pushvalue(L, -1);                          // push metatable copy
+    lua_pushstring(L, "LegendAnimationEffect");    // type name
+    lua_rawset(L, LUA_REGISTRYINDEX);              // registry[mt] = "LegendAnimationEffect"
+
+    // 2. tolua_super[metatable] = {ax.Node=true, ax.Sprite=true, ax.Ref=true}
+    lua_pushstring(L, "tolua_super");
+    lua_rawget(L, LUA_REGISTRYINDEX);              // get tolua_super from registry
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushstring(L, "tolua_super");
+        lua_pushvalue(L, -2);
+        lua_rawset(L, LUA_REGISTRYINDEX);          // registry["tolua_super"] = new_table
+    }
+    if (lua_istable(L, -1)) {
+        lua_pushvalue(L, -2);                      // key: metatable
+        lua_newtable(L);                           // value: super types table
+        lua_pushstring(L, "ax.Node");
+        lua_pushboolean(L, 1);
+        lua_rawset(L, -3);                         // super["ax.Node"] = true
+        lua_pushstring(L, "ax.Sprite");
+        lua_pushboolean(L, 1);
+        lua_rawset(L, -3);                         // super["ax.Sprite"] = true
+        lua_pushstring(L, "ax.Ref");
+        lua_pushboolean(L, 1);
+        lua_rawset(L, -3);                         // super["ax.Ref"] = true
+        lua_rawset(L, -3);                         // tolua_super[metatable] = super
+    }
+    lua_pop(L, 1);                                 // pop tolua_super
 
     // __gc
     lua_pushcfunction(L, [](lua_State* L) -> int {
@@ -910,12 +1261,14 @@ int register_game_bindings(lua_State* L)
     lua_pushcfunction(L, [](lua_State* L) -> int {
         int argOffset = (lua_type(L, 1) != LUA_TSTRING) ? 1 : 0;  // skip self for colon call
         const char* resource = luaL_checkstring(L, 1 + argOffset);
+        float scale = (float)luaL_optnumber(L, 2 + argOffset, 1.0f);
         auto* obj = ax::LegendAnimationEffect::create(resource);
         if (obj)
         {
+            obj->setScale(scale);
+            obj->retain();
             auto** ud = (ax::LegendAnimationEffect**)lua_newuserdata(L, sizeof(ax::LegendAnimationEffect*));
             *ud = obj;
-            obj->retain();
             luaL_getmetatable(L, "LegendAnimationEffect_mt");
             lua_setmetatable(L, -2);
             return 1;

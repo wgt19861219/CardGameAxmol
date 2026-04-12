@@ -53,41 +53,60 @@ local function reset(self, stage_info, battle_info, extraInfo)
 	self.pause_locks = {}
 	self.battleModeInfo = extraInfo
 	self.node = CCScene:create()
-	local bg = battle_info["Background Pic"]
-	self.background = ed.createSprite("UI/alpha/HVGA/" .. bg)
-	local flip = battle_info["H Flip"]
-	if flip then
-		self.background:setFlipX(true)
-	end
+	-- ensure layers exist first
 	self.background_layer = CCLayer:create()
 	self.main_layer = CCLayer:create()
 	self.top_layer = CCLayer:create()
 	self.ui_layer = CCLayer:create()
-	self.background:setAnchorPoint(ed.ccpZero)
-	self.background:setPosition(ed.ccpZero)
-	self.background_layer:addChild(self.background)
 	self.node:addChild(self.background_layer, 0)
 	self.node:addChild(self.main_layer, 1)
 	self.node:addChild(self.top_layer, 2)
 	self.node:addChild(self.ui_layer, 3)
-	self:resetUI(stage_info, battle_info)
-	local chapter = stage_info["Chapter ID"]
-	self.delayPlayMusicHandler = self:delayPlayMusic(ed.music["chapter" .. chapter])
+	-- background
+	local ok_bg, err_bg = pcall(function()
+		local bg = battle_info["Background Pic"]
+		self.background = ed.createSprite("UI/alpha/HVGA/" .. bg)
+		local flip = battle_info["H Flip"]
+		if flip then
+			self.background:setFlipX(true)
+		end
+		self.background:setAnchorPoint(ed.ccpZero)
+		self.background:setPosition(ed.ccpZero)
+		self.background_layer:addChild(self.background)
+	end)
+	if not ok_bg then
+		print("[BATTLE_SCENE] reset bg error: " .. tostring(err_bg))
+	end
+	-- UI
+	local ok_ui, err_ui = pcall(function()
+		self:resetUI(stage_info, battle_info)
+		local chapter = stage_info["Chapter ID"]
+		self.delayPlayMusicHandler = self:delayPlayMusic(ed.music["chapter" .. chapter])
+	end)
+	if not ok_ui then
+		print("[BATTLE_SCENE] resetUI error: " .. tostring(err_ui))
+	end
+	-- Actor creation (critical)
+	print("[BATTLE_SCENE] reset: unit_list=" .. tostring(#(ed.engine.unit_list or {})))
 	self.lastSync = nil
 	self:syncActors()
+	print("[BATTLE_SCENE] reset: actor_list=" .. tostring(#(self.actor_list or {})))
 	local viewCamp = ed.emCampPlayer
 	if self.battleModeInfo and self.battleModeInfo.replayInfo and self.battleModeInfo.replayInfo.oppoUserid == ed.getUserid() then
 		viewCamp = ed.emCampEnemy
 	end
 	for i, unit in ipairs(ed.engine.unit_list) do
 		if unit.actor then
-			unit:preload()
+			local ok_pre, err_pre = pcall(function() unit:preload() end)
+			if not ok_pre then print("[BATTLE_SCENE] preload err: " .. tostring(err_pre)) end
 		end
 		if unit.camp == viewCamp and unit:isHero() then
-			self:addHeroPanel(unit)
+			local ok_hp, err_hp = pcall(function() self:addHeroPanel(unit) end)
+			if not ok_hp then print("[BATTLE_SCENE] addHeroPanel err: " .. tostring(err_hp)) end
 		end
 		if unit.hpLayer and 0 ~= unit.hpLayer then
-			self:addBigBloodPanel(unit)
+			local ok_bb, err_bb = pcall(function() self:addBigBloodPanel(unit) end)
+			if not ok_bb then print("[BATTLE_SCENE] addBigBloodPanel err: " .. tostring(err_bb)) end
 		end
 	end
 end
@@ -407,15 +426,29 @@ local function syncActors(self)
 		self.lastSync = ed.engine.ticks
 		for unit in ed.engine:foreachAliveUnit(ed.emCampBoth) do
 			if not unit.actor then
-				unit.actor = ed.UnitActorCreate(unit)
-				self:addActor(unit.actor)
+				local ok, actor = pcall(function()
+					return ed.UnitActorCreate(unit)
+				end)
+				if ok and actor then
+					unit.actor = actor
+					self:addActor(actor)
+				else
+					print("[SYNC] UnitActorCreate failed for " .. tostring(unit.name or unit.tid) .. ": " .. tostring(actor))
+				end
 			end
 		end
 		for npc in ed.engine:foreachNpc() do
 			if not npc.actor then
-				npc.actor = ed.NpcActorCreate(npc)
-				npc:setAction(npc.bornActionName, true)
-				self:addActor(npc.actor)
+				local ok, ret = pcall(function()
+					npc.actor = ed.NpcActorCreate(npc)
+					npc:setAction(npc.bornActionName, true)
+					return npc.actor
+				end)
+				if ok and ret then
+					self:addActor(ret)
+				else
+					print("[SYNC] NpcActorCreate failed: " .. tostring(ret))
+				end
 			end
 		end
 	end
@@ -604,14 +637,24 @@ local function update(self, dt)
 		paused = paused or v
 	end
 	if not paused then
-		ed.engine:update(dt)
+		local ok_eng, err_eng = pcall(function() ed.engine:update(dt) end)
+		if not ok_eng then
+			if not self._engErrShown then
+				print("[BATTLE_SCENE] engine update error: " .. tostring(err_eng))
+				self._engErrShown = true
+			end
+		end
 		self.frames = self.frames + 1
 		self:syncActors()
 		local new_list = {}
 		for _, actor in ipairs(self.actor_list) do
 			if not actor.model.terminated then
 				if not actor.model.frozen_actor then
-					actor:update(dt)
+					local ok_upd, err_upd = pcall(function() actor:update(dt) end)
+					if not ok_upd and not actor._updErrShown then
+						print("[BATTLE_SCENE] actor update error: " .. tostring(err_upd))
+						actor._updErrShown = true
+					end
 				end
 				insert(new_list, actor)
 			else

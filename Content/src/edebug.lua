@@ -1,7 +1,7 @@
 local _tostring = tostring
 local _print = print
 function tostring(o, limit)
-  if limit and limit < 0 then
+  if limit and type(limit) == "number" and limit < 0 then
     return ""
   end
   if type(o) == "userdata" then

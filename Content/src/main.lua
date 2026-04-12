@@ -183,6 +183,7 @@ if not ed.proc_net then ed.proc_net = function() end end
 if not ed.getUserid then ed.getUserid = function() return "ax-user-001" end end
 if not ed.getDeviceId then ed.getDeviceId = function() return "ax-device-001" end end
 if not ed.send then ed.send = function() end end
+if not ed.delaySend then ed.delaySend = function() end end
 if not ed.upmsg then
     ed.upmsg = setmetatable({ login = function() return {} end }, {
         __index = function(t, key)
@@ -273,7 +274,24 @@ rawset(_G, "module", function(name, ...)
     local M = package.loaded[name]
     if type(M) ~= "table" then M = rawget(_G, name) end
     if type(M) ~= "table" then M = {} end
-    rawset(_G, name, M)
+
+    -- 支持点分隔的模块名：创建中间表并注册到正确位置
+    -- e.g. module("ed.FloatingBarType.HP") -> ed.FloatingBarType.HP = M
+    local parts = {}
+    for part in name:gmatch("[^.]+") do parts[#parts+1] = part end
+    if #parts > 1 then
+        local parent = _G
+        for i = 1, #parts - 1 do
+            if type(parent[parts[i]]) ~= "table" then
+                parent[parts[i]] = {}
+            end
+            parent = parent[parts[i]]
+        end
+        parent[parts[#parts]] = M
+    else
+        rawset(_G, name, M)
+    end
+
     package.loaded[name] = M
     -- 应用 package.seeall 等参数（设置 __index = _G 以继承全局）
     for i = 1, select('#', ...) do
@@ -1675,6 +1693,7 @@ local function ensureStubsAfterTools()
     print("[ENSURE] ed.config = " .. tostring(ed.config) .. " localMode=" .. tostring(ed.config.localMode))
     if not ed.getUserid then ed.getUserid = function() return "ax-user-001" end end
     if not ed.getDeviceId then ed.getDeviceId = function() return "ax-device-001" end end
+    if not ed.delaySend then ed.delaySend = function() end end
     if not ed.send then
         ed.send = function(msg, msgType)
             print("[STUB-SEND] " .. tostring(msgType))
@@ -1794,6 +1813,7 @@ local function ensureStubsAfterTools()
         end
     end
     if not ed.proc_net then ed.proc_net = function() end end
+    if not ed.delaySend then ed.delaySend = function() end end
     if not ed.netreply then ed.netreply = {} end
     if not ed.netdata then ed.netdata = {} end
     -- 包装 ed.upmsg：保留 proto 已有的消息类型，缺失的自动创建空工厂

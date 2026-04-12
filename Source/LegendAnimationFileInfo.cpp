@@ -3,6 +3,7 @@
 
 extern "C" {
 #include "unzip/unzip.h"
+#include <zlib.h>
 }
 
 namespace ax {
@@ -42,29 +43,131 @@ static void readAffineTransform(unsigned char*& data, AffineTransform& out)
     data += sizeof(AffineTransform);
 }
 
-// ---- ZIP extraction ----
+// ---- In-memory ZIP extraction ----
+
+#pragma pack(push, 1)
+struct ZipLocalFileHeader
+{
+    uint32_t signature;
+    uint16_t versionNeeded;
+    uint16_t generalFlag;
+    uint16_t compressionMethod;
+    uint16_t modTime;
+    uint16_t modDate;
+    uint32_t crc32;
+    uint32_t compressedSize;
+    uint32_t uncompressedSize;
+    uint16_t filenameLength;
+    uint16_t extraFieldLength;
+};
+#pragma pack(pop)
+
+static bool extractFromMemoryZip(const unsigned char* zipData, size_t zipSize,
+                                  const std::string& entryName,
+                                  std::vector<unsigned char>& outData)
+{
+    const unsigned char* ptr = zipData;
+    const unsigned char* end = zipData + zipSize;
+
+    while (ptr + sizeof(ZipLocalFileHeader) <= end)
+    {
+        auto* hdr = reinterpret_cast<const ZipLocalFileHeader*>(ptr);
+        if (hdr->signature != 0x04034b50)
+            break;
+
+        const char* filename = reinterpret_cast<const char*>(ptr + sizeof(ZipLocalFileHeader));
+        size_t nameLen = hdr->filenameLength;
+
+        const unsigned char* dataStart = ptr + sizeof(ZipLocalFileHeader) + hdr->filenameLength + hdr->extraFieldLength;
+
+        if (nameLen == entryName.size() &&
+            memcmp(filename, entryName.c_str(), nameLen) == 0)
+        {
+            if (hdr->compressionMethod == 0)
+            {
+                if (dataStart + hdr->uncompressedSize <= end)
+                {
+                    outData.assign(dataStart, dataStart + hdr->uncompressedSize);
+                    return true;
+                }
+            }
+            else if (hdr->compressionMethod == 8)
+            {
+                outData.resize(hdr->uncompressedSize);
+                z_stream stream = {};
+                stream.next_in = const_cast<unsigned char*>(dataStart);
+                stream.avail_in = hdr->compressedSize;
+                stream.next_out = outData.data();
+                stream.avail_out = hdr->uncompressedSize;
+
+                if (inflateInit2(&stream, -MAX_WBITS) == Z_OK)
+                {
+                    int ret = inflate(&stream, Z_FINISH);
+                    inflateEnd(&stream);
+                    if (ret == Z_STREAM_END || ret == Z_OK)
+                    {
+                        outData.resize(stream.total_out);
+                        return true;
+                    }
+                }
+                outData.clear();
+                return false;
+            }
+            return false;
+        }
+
+        size_t entrySize = sizeof(ZipLocalFileHeader) + hdr->filenameLength + hdr->extraFieldLength + hdr->compressedSize;
+        if (hdr->generalFlag & 0x08)
+        {
+            if (hdr->compressedSize == 0)
+            {
+                const unsigned char* scan = dataStart;
+                while (scan + 4 <= end)
+                {
+                    uint32_t sig = *reinterpret_cast<const uint32_t*>(scan);
+                    if (sig == 0x04034b50 || sig == 0x02014b50 || sig == 0x06054b50)
+                        break;
+                    scan++;
+                }
+                ptr = scan;
+                continue;
+            }
+        }
+        ptr += entrySize;
+    }
+    return false;
+}
+
 static bool extractFromZip(const std::string& zipPath, const std::string& entryName,
                            std::vector<unsigned char>& outData)
 {
     unzFile zf = unzOpen(zipPath.c_str());
-    if (!zf) return false;
-
-    bool found = false;
-    if (unzLocateFile(zf, entryName.c_str(), 0) == UNZ_OK)
+    if (zf)
     {
-        unz_file_info info;
-        unzGetCurrentFileInfo(zf, &info, nullptr, 0, nullptr, 0, nullptr, 0);
-
-        if (unzOpenCurrentFile(zf) == UNZ_OK)
+        bool found = false;
+        if (unzLocateFile(zf, entryName.c_str(), 0) == UNZ_OK)
         {
-            outData.resize(info.uncompressed_size);
-            int bytesRead = unzReadCurrentFile(zf, outData.data(), info.uncompressed_size);
-            unzCloseCurrentFile(zf);
-            found = (bytesRead > 0);
+            unz_file_info info;
+            unzGetCurrentFileInfo(zf, &info, nullptr, 0, nullptr, 0, nullptr, 0);
+            if (unzOpenCurrentFile(zf) == UNZ_OK)
+            {
+                outData.resize(info.uncompressed_size);
+                int bytesRead = unzReadCurrentFile(zf, outData.data(), info.uncompressed_size);
+                unzCloseCurrentFile(zf);
+                found = (bytesRead > 0);
+            }
         }
+        unzClose(zf);
+        if (found) return true;
     }
-    unzClose(zf);
-    return found;
+
+    auto* fu = FileUtils::getInstance();
+    auto zipData = fu->getDataFromFile(zipPath);
+    if (zipData.isNull() || zipData.getSize() == 0)
+        return false;
+
+    return extractFromMemoryZip(reinterpret_cast<const unsigned char*>(zipData.getBytes()),
+                                zipData.getSize(), entryName, outData);
 }
 
 // ---- Factory ----
@@ -78,10 +181,9 @@ LegendAnimationFileInfo* LegendAnimationFileInfo::getAniFileInfo(const std::stri
     if (obj->_elements.empty() && obj->_actions.empty())
     {
         delete obj;
-        // 不缓存失败，允许文件修复后重新加载
         return nullptr;
     }
-    obj->retain();  // 缓存持有引用，避免 autorelease pool 释放
+    obj->retain();
     _cache[name] = obj;
     return obj;
 }
@@ -109,7 +211,7 @@ LegendAnimationFileInfo::LegendAnimationFileInfo(const std::string& name)
         }
     }
 
-    _scalefactor = 1.0f;  // g_ani_scale_factor, default 1.0
+    _scalefactor = 1.0f;
 
     // Extract plist
     std::vector<unsigned char> plistData;
@@ -144,19 +246,38 @@ LegendAnimationFileInfo::LegendAnimationFileInfo(const std::string& name)
     }
 
     auto textureName = name + "_ani_tex";
-    auto* texture = Director::getInstance()->getTextureCache()->addImage(image, textureName);
+    _texture = Director::getInstance()->getTextureCache()->addImage(image, textureName);
     image->release();
 
-    if (!texture)
+    if (!_texture)
     {
         AXLOGW("LegendAnimationFileInfo: failed to create texture");
         return;
     }
 
-    // Load sprite frames from plist content
-    Data plistContent;
-    plistContent.copy(plistData.data(), plistData.size());
-    SpriteFrameCache::getInstance()->addSpriteFramesWithFileContent(plistContent, texture);
+    AXLOGW("LegendAnimationFileInfo: name={} textureSize={}x{}", name,
+           (int)_texture->getContentSize().width, (int)_texture->getContentSize().height);
+
+    // Parse plist and create sprite frames into PRIVATE map
+    // This matches the original architecture where each LegendAnimationFileInfo
+    // had its own CCSpriteFrameCache instance, preventing name collisions
+    parsePlistAndCreateFrames(plistData, _texture);
+
+    // Verify first sprite frame
+    if (!_elements.empty())
+    {
+        auto* testFrame = getSpriteFrame(_elements[0].resouceName.c_str());
+        if (testFrame)
+        {
+            auto r = testFrame->getRect();
+            AXLOGW("LegendAnimationFileInfo: first frame '{}' rect=({},{},{},{})",
+                   _elements[0].resouceName, (int)r.origin.x, (int)r.origin.y, (int)r.size.width, (int)r.size.height);
+        }
+        else
+        {
+            AXLOGW("LegendAnimationFileInfo: first frame '{}' NOT FOUND in private cache", _elements[0].resouceName);
+        }
+    }
 
     // Extract and parse key file
     std::vector<unsigned char> keyData;
@@ -171,14 +292,107 @@ LegendAnimationFileInfo::LegendAnimationFileInfo(const std::string& name)
 
 LegendAnimationFileInfo::~LegendAnimationFileInfo()
 {
+    // Release all privately-owned sprite frames
+    for (auto& [name, frame] : _spriteFrames)
+    {
+        if (frame)
+            frame->release();
+    }
+    _spriteFrames.clear();
+
+    // Texture is owned by TextureCache, don't release it here
+    _texture = nullptr;
+
     _actions.clear();
     _elements.clear();
 }
 
 SpriteFrame* LegendAnimationFileInfo::getSpriteFrame(const char* frameName)
 {
+    // Look up in PRIVATE map (not global SpriteFrameCache)
     std::string fullName = std::string(frameName) + ".png";
-    return SpriteFrameCache::getInstance()->getSpriteFrameByName(fullName);
+    auto it = _spriteFrames.find(fullName);
+    if (it != _spriteFrames.end())
+        return it->second;
+    return nullptr;
+}
+
+void LegendAnimationFileInfo::parsePlistAndCreateFrames(const std::vector<unsigned char>& plistData, Texture2D* texture)
+{
+    // Parse plist XML into ValueMap using Axmol's built-in parser
+    auto dict = FileUtils::getInstance()->getValueMapFromData(
+        reinterpret_cast<const char*>(plistData.data()),
+        static_cast<int>(plistData.size()));
+
+    if (dict.find("frames") == dict.end() || dict["frames"].getType() != Value::Type::MAP)
+    {
+        AXLOGW("LegendAnimationFileInfo: plist has no 'frames' dict");
+        return;
+    }
+
+    auto& framesDict = dict["frames"].asValueMap();
+
+    // Detect plist format from metadata
+    int format = 0;
+    auto metaIt = dict.find("metadata");
+    if (metaIt != dict.end())
+    {
+        auto& metadata = metaIt->second.asValueMap();
+        auto fmtIt = metadata.find("format");
+        if (fmtIt != metadata.end())
+            format = fmtIt->second.asInt();
+    }
+
+    AXLOGW("LegendAnimationFileInfo: parsing {} frames, format={}", framesDict.size(), format);
+
+    // Create SpriteFrame objects from plist data (same logic as PlistSpriteSheetLoader)
+    for (auto& [spriteFrameName, value] : framesDict)
+    {
+        auto& frameDict = value.asValueMap();
+        SpriteFrame* spriteFrame = nullptr;
+
+        if (format == 0)
+        {
+            float x  = frameDict.count("x") ? frameDict.at("x").asFloat() : 0;
+            float y  = frameDict.count("y") ? frameDict.at("y").asFloat() : 0;
+            float w  = frameDict.count("width") ? frameDict.at("width").asFloat() : 0;
+            float h  = frameDict.count("height") ? frameDict.at("height").asFloat() : 0;
+            float ox = frameDict.count("offsetX") ? frameDict.at("offsetX").asFloat() : 0;
+            float oy = frameDict.count("offsetY") ? frameDict.at("offsetY").asFloat() : 0;
+            int ow   = frameDict.count("originalWidth") ? abs(frameDict.at("originalWidth").asInt()) : 0;
+            int oh   = frameDict.count("originalHeight") ? abs(frameDict.at("originalHeight").asInt()) : 0;
+            if (!ow) ow = (int)w;
+            if (!oh) oh = (int)h;
+            spriteFrame = SpriteFrame::createWithTexture(texture, Rect(x, y, w, h), false, Vec2(ox, oy), Vec2((float)ow, (float)oh));
+        }
+        else if (format == 1 || format == 2)
+        {
+            Rect frame = utils::parseRect(frameDict.count("frame") ? frameDict.at("frame").asString() : "{{0,0},{0,0}}");
+            bool rotated = (format == 2 && frameDict.count("rotated")) ? frameDict.at("rotated").asBool() : false;
+            Vec2 offset = utils::parseVec2(frameDict.count("offset") ? frameDict.at("offset").asString() : "{0,0}");
+            Vec2 sourceSize = utils::parseVec2(frameDict.count("sourceSize") ? frameDict.at("sourceSize").asString() : "{0,0}");
+            spriteFrame = SpriteFrame::createWithTexture(texture, frame, rotated, offset, sourceSize);
+        }
+        else if (format == 3)
+        {
+            Vec2 spriteSize = utils::parseVec2(frameDict.count("spriteSize") ? frameDict.at("spriteSize").asString() : "{0,0}");
+            Vec2 spriteOffset = utils::parseVec2(frameDict.count("spriteOffset") ? frameDict.at("spriteOffset").asString() : "{0,0}");
+            Vec2 spriteSourceSize = utils::parseVec2(frameDict.count("spriteSourceSize") ? frameDict.at("spriteSourceSize").asString() : "{0,0}");
+            Rect textureRect = utils::parseRect(frameDict.count("textureRect") ? frameDict.at("textureRect").asString() : "{{0,0},{0,0}}");
+            bool textureRotated = frameDict.count("textureRotated") ? frameDict.at("textureRotated").asBool() : false;
+            spriteFrame = SpriteFrame::createWithTexture(
+                texture, Rect(textureRect.origin.x, textureRect.origin.y, spriteSize.width, spriteSize.height),
+                textureRotated, spriteOffset, spriteSourceSize);
+        }
+
+        if (spriteFrame)
+        {
+            spriteFrame->retain();  // Private ownership
+            _spriteFrames[spriteFrameName] = spriteFrame;
+        }
+    }
+
+    AXLOGW("LegendAnimationFileInfo: private cache has {} frames for {}", _spriteFrames.size(), _name);
 }
 
 void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned char* data, unsigned long dataSize)

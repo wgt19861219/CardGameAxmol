@@ -77,9 +77,21 @@ end
 ed.initSpriteWithFrame = initSpriteWithFrame
 local function createScale9Sprite(res, capInsets)
 	local frame = ed.getSpriteFrame(res)
+	if not frame then return nil end
 	if not capInsets then
-		local size = frame:getRect().size
-		capInsets = CCRectMake(size.width / 3, size.height / 3, size.width / 3, size.height / 3)
+		local sw, sh = 0, 0
+		local ok, rect = pcall(function() return frame:getRect() end)
+		if ok and rect then
+			if type(rect) == "table" then
+				sw = rect.width or (rect.size and rect.size.width) or 0
+				sh = rect.height or (rect.size and rect.size.height) or 0
+			end
+		end
+		if sw == 0 or sh == 0 then
+			local ok2, sz = pcall(function() return frame:getOriginalSize() end)
+			if ok2 and sz then sw = sz.width or 0; sh = sz.height or 0 end
+		end
+		capInsets = CCRectMake(sw / 3, sh / 3, sw / 3, sh / 3)
 	end
 	local sprite = CCScale9Sprite:createWithSpriteFrame(frame, capInsets)
 	return sprite

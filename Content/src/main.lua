@@ -1344,6 +1344,7 @@ for _, mod in ipairs(coreModules) do
                             end
                             -- enter_stage 回复
                             if data._enter_stage_reply then
+                                LegendLog("[REPLY] enter_stage reply received, callback=" .. tostring(ed.netreply.enterStage ~= nil))
                                 if ed.netreply.enterStage then
                                     ed.netreply.enterStage()
                                     ed.netreply.enterStage = nil

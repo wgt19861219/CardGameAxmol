@@ -1,4 +1,4 @@
---¸±±¾Õ½¶·£¬Ñ¡ÔñÓ¢ĞÛ£¬Õ½¶·Ç°µÄ×îºóÒ»¸öÒ³Ãæ
+--ï¿½ï¿½ï¿½ï¿½Õ½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ó¢ï¿½Û£ï¿½Õ½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ò³ï¿½ï¿½
 local base = ed.ui.basescene
 local class = newclass(base.mt)
 ed.ui.battleprepare = class
@@ -288,6 +288,7 @@ local function doPvp(self)
 end
 local function doGo(self)
   local function handler(force)
+    LegendLog("[DOGO] enter force=" .. tostring(force) .. " stage=" .. tostring(self.stage))
     lsr:report("clickgo")
      --add by xinghui
     if --[[ed.tutorial.checkDone("gotoBattle")== false--]] ed.tutorial.isShowTutorial then
@@ -295,23 +296,27 @@ local function doGo(self)
     end
     --
     ed.endTeach("selectHero")
-       
+
     ed.endTeach("gotoBattle")
+    LegendLog("[DOGO] tutorial done")
     local ul = ed.getDataTable("Stage")[self.stage]["Unlock Level"]
     if ul > ed.player:getLevel() then
       ed.showToast(T(LSTR("BATTLEPREPARE.REACH_LEVEL__D_TO_ENTER_THIS_CHAPTER"), ul))
       return
     end
+    LegendLog("[DOGO] level ok, team_size=" .. tostring(#(self.team or {})))
     if #(self.team or {}) == 0 then
       ed.showToast(T(LSTR("BATTLEPREPARE.PLEASE_SELECT_BATTLE_HERO")))
       return
     end
     if not force then
+      LegendLog("[DOGO] calling lackHeroConfirm")
       self:lackHeroConfirm(function()
         handler(true)
       end)
       return
     end
+    LegendLog("[DOGO] force=true, building team data")
     local teamData = {}
     for i = 1, #self.team do
       local mercenaryData = self.team[i].heroIcon.info.mercenary
@@ -322,13 +327,17 @@ local function doGo(self)
     self:setTeamData(teamData)
     local hero, bUseMercenary = getCurrentTeam(self)
     local stageid = self.stage
+    LegendLog("[DOGO] stageid=" .. tostring(stageid))
     local type = ed.stageType(stageid)
+    LegendLog("[DOGO] stageType=" .. tostring(type))
     if ed.isElementInTable(type, {"normal", "elite"}) then
       ed.netreply.enterStage = self:gotoBattle()
       local msg = ed.upmsg.enter_stage()
       msg._stage_id = stageid
+      LegendLog("[DOGO] sending enter_stage")
       ed.delaySend(ed.player:tomd5(), "important_data_md5", true)
       ed.send(msg, "enter_stage")
+      LegendLog("[DOGO] enter_stage sent")
     elseif type == "act" then
       ed.netreply.enterStage = self:gotoBattle()
       local msg = ed.upmsg.enter_act_stage()
@@ -336,6 +345,8 @@ local function doGo(self)
       msg._stage_group = ed.getDataTable("Stage")[stageid]["Stage Group"]
       ed.delaySend(ed.player:tomd5(), "important_data_md5", true)
       ed.send(msg, "enter_act_stage")
+    else
+      LegendLog("[DOGO] WARNING: unknown stageType=" .. tostring(type) .. " for stage=" .. tostring(stageid))
     end
   end
   return handler
@@ -578,6 +589,7 @@ local function cancelPay()
 end
 class.cancelPay = cancelPay
 local function doNow(self)
+  LegendLog("[DONOW] mode=" .. tostring(self.mode) .. " pvpMode=" .. tostring(self.pvpMode))
   local cost, name, id = getMercenaryInfo(self)
   if cost then
     if cost > ed.player._money then

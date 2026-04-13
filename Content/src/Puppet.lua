@@ -879,7 +879,7 @@ return {
 
 },
     ["ID"] = "PLmirror.cha",
-    ["Resource"] = "PLmirror",
+    ["Resource"] = "Lancer",
     ["Scale"] = 0.85,
     ["ScaleX Inverse"] = false
   },

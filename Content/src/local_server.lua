@@ -1583,11 +1583,20 @@ local function local_dispatch(msg)
     -- exit_stage 回复
     if data._exit_stage_reply then
         local result = data._exit_stage_reply._result == "known"
+        LegendLog("[local_dispatch] exit_stage_reply: result=" .. tostring(result) .. " netreply=" .. tostring(ed.netreply ~= nil) .. " exitStageReply=" .. tostring(ed.netreply and ed.netreply.exitStageReply ~= nil))
         if ed.netreply and ed.netreply.exitStageReply then
+            LegendLog("[local_dispatch] calling exitStageReply(" .. tostring(result) .. ")")
             ed.netreply.exitStageReply(result)
             ed.netreply.exitStageReply = nil
+        else
+            LegendLog("[local_dispatch] WARNING: exitStageReply callback is nil!")
         end
         if ed.netdata then ed.netdata.exitStageReply = nil end
+    else
+        -- 诊断：检查 data 中有哪些 key
+        local keys = {}
+        for k, _ in pairs(data) do keys[#keys+1] = k end
+        LegendLog("[local_dispatch] NO _exit_stage_reply in data, keys: " .. table.concat(keys, ","))
     end
 
     -- shop_refresh / shop_consume 回复
@@ -1789,6 +1798,11 @@ function M.handle(msg_type, obj)
         return false
     end
 
+    -- 诊断：exit_stage 的处理追踪
+    if msg_type == "exit_stage" then
+        LegendLog("[local_server] handle exit_stage: obj._result=" .. tostring(obj._result) .. " handler=" .. tostring(M.handlers[msg_type] ~= nil))
+    end
+
     local handler = M.handlers[msg_type]
     if handler then
         local ok_h, err_h = pcall(handler, data, obj, M.data)
@@ -1797,6 +1811,11 @@ function M.handle(msg_type, obj)
         end
     else
         LegendLog("[local_server] WARNING: no handler for '" .. tostring(msg_type) .. "'")
+    end
+
+    -- 诊断：handler 后检查 data 内容
+    if msg_type == "exit_stage" then
+        LegendLog("[local_server] after handler: _exit_stage_reply=" .. tostring(data._exit_stage_reply ~= nil) .. " ed.dispatch=" .. tostring(ed.dispatch ~= nil))
     end
 
     -- 使用 network.lua 的 dispatch 处理所有回复类型（40+ 消息类型）

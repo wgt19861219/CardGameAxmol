@@ -33,8 +33,8 @@ print("[MAIN] Lua print redirected, loading modules...")
 if not rawget(_G, "tolua") then rawset(_G, "tolua", {}) end
 if not tolua.isnull then tolua.isnull = function(obj) return obj == nil end end
 
-rawset(_G, "LegendSetAniScaleFactor", function() end)
-rawset(_G, "LegendSetSoundSwitch", function() end)
+if not rawget(_G, "LegendSetAniScaleFactor") then rawset(_G, "LegendSetAniScaleFactor", function() end) end
+if not rawget(_G, "LegendSetSoundSwitch") then rawset(_G, "LegendSetSoundSwitch", function() end) end
 rawset(_G, "LegendGetDeviceID", function() return "ax-001" end)
 rawset(_G, "LegendFindFileCpp", function(f) return f end)
 rawset(_G, "LegendGetEncryptedFileData", function(path)
@@ -119,7 +119,9 @@ if not rawget(_G, "socket") then rawset(_G, "socket", { connect = function() end
 if not rawget(_G, "LegendTime") then
     rawset(_G, "LegendTime", function()
         local t = os.date("*t", os.time())
-        return t.year, t.month, t.day, t.hour, t.min, t.sec, os.time(), os.time() * 1000
+        -- 使用 os.clock() 获取毫秒精度（os.time() 只有秒级精度，导致 dt 计算不准）
+        local million = math.floor(os.clock() * 1000)
+        return t.year, t.month, t.day, t.hour, t.min, t.sec, os.time(), million
     end)
 end
 

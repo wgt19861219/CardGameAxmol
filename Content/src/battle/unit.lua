@@ -1603,6 +1603,13 @@ local function usePuppet(self)
 		old:removeFromParentAndCleanup(true)
 	end
 	local actionName = self:getActionName(model.action_name)
+	local isFallback = (type(self.puppet.setComponent) ~= "function")
+	print("[UNIT-DIAG] usePuppet: unit=" .. tostring(model.name or model.tid or "?")
+		.. " camp=" .. tostring(model.camp)
+		.. " puppet=" .. tostring(self.puppetName)
+		.. " action=" .. tostring(model.action_name)
+		.. " resolved=" .. tostring(actionName)
+		.. " fallback=" .. tostring(isFallback))
 	if actionName then
 		self.puppet:setAction(actionName)
 	end
@@ -1780,6 +1787,13 @@ local function usePuppet(self)
 		old:removeFromParentAndCleanup(true)
 	end
 	local actionName = self:getActionName(model.action_name)
+	local isFallback = (type(self.puppet.setComponent) ~= "function")
+	print("[UNIT-DIAG2] usePuppet: unit=" .. tostring(model.name or model.tid or "?")
+		.. " camp=" .. tostring(model.camp)
+		.. " puppet=" .. tostring(self.puppetName)
+		.. " action=" .. tostring(model.action_name)
+		.. " resolved=" .. tostring(actionName)
+		.. " fallback=" .. tostring(isFallback))
 	if actionName then
 		self.puppet:setAction(actionName)
 	end

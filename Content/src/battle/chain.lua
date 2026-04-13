@@ -30,7 +30,9 @@ local function jump(self)
 	self.skill:takeEffectOn(self.target, source)
 	if ed.run_with_scene and self.skill.info["Chain Effect"] then
 		local effect = ed.ChainEffectCreate(self)
-		ed.scene:addEffect(effect)
+		if effect then
+			ed.scene:addEffect(effect)
+		end
 	end
 end
 class.jump = jump
@@ -92,10 +94,14 @@ local math = math
 function ChainEffectCreate(model)
 	local info = model.skill.info
 	local resource = string.gsub(info["Chain Effect"], "%.cha$", "")
+	local content = LegendAminationEffect:create(resource)
+	if not content then
+		return nil
+	end
 	local self = {
 		model = model,
 		node = CCLayer:create(),
-		content = LegendAminationEffect:create(resource),
+		content = content,
 		jumps_remaining = info["Chain Jumps"],
 		terminated = false,
 		startPos = nil,
@@ -125,7 +131,7 @@ local function update(self, dt)
 	local height = math.abs(startPos.y - endPos.y)
 	self.node:setClipRect(CCRectMake(x0, y0 - 10, width, height + 20))
 	self.node:setPosition(ed.ccpZero)
-	self.content:setPosition(ccpMidpoint(startPos, endPos))
+	self.content:setPosition(ccp((startPos.x + endPos.x) / 2, (startPos.y + endPos.y) / 2))
 	local deg = -math.deg(math.atan2(endPos.y - startPos.y, endPos.x - startPos.x))
 	self.content:setRotation(deg)
 	self.content:update(dt)

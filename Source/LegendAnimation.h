@@ -7,6 +7,8 @@ namespace ax {
 
 class SpriteBatchNode;
 
+class LegendAnimationEffect;
+
 class LegendAnimation : public Sprite
 {
 public:
@@ -21,12 +23,20 @@ public:
     bool isTerminated() const { return _isTerminated; }
     std::string getAniFileName() const { return _aniFileName; }
 
+    // Effect management (matches original LegendAnimation)
+    int addEffect(const char* resName);
+    int addEffect(const char* resName, const AffineTransform& mat, int zorder);
+    int addEffect(const char* resName, Vec2 pos, int zorder);
+    int addEffect(const char* resName, int zorder);
+    void removeEffectWithID(int eid);
+    void removeEffectWithName(const char* name);
+
     virtual void update(float dt) override;
 
 protected:
     LegendAnimation();
     bool init(LegendAnimationFileInfo* info, double scale);
-    void onActionFinished();
+    virtual void onActionFinished();
     void applyFrame(const LegendAnimationFrame& frame);
 
     LegendAnimationFileInfo* _aniFileInfo = nullptr;
@@ -35,6 +45,10 @@ protected:
     // Batch rendering (matches original CCSpriteBatchNode architecture)
     SpriteBatchNode* _batchNode = nullptr;
     std::vector<Sprite*> _elementSprites;
+
+    // Effect management (matches original _effectArray)
+    Vector<LegendAnimationEffect*> _effectArray;
+    int _curEffectTag = 0;
 
     int _currentFrame = -1;
     std::string _currentActionName;

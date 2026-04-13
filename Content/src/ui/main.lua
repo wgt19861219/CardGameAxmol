@@ -441,7 +441,9 @@ local function createMainFca(self)
 				if title and not tolua.isnull(title) then
 					local cs = node:getContentSize()
 					local sc = v.scale or 1
-					local actualH = cs.height * sc
+					-- getContentSize may return Size table or raw value depending on node type
+					local csH = (type(cs) == "table") and cs.height or (tonumber(cs) or 0)
+					local actualH = csH * sc
 					if actualH > 0 and actualH < 220 then
 						local titleX = v.pos.x + (v.titlePos and v.titlePos.x or 0)
 						local titleY = v.pos.y - actualH / 2 - 5

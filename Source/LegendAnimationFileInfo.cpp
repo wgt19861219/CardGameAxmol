@@ -9,6 +9,7 @@ extern "C" {
 namespace ax {
 
 std::unordered_map<std::string, LegendAnimationFileInfo*> LegendAnimationFileInfo::_cache;
+float LegendAnimationFileInfo::s_currentScaleFactor = 1.0f;
 
 // ---- Binary reader helpers ----
 static unsigned char* s_pdataEnd = nullptr;
@@ -194,24 +195,45 @@ LegendAnimationFileInfo::LegendAnimationFileInfo(const std::string& name)
 {
     auto* fu = FileUtils::getInstance();
 
-    // Try .ani first, then .abc
-    std::string filename = "anim/" + name + ".ani";
-    std::string fullPath = fu->fullPathForFilename(filename);
-    bool isCompatible = false;
+    // Search paths: anim/ root, then anim/effect/ subdirectory
+    const char* searchPaths[] = { "anim/", "anim/effect/" };
 
-    if (fullPath.empty() || fullPath == filename)
+    std::string filename;
+    std::string fullPath;
+    bool isCompatible = false;
+    bool found = false;
+
+    for (const char* basePath : searchPaths)
     {
-        filename = "anim/" + name + ".abc";
+        // Try .ani first
+        filename = std::string(basePath) + name + ".ani";
         fullPath = fu->fullPathForFilename(filename);
-        isCompatible = true;
-        if (fullPath.empty() || fullPath == filename)
+        if (!fullPath.empty() && fullPath != filename)
         {
-            AXLOGW("LegendAnimationFileInfo: file not found: {}", name);
-            return;
+            found = true;
+            break;
+        }
+
+        // Try .abc
+        filename = std::string(basePath) + name + ".abc";
+        fullPath = fu->fullPathForFilename(filename);
+        if (!fullPath.empty() && fullPath != filename)
+        {
+            isCompatible = true;
+            found = true;
+            break;
         }
     }
 
-    _scalefactor = 1.0f;
+    if (!found)
+    {
+        AXLOGW("LegendAnimationFileInfo: file not found: {}", name);
+        return;
+    }
+
+    _scalefactor = s_currentScaleFactor;
+    AXLOGW("LegendAnimationFileInfo ctor: name={}, scaleFactor={}, s_currentScaleFactor={}",
+           name, _scalefactor, s_currentScaleFactor);
 
     // Extract plist
     std::vector<unsigned char> plistData;
@@ -222,13 +244,25 @@ LegendAnimationFileInfo::LegendAnimationFileInfo(const std::string& name)
         return;
     }
 
-    // Extract texture (try PNG then PVR)
+    // Extract texture
+    // .ani files: texture is in "sheet.png" (then fallback "sheet.pvr")
+    // .abc files: texture is in "sheet.pvr" (NOT "cha" — "cha" is key frame data)
     std::vector<unsigned char> textureData;
-    bool hasTexture = extractFromZip(fullPath, isCompatible ? "cha" : "sheet.png", textureData);
-    if (!hasTexture || textureData.empty())
-        hasTexture = extractFromZip(fullPath, "sheet.png", textureData);
-    if (!hasTexture || textureData.empty())
+    bool hasTexture = false;
+    if (isCompatible)
+    {
+        // .abc format: texture is PVR
         hasTexture = extractFromZip(fullPath, "sheet.pvr", textureData);
+        if (!hasTexture || textureData.empty())
+            hasTexture = extractFromZip(fullPath, "sheet.png", textureData);
+    }
+    else
+    {
+        // .ani format: texture is PNG
+        hasTexture = extractFromZip(fullPath, "sheet.png", textureData);
+        if (!hasTexture || textureData.empty())
+            hasTexture = extractFromZip(fullPath, "sheet.pvr", textureData);
+    }
     if (!hasTexture || textureData.empty())
     {
         AXLOGW("LegendAnimationFileInfo: failed to extract texture from {}", filename);
@@ -486,6 +520,14 @@ void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned
                     float dstTX = (dstC * fheight * 0.5f - dstA * 0.5f * fwidth) + felem.transform.tx;
                     float dstTY = (dstD * -0.5f * fheight + dstB * 0.5f * fwidth) - felem.transform.ty;
                     felem.transform = AffineTransformMake(dstA, -dstB, -dstC, dstD, dstTX, dstTY);
+
+                    // DIAG: 只打印第一个动作前3帧的第一个元素
+                    if (i == 0 && j < 3 && k == 0) {
+                        AXLOGW("DIAG readFrames: ani={} action={} frame={} idx={} factor={:.4f}",
+                               info->_name, action.name, j, felem.index, factor);
+                        AXLOGW("DIAG readFrames: final a={:.4f} b={:.4f} c={:.4f} d={:.4f} tx={:.2f} ty={:.2f} w={:.0f} h={:.0f}",
+                               dstA, -dstB, -dstC, dstD, dstTX, dstTY, fwidth, fheight);
+                    }
                 }
             }
         }

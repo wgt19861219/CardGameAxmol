@@ -49,7 +49,7 @@ local function reset(self, stage_info, battle_info, extraInfo)
 	self.effect_list = {}
 	self.ui_list = {}
 	self.frames = 0
-	self.auto_combat = false
+	self.auto_combat = ed.config and ed.config.localMode
 	self.pause_locks = {}
 	self.battleModeInfo = extraInfo
 	self.node = CCScene:create()
@@ -303,6 +303,7 @@ end
 
 ed.next_battle_walk_speeder = 1.75
 local function nextBtnTapHandler()
+	print("[BATTLE] nextBtnTapHandler called")
 	xpcall(function()
 		ed.playEffect(ed.sound.battle.goNextBattle)
             --add by xinghui:send dot info when click next wave btn
@@ -432,8 +433,9 @@ local function syncActors(self)
 				if ok and actor then
 					unit.actor = actor
 					self:addActor(actor)
+					print("[SYNC] Actor created: " .. tostring(unit.name or unit.tid) .. " camp=" .. tostring(unit.camp) .. " hasPuppet=" .. tostring(actor.puppet ~= nil))
 				else
-					print("[SYNC] UnitActorCreate failed for " .. tostring(unit.name or unit.tid) .. ": " .. tostring(actor))
+					print("[SYNC] UnitActorCreate FAILED for " .. tostring(unit.name or unit.tid) .. " camp=" .. tostring(unit.camp) .. " ok=" .. tostring(ok) .. " err=" .. tostring(actor))
 				end
 			end
 		end
@@ -627,6 +629,12 @@ local insert = table.insert
 local pairs = pairs
 local ipairs = ipairs
 local function update(self, dt)
+	-- 诊断：每300帧打印一次 dt 和帧率
+	if not self._diagFrameCount then self._diagFrameCount = 0 end
+	self._diagFrameCount = self._diagFrameCount + 1
+	if self._diagFrameCount % 300 == 1 then
+		print("[BATTLE_DIAG] dt=" .. string.format("%.4f", dt) .. " speedState=" .. tostring(class.curSpeedState) .. " tick=" .. tostring(ed.engine.ticks))
+	end
 	--add by xinghui
 	if class.curSpeedState == class.speedState.speed then
 		dt = dt*2
@@ -1225,8 +1233,13 @@ end
 class.resetUI = resetUI
 
 local function showNextButton(self)
+	print("[BATTLE] showNextButton called")
 	ed.teach("nextWave", self.next_btn, self.ui_layer)
 	local btn = self.next_btn
+	if not btn then
+		print("[BATTLE] ERROR: next_btn is nil!")
+		return
+	end
 	btn:setVisible(true)
 	btn:setEnabled(true)
 	local action = CCSequence:createWithTwoActions(CCMoveBy:create(0.65, ccp(30, 0)), CCMoveBy:create(0.65, ccp(-30, 0)))
@@ -1243,7 +1256,7 @@ local function updateTimer(self)
 	if seconds ~= self.timer.value then
 		self.timer.value = seconds
 		local node = self.timer.text
-		local str = string.format("%02i:%02i", seconds / 60, seconds % 60)
+		local str = string.format("%02i:%02i", math.floor(seconds / 60), math.floor(seconds % 60))
 		local length = createNumbers(node, str, -3)
 		if seconds < 20 then
 			self.timer.mask:setVisible(true)

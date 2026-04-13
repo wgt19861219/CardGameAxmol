@@ -11,6 +11,13 @@ namespace ax {
 
 struct LegendAnimationEvent
 {
+    enum EventType
+    {
+        EVENT_SOUND = 1,
+        EVENT_ADD_EFFECT = 2,
+        EVENT_REMOVE_EFFECT = 3
+    };
+
     unsigned int type = 0;
     std::string arg;
     float x1 = 0, x2 = 0;
@@ -61,6 +68,11 @@ public:
 
     SpriteFrame* getSpriteFrame(const char* frameName);
     Texture2D* getTexture() const { return _texture; }
+    float getScaleFactor() const { return _scalefactor; }
+
+    // Global scale factor set by Lua (LegendSetAniScaleFactor)
+    static void setCurrentScaleFactor(double factor) { s_currentScaleFactor = (float)factor; }
+    static float getCurrentScaleFactor() { return s_currentScaleFactor; }
 
     std::string _name;
     float _scalefactor = 1.0f;
@@ -77,6 +89,7 @@ private:
     Texture2D* _texture = nullptr;
 
     static std::unordered_map<std::string, LegendAnimationFileInfo*> _cache;
+    static float s_currentScaleFactor;  // Set by LegendSetAniScaleFactor
 };
 
 } // namespace ax

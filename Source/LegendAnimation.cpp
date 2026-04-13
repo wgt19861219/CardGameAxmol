@@ -1,6 +1,7 @@
 #include "LegendAnimation.h"
 #include "axmol/2d/SpriteBatchNode.h"
 #include "axmol/axmol.h"
+#include "axmol/math/TransformUtils.h"
 
 namespace ax {
 
@@ -73,6 +74,9 @@ bool LegendAnimation::init(LegendAnimationFileInfo* info, double scale)
                     if (_batchNode)
                     {
                         _batchNode->retain();
+                        // Match original: batch node scale matches the animation's scale factor
+                        // (original: this->_batchNode->setScale(this->_aniFileInfo->_scalefactor))
+                        _batchNode->setScale(_aniFileInfo->getScaleFactor());
                         addChild(_batchNode, 0);
                     }
                 }
@@ -106,6 +110,9 @@ bool LegendAnimation::init(LegendAnimationFileInfo* info, double scale)
 
     AXLOGW("LegendAnimation init: name={} elements={} sprites_ok={} sprites_fail={} actions={}",
            info->_name, count, spriteOk, spriteFail, info->_actions.size());
+    if (_batchNode)
+        AXLOGW("DIAG init: batchNode scale={:.4f}, scaleFactor={:.4f}",
+               _batchNode->getScale(), info->getScaleFactor());
 
     setContentSize(Size(200, 200));
     scheduleUpdate();
@@ -128,7 +135,9 @@ bool LegendAnimation::setAction(const char* name, bool bRemoveQueue)
 
     if (!action || action->frames.empty())
     {
-        AXLOGD("LegendAnimation::setAction: '{}' not found", name);
+        AXLOGW("LegendAnimation::setAction: '{}' not found in '{}' (has {} actions: {})",
+               name, _aniFileName, _aniFileInfo->_actions.size(),
+               _aniFileInfo->_actions.empty() ? "" : _aniFileInfo->_actions[0].name);
         return false;
     }
 
@@ -173,7 +182,20 @@ void LegendAnimation::update(float dt)
     Sprite::update(dt);
 
     if (!_currentAction || _frameDuration <= 0)
+    {
+        // Still update child effects even if no action
+        for (int kk = (int)_effectArray.size() - 1; kk >= 0; kk--)
+        {
+            auto* eff = _effectArray.at(kk);
+            eff->update(dt);
+            if (eff->isTerminated())
+            {
+                _effectArray.erase(kk);
+                removeChild(eff, true);
+            }
+        }
         return;
+    }
 
     _curActionElapsed += dt * _speeder;
 
@@ -195,14 +217,57 @@ void LegendAnimation::update(float dt)
                 _isTerminated = true;
                 onActionFinished();
             }
+            // Update child effects
+            for (int kk = (int)_effectArray.size() - 1; kk >= 0; kk--)
+            {
+                auto* eff = _effectArray.at(kk);
+                eff->update(dt);
+                if (eff->isTerminated())
+                {
+                    _effectArray.erase(kk);
+                    removeChild(eff, true);
+                }
+            }
             return;
         }
     }
 
     if (newFrame != _currentFrame)
     {
+        // Process events for all frames between _currentFrame and newFrame
+        // (matches original: for i=_currentFrame+1 to calcFrame, process events)
+        int startFrame = (_currentFrame < 0) ? 0 : _currentFrame + 1;
+        for (int i = startFrame; i <= newFrame && i < totalFrames; i++)
+        {
+            const LegendAnimationFrame& frame = _currentAction->frames[i];
+            for (size_t j = 0; j < frame.events.size(); j++)
+            {
+                const LegendAnimationEvent& evt = frame.events[j];
+                if (evt.type == LegendAnimationEvent::EVENT_ADD_EFFECT)
+                {
+                    addEffect(evt.arg.c_str(), evt.transform, evt.zorder);
+                }
+                else if (evt.type == LegendAnimationEvent::EVENT_REMOVE_EFFECT)
+                {
+                    removeEffectWithName(evt.arg.c_str());
+                }
+            }
+        }
+
         _currentFrame = newFrame;
         applyFrame(_currentAction->frames[_currentFrame]);
+    }
+
+    // Update child effects (matches original: iterate _effectArray backwards)
+    for (int kk = (int)_effectArray.size() - 1; kk >= 0; kk--)
+    {
+        auto* eff = _effectArray.at(kk);
+        eff->update(dt);
+        if (eff->isTerminated())
+        {
+            _effectArray.erase(kk);
+            removeChild(eff, true);
+        }
     }
 }
 
@@ -217,9 +282,83 @@ void LegendAnimation::onActionFinished()
     }
 }
 
+// ---- Effect management (matches original LegendAnimation) ----
+
+int LegendAnimation::addEffect(const char* resName)
+{
+    return addEffect(resName, AffineTransformMakeIdentity(), 1);
+}
+
+int LegendAnimation::addEffect(const char* resName, const AffineTransform& mat, int zorder)
+{
+    auto* eff = LegendAnimationEffect::create(resName);
+    if (!eff)
+    {
+        AXLOGW("LegendAnimation::addEffect: failed to create effect '{}'", resName);
+        return -1;
+    }
+
+    // Match original: eff->setTransform(mat)
+    // In original cocos2d-x, CCSprite::setTransform() directly sets the node transform.
+    // In Axmol, we use setNodeToParentTransform to achieve the same effect.
+    Mat4 transformMat;
+    CGAffineToGL(mat, transformMat.m);
+    eff->setNodeToParentTransform(transformMat);
+
+    this->addChild(eff, zorder);
+    _effectArray.pushBack(eff);
+    eff->setTag(_curEffectTag++);
+
+    return eff->getTag();
+}
+
+int LegendAnimation::addEffect(const char* resName, Vec2 pos, int zorder)
+{
+    AffineTransform mt = AffineTransformMakeIdentity();
+    mt.tx = pos.x;
+    mt.ty = pos.y;
+    return addEffect(resName, mt, zorder);
+}
+
+int LegendAnimation::addEffect(const char* resName, int zorder)
+{
+    return addEffect(resName, AffineTransformMakeIdentity(), zorder);
+}
+
+void LegendAnimation::removeEffectWithID(int eid)
+{
+    for (auto& eff : _effectArray)
+    {
+        if (eff->getTag() == eid)
+        {
+            _effectArray.eraseObject(eff);
+            removeChild(eff, true);
+            return;
+        }
+    }
+}
+
+void LegendAnimation::removeEffectWithName(const char* name)
+{
+    for (auto& eff : _effectArray)
+    {
+        if (eff->getAniFileName() == name)
+        {
+            _effectArray.eraseObject(eff);
+            removeChild(eff, true);
+            return;
+        }
+    }
+}
+
 void LegendAnimation::applyFrame(const LegendAnimationFrame& frame)
 {
     if (!_aniFileInfo) return;
+
+    // DIAG: 打印前2帧的前2个元素的变换
+    static int diagFrameCount = 0;
+    bool doDiag = (diagFrameCount < 2);
+    diagFrameCount++;
 
     // Hide all element sprites
     for (size_t i = 0; i < _elementSprites.size(); i++)
@@ -250,11 +389,24 @@ void LegendAnimation::applyFrame(const LegendAnimationFrame& frame)
             needReorder = true;
         child->setLocalZOrder((int)i);
 
-        // Apply full affine transform via setAdditionalTransform.
-        // Anchor is (0,0) so the base transform is identity,
-        // making final = identity * additional = additional.
-        // This matches original CCSprite::setTransform() behavior.
-        child->setAdditionalTransform(felem.transform);
+        // Apply full affine transform via setNodeToParentTransform.
+        // This DIRECTLY REPLACES the node's transform matrix,
+        // matching the original CCSprite::setTransform() behavior.
+        // IMPORTANT: Do NOT use setAdditionalTransform — it MULTIPLIES
+        // the node's existing transform, causing garbled rendering.
+        Mat4 transformMat;
+        CGAffineToGL(felem.transform, transformMat.m);
+        child->setNodeToParentTransform(transformMat);
+
+        // DIAG: 打印前2帧的前2个元素
+        if (doDiag && i < 2) {
+            AXLOGW("DIAG applyFrame: ani={} action={} frame={} elem={} alpha={} pos=({:.1f},{:.1f})",
+                   _aniFileName, _currentActionName, _currentFrame, idx, (int)felem.alpha,
+                   transformMat.m[12], transformMat.m[13]);
+            AXLOGW("DIAG applyFrame: m=[{:.4f},{:.4f},{:.4f},{:.4f}] anchor=({:.1f},{:.1f}) visible={}",
+                   transformMat.m[0], transformMat.m[1], transformMat.m[4], transformMat.m[5],
+                   child->getAnchorPoint().x, child->getAnchorPoint().y, child->isVisible());
+        }
     }
 
     // Update batch rendering order if needed
@@ -276,6 +428,7 @@ LegendAnimationEffect::~LegendAnimationEffect()
 
 LegendAnimationEffect* LegendAnimationEffect::create(const char* resource)
 {
+    // No prefix — LegendAnimationFileInfo searches both anim/ and anim/effect/ paths
     auto* info = LegendAnimationFileInfo::getAniFileInfo(resource);
     if (!info || info->_elements.empty())
         return nullptr;

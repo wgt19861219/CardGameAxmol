@@ -919,9 +919,35 @@ int register_game_bindings(lua_State* L)
     });
     lua_setfield(L, -2, "update");
 
-    // addEffect(name, zOrder) - stub, LegendAnimation doesn't support overlay effects
+    // addEffect(resName[, pos/zorder, zorder]) — calls LegendAnimation::addEffect
     lua_pushcfunction(L, [](lua_State* L) -> int {
-        return 0;
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        if (!obj) { lua_pushinteger(L, -1); return 1; }
+        const char* resName = luaL_checkstring(L, 2);
+        int top = lua_gettop(L);
+        if (top == 2) {
+            lua_pushinteger(L, obj->addEffect(resName));
+        } else if (top == 3) {
+            int zorder = (int)luaL_checkinteger(L, 3);
+            lua_pushinteger(L, obj->addEffect(resName, zorder));
+        } else if (top >= 4) {
+            int type3 = lua_type(L, 3);
+            if (type3 == LUA_TNUMBER) {
+                int zorder = (int)luaL_checkinteger(L, 3);
+                lua_pushinteger(L, obj->addEffect(resName, zorder));
+            } else {
+                float x = 0, y = 0;
+                if (lua_istable(L, 3)) {
+                    lua_getfield(L, 3, "x"); x = (float)luaL_optnumber(L, -1, 0); lua_pop(L, 1);
+                    lua_getfield(L, 3, "y"); y = (float)luaL_optnumber(L, -1, 0); lua_pop(L, 1);
+                }
+                int zorder = (int)luaL_checkinteger(L, 4);
+                lua_pushinteger(L, obj->addEffect(resName, ax::Vec2(x, y), zorder));
+            }
+        } else {
+            lua_pushinteger(L, -1);
+        }
+        return 1;
     });
     lua_setfield(L, -2, "addEffect");
 
@@ -931,14 +957,20 @@ int register_game_bindings(lua_State* L)
     });
     lua_setfield(L, -2, "addEffectToComponent");
 
-    // removeEffectWithID stub
+    // removeEffectWithID(eid)
     lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        int eid = (int)luaL_checkinteger(L, 2);
+        if (obj) obj->removeEffectWithID(eid);
         return 0;
     });
     lua_setfield(L, -2, "removeEffectWithID");
 
-    // removeEffectWithName stub
+    // removeEffectWithName(name)
     lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        const char* name = luaL_checkstring(L, 2);
+        if (obj) obj->removeEffectWithName(name);
         return 0;
     });
     lua_setfield(L, -2, "removeEffectWithName");
@@ -1150,6 +1182,70 @@ int register_game_bindings(lua_State* L)
     }, 0);
     lua_setfield(L, -2, "setVisible");
 
+    // isVisible() -> bool
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        lua_pushboolean(L, self && self->isVisible());
+        return 1;
+    }, 0);
+    lua_setfield(L, -2, "isVisible");
+
+    // getScaleX() -> float
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        lua_pushnumber(L, self ? self->getScaleX() : 1.0f);
+        return 1;
+    }, 0);
+    lua_setfield(L, -2, "getScaleX");
+
+    // getScaleY() -> float
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        lua_pushnumber(L, self ? self->getScaleY() : 1.0f);
+        return 1;
+    }, 0);
+    lua_setfield(L, -2, "getScaleY");
+
+    // getScale() -> float
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        lua_pushnumber(L, self ? self->getScale() : 1.0f);
+        return 1;
+    }, 0);
+    lua_setfield(L, -2, "getScale");
+
+    // setOpacity(opacity)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setOpacity((uint8_t)luaL_checkinteger(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setOpacity");
+
+    // getTag() -> int
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        lua_pushinteger(L, self ? self->getTag() : -1);
+        return 1;
+    }, 0);
+    lua_setfield(L, -2, "getTag");
+
+    // setTag(tag)
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        if (self) self->setTag((int)luaL_checkinteger(L, 2));
+        return 0;
+    }, 0);
+    lua_setfield(L, -2, "setTag");
+
+    // getRotation() -> float
+    lua_pushcclosure(L, [](lua_State* L) -> int {
+        auto* self = LAE_NODE(L);
+        lua_pushnumber(L, self ? self->getRotation() : 0.0f);
+        return 1;
+    }, 0);
+    lua_setfield(L, -2, "getRotation");
+
     // setContentSize(width, height)
     lua_pushcclosure(L, [](lua_State* L) -> int {
         auto* self = LAE_NODE(L);
@@ -1262,6 +1358,8 @@ int register_game_bindings(lua_State* L)
         int argOffset = (lua_type(L, 1) != LUA_TSTRING) ? 1 : 0;  // skip self for colon call
         const char* resource = luaL_checkstring(L, 1 + argOffset);
         float scale = (float)luaL_optnumber(L, 2 + argOffset, 1.0f);
+        // LegendAnimationEffect::create handles Start/Loop auto-detection
+        // LegendAnimationFileInfo searches both anim/ and anim/effect/ paths
         auto* obj = ax::LegendAnimationEffect::create(resource);
         if (obj)
         {
@@ -1350,8 +1448,13 @@ int register_game_bindings(lua_State* L)
     });
     lua_setglobal(L, "LegendFindFileCpp");
 
-    // LegendSetAniScaleFactor / LegendSetSoundSwitch
-    lua_pushcfunction(L, [](lua_State* L) -> int { return 0; });
+    // LegendSetAniScaleFactor — sets global animation scale factor
+    // (original engine used this to scale FCA animations to match screen DPI)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        double scale = luaL_checknumber(L, 1);
+        LegendAnimationFileInfo::setCurrentScaleFactor(scale);
+        return 0;
+    });
     lua_setglobal(L, "LegendSetAniScaleFactor");
     lua_pushcfunction(L, [](lua_State* L) -> int {
         SpineContainer::s_soundSwitch = (int)luaL_checkinteger(L, 1);

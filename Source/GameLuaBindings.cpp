@@ -1,4 +1,5 @@
 #include "GameLuaBindings.h"
+#include <algorithm>
 #include "CCBContainer.h"
 #include "SpineContainer.h"
 #include "LegendAnimation.h"
@@ -221,9 +222,9 @@ static int lua_CCBContainer_getCurAnimationDoneName(lua_State* L)
 static int lua_CCBContainer_setAllChildColor(lua_State* L)
 {
     auto* self = *(CCBContainer**)lua_touserdata(L, 1);
-    int r = (int)luaL_checkinteger(L, 2);
-    int g = (int)luaL_checkinteger(L, 3);
-    int b = (int)luaL_checkinteger(L, 4);
+    int r = (int)luaL_checknumber(L, 2);
+    int g = (int)luaL_checknumber(L, 3);
+    int b = (int)luaL_checknumber(L, 4);
     if (self)
         self->setAllChildColor((unsigned char)r, (unsigned char)g, (unsigned char)b);
     return 0;
@@ -623,9 +624,9 @@ int register_game_bindings(lua_State* L)
     // setColor(r, g, b)
     lua_pushcfunction(L, [](lua_State* L) -> int {
         auto* self = SAFE_SPINE(L);
-        int r = (int)luaL_checkinteger(L, 2);
-        int g = (int)luaL_checkinteger(L, 3);
-        int b = (int)luaL_checkinteger(L, 4);
+        int r = (int)luaL_checknumber(L, 2);
+        int g = (int)luaL_checknumber(L, 3);
+        int b = (int)luaL_checknumber(L, 4);
         if (self) self->setColor(ax::Color32((uint8_t)r, (uint8_t)g, (uint8_t)b));
         return 0;
     });
@@ -874,6 +875,17 @@ int register_game_bindings(lua_State* L)
     });
     lua_setfield(L, -2, "isTerminated");
 
+    // getActionNaturalDuration() -> float (returns 0 if no action)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        if (obj)
+            lua_pushnumber(L, obj->getActionNaturalDuration());
+        else
+            lua_pushnumber(L, 0);
+        return 1;
+    });
+    lua_setfield(L, -2, "getActionNaturalDuration");
+
     // setLoopAction(name)
     lua_pushcfunction(L, [](lua_State* L) -> int {
         auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
@@ -1021,21 +1033,26 @@ int register_game_bindings(lua_State* L)
     lua_pushcfunction(L, [](lua_State* L) -> int {
         auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
         if (obj && lua_gettop(L) >= 4) {
-            obj->setColor(ax::Color32((uint8_t)luaL_checkinteger(L, 2),
-                (uint8_t)luaL_checkinteger(L, 3),
-                (uint8_t)luaL_checkinteger(L, 4)));
+            obj->setColor(ax::Color32((uint8_t)(int)luaL_checknumber(L, 2),
+                (uint8_t)(int)luaL_checknumber(L, 3),
+                (uint8_t)(int)luaL_checknumber(L, 4)));
         }
         return 0;
     });
     lua_setfield(L, -2, "setColor");
 
-    // tint(r, g, b)
+    // tint(r, g, b) — multiplicative color factor (0.0-∞, 1.0=normal)
+    // Original FCA system: tint(0.4)=darken to 40%, tint(2.5)=brighten to 250% (restore)
+    // Convert: value * 255, clamped to [0, 255]
     lua_pushcfunction(L, [](lua_State* L) -> int {
         auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
         if (obj && lua_gettop(L) >= 4) {
-            obj->setColor(ax::Color32((uint8_t)luaL_checkinteger(L, 2),
-                (uint8_t)luaL_checkinteger(L, 3),
-                (uint8_t)luaL_checkinteger(L, 4)));
+            auto toColor = [](lua_State* LS, int idx) -> uint8_t {
+                float v = (float)luaL_checknumber(LS, idx);
+                int c = (int)(v * 255.0f);
+                return (uint8_t)std::max(0, std::min(255, c));
+            };
+            obj->setColor(ax::Color32(toColor(L, 2), toColor(L, 3), toColor(L, 4), 255));
         }
         return 0;
     });
@@ -1217,7 +1234,7 @@ int register_game_bindings(lua_State* L)
     // setOpacity(opacity)
     lua_pushcclosure(L, [](lua_State* L) -> int {
         auto* self = LAE_NODE(L);
-        if (self) self->setOpacity((uint8_t)luaL_checkinteger(L, 2));
+        if (self) self->setOpacity((uint8_t)(int)luaL_checknumber(L, 2));
         return 0;
     }, 0);
     lua_setfield(L, -2, "setOpacity");
@@ -1233,7 +1250,7 @@ int register_game_bindings(lua_State* L)
     // setTag(tag)
     lua_pushcclosure(L, [](lua_State* L) -> int {
         auto* self = LAE_NODE(L);
-        if (self) self->setTag((int)luaL_checkinteger(L, 2));
+        if (self) self->setTag((int)luaL_checknumber(L, 2));
         return 0;
     }, 0);
     lua_setfield(L, -2, "setTag");
@@ -1287,16 +1304,16 @@ int register_game_bindings(lua_State* L)
     }, 0);
     lua_setfield(L, -2, "setRotation");
 
-    // setLocalZOrder(z) / setZOrder(z)
+    // setLocalZOrder(z) / setZOrder(z) — 接受 float 自动截断（cocos2d-x 2.x 兼容）
     lua_pushcclosure(L, [](lua_State* L) -> int {
         auto* self = LAE_NODE(L);
-        if (self) self->setLocalZOrder((int)luaL_checkinteger(L, 2));
+        if (self) self->setLocalZOrder((int)luaL_checknumber(L, 2));
         return 0;
     }, 0);
     lua_setfield(L, -2, "setLocalZOrder");
     lua_pushcclosure(L, [](lua_State* L) -> int {
         auto* self = LAE_NODE(L);
-        if (self) self->setLocalZOrder((int)luaL_checkinteger(L, 2));
+        if (self) self->setLocalZOrder((int)luaL_checknumber(L, 2));
         return 0;
     }, 0);
     lua_setfield(L, -2, "setZOrder");

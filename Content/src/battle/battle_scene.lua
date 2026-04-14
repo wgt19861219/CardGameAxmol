@@ -87,10 +87,8 @@ local function reset(self, stage_info, battle_info, extraInfo)
 		print("[BATTLE_SCENE] resetUI error: " .. tostring(err_ui))
 	end
 	-- Actor creation (critical)
-	print("[BATTLE_SCENE] reset: unit_list=" .. tostring(#(ed.engine.unit_list or {})))
 	self.lastSync = nil
 	self:syncActors()
-	print("[BATTLE_SCENE] reset: actor_list=" .. tostring(#(self.actor_list or {})))
 	local viewCamp = ed.emCampPlayer
 	if self.battleModeInfo and self.battleModeInfo.replayInfo and self.battleModeInfo.replayInfo.oppoUserid == ed.getUserid() then
 		viewCamp = ed.emCampEnemy
@@ -303,7 +301,6 @@ end
 
 ed.next_battle_walk_speeder = 1.75
 local function nextBtnTapHandler()
-	print("[BATTLE] nextBtnTapHandler called")
 	xpcall(function()
 		ed.playEffect(ed.sound.battle.goNextBattle)
             --add by xinghui:send dot info when click next wave btn
@@ -433,9 +430,7 @@ local function syncActors(self)
 				if ok and actor then
 					unit.actor = actor
 					self:addActor(actor)
-					print("[SYNC] Actor created: " .. tostring(unit.name or unit.tid) .. " camp=" .. tostring(unit.camp) .. " hasPuppet=" .. tostring(actor.puppet ~= nil))
 				else
-					print("[SYNC] UnitActorCreate FAILED for " .. tostring(unit.name or unit.tid) .. " camp=" .. tostring(unit.camp) .. " ok=" .. tostring(ok) .. " err=" .. tostring(actor))
 				end
 			end
 		end
@@ -449,7 +444,6 @@ local function syncActors(self)
 				if ok and ret then
 					self:addActor(ret)
 				else
-					print("[SYNC] NpcActorCreate failed: " .. tostring(ret))
 				end
 			end
 		end
@@ -629,12 +623,6 @@ local insert = table.insert
 local pairs = pairs
 local ipairs = ipairs
 local function update(self, dt)
-	-- 诊断：每300帧打印一次 dt 和帧率
-	if not self._diagFrameCount then self._diagFrameCount = 0 end
-	self._diagFrameCount = self._diagFrameCount + 1
-	if self._diagFrameCount % 300 == 1 then
-		print("[BATTLE_DIAG] dt=" .. string.format("%.4f", dt) .. " speedState=" .. tostring(class.curSpeedState) .. " tick=" .. tostring(ed.engine.ticks))
-	end
 	--add by xinghui
 	if class.curSpeedState == class.speedState.speed then
 		dt = dt*2
@@ -1233,11 +1221,9 @@ end
 class.resetUI = resetUI
 
 local function showNextButton(self)
-	print("[BATTLE] showNextButton called")
 	ed.teach("nextWave", self.next_btn, self.ui_layer)
 	local btn = self.next_btn
 	if not btn then
-		print("[BATTLE] ERROR: next_btn is nil!")
 		return
 	end
 	btn:setVisible(true)

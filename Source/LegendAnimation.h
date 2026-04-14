@@ -22,6 +22,7 @@ public:
     void setActionSpeeder(float speeder);
     bool isTerminated() const { return _isTerminated; }
     std::string getAniFileName() const { return _aniFileName; }
+    float getActionNaturalDuration() const;
 
     // Effect management (matches original LegendAnimation)
     int addEffect(const char* resName);
@@ -59,6 +60,7 @@ protected:
     float _speeder = 1.0f;
     float _frameDuration = 0;
     bool _isTerminated = false;
+    bool _externalTimeCtrl = false;  // true = Lua controls elapsed, update() skips auto-accumulate
 };
 
 // ---- LegendAnimationEffect (Start → Loop auto-switch) ----

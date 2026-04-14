@@ -1134,8 +1134,15 @@ end
 -- getZOrder �� getLocalZOrder
 -----------------------------------------------------------------
 if ax.Node then
-    if not ax.Node.setZOrder and ax.Node.setLocalZOrder then
-        ax.Node.setZOrder = ax.Node.setLocalZOrder
+    -- cocos2d-x 2.x setZOrder 接受 float，内部自动截断
+    -- Axmol tolua++ setLocalZOrder 要求 integer，浮点数会报错
+    -- 包装为自动 math.floor 转换
+    local _origSetLocalZOrder = ax.Node.setLocalZOrder
+    ax.Node.setZOrder = function(self, z)
+        _origSetLocalZOrder(self, math.floor(tonumber(z) or 0))
+    end
+    if ax.Node.setLocalZOrder then
+        ax.Node.setLocalZOrder = ax.Node.setZOrder
     end
     if not ax.Node.getZOrder and ax.Node.getLocalZOrder then
         ax.Node.getZOrder = ax.Node.getLocalZOrder

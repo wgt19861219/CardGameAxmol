@@ -219,7 +219,10 @@ local function ProjectileActorCreate(model)
 	elseif string.match(art, "%.cha$") then
 		art = string.gsub(art, "%.cha$", "")
 		self.puppet = LegendAminationEffect:create(art)
-		self.puppet:setLoopAction("Loop")
+		if self.puppet then
+			self.puppet:setLoopAction("Loop")
+			self.puppet:setStartAction("Loop")
+		end
 		self.node = self.puppet
 	end
 	return self
@@ -235,6 +238,9 @@ local setZOrder = CCNode.setZOrder
 local function update(self, dt)
 	local m = self.model
 	local info = m.skill.info
+	if self.tick == -1 then
+		self._firstUpdate = true
+	end
 	if self.tick ~= ed.engine.ticks then
 		self.tick = ed.engine.ticks
 		self.height = m.height
@@ -247,6 +253,9 @@ local function update(self, dt)
 		local v2 = m.velocity
 		v1[1] = v2[1]
 		v1[2] = v2[2]
+		if self._firstUpdate then
+			self._firstUpdate = nil
+		end
 	else
 		local pos = self.position
 		local v = self.velocity

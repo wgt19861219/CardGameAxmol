@@ -16,7 +16,7 @@ require("battle/ball")
 local table = table
 local ipairs = ipairs
 local ed = ed
-ed.tick_interval = 0.125
+ed.tick_interval = 0.033
 local class = {
 	mt = {}
 }
@@ -605,13 +605,11 @@ end
 class.battleSupply = battleSupply
 
 local function nextBattle(self)
-	print("[BATTLE] nextBattle: from wave " .. tostring(self.wave_id) .. " to wave " .. tostring(self.wave_id + 1))
 	if not self.supplied then
 		self:battleSupply()
 	end
 	local battle = ed.lookupDataTable("Battle", nil, self.stage_info["Stage ID"], self.wave_id + 1)
 	if not battle then
-		print("[BATTLE] ERROR: no battle data for wave " .. tostring(self.wave_id + 1))
 		return
 	end
 	self:setupBattle(battle)
@@ -737,7 +735,6 @@ local function tick(self)
 		self:onBattleEnd()
 		self:exitStage(3)
 	elseif self.alive_enemy_count == 0 then
-		print("[BATTLE] victory: wave=" .. tostring(self.wave_id) .. "/" .. tostring(self.stage_info.Waves) .. " run_with_scene=" .. tostring(ed.run_with_scene))
 		self:unfreeze(true)
 		self:onBattleEnd()
 		self:victory()
@@ -1086,7 +1083,6 @@ end
 
 local function downExit(self, result)
 	local function handler(isKnown, bestRankReward)
-		print("[BATTLE] downExit handler called: isKnown=" .. tostring(isKnown) .. " result=" .. tostring(result))
 		bestRankReward = bestRankReward or {}
 		if not self then
 			return
@@ -1475,7 +1471,6 @@ local function exitStage(self, result, exitFlag)
 			return
 		end
 			if result == 0 then
-				print("[BATTLE] exitStage: victory! registering downExit callback")
 				FireEvent("BattleEnding", self.stage_info["Stage ID"], "success")
 				ed.netreply.exitStageReply = self:downExit(result)
 				ed.scene:autoCollectLoots(2.8)
@@ -1524,9 +1519,7 @@ local function exitStage(self, result, exitFlag)
 		self.battleResult = result
 		self.exitStageMSG = msg
 		self.exitStageMsgName = msgName
-			print("[BATTLE] exitStage: calling ed.send with msgName=" .. tostring(msgName))
 			ed.send(msg, msgName)
-			print("[BATTLE] exitStage: ed.send returned")
 		end
 end
 class.exitStage = exitStage
@@ -1538,7 +1531,6 @@ class.enterGmMode = enterGmMode
 
 local function victory(self, skip)
 	self.running = false
-	print("[BATTLE] victory: wave_id=" .. tostring(self.wave_id) .. " total_waves=" .. tostring(self.stage_info.Waves) .. " skip=" .. tostring(skip))
 	if self.wave_id < self.stage_info.Waves and not skip then
 		for unit in self:foreachAliveUnit(ed.emCampPlayer) do
 			if unit.config.is_summoned then
@@ -1547,7 +1539,6 @@ local function victory(self, skip)
 		end
 		if ed.run_with_scene then
 			ed.scene:showNextButton()
-			print("[BATTLE] victory: showNextButton called, wave=" .. tostring(self.wave_id) .. "/" .. tostring(self.stage_info.Waves))
 			for unit in self:foreachAliveUnit(ed.emCampPlayer) do
 				if unit.actor then
 					unit.actor:waitAfterBattle()

@@ -45,6 +45,11 @@ bool LegendAnimation::init(LegendAnimationFileInfo* info, double scale)
     _aniFileInfo->retain();
     _aniFileName = info->_name;
 
+    // FCA动画变换相对于角色原点（脚底位置），需要 anchor (0,0)
+    // 否则默认 anchor (0.5,0.5) + setContentSize 会导致 (-100,-100) 偏移
+    setAnchorPoint(Vec2(0, 0));
+    setContentSize(Size::ZERO);
+
     // Create child sprites for each element using SpriteBatchNode
     // (matches original architecture where all elements share one texture atlas)
     int count = (int)info->_elements.size();
@@ -108,13 +113,6 @@ bool LegendAnimation::init(LegendAnimationFileInfo* info, double scale)
         }
     }
 
-    AXLOGW("LegendAnimation init: name={} elements={} sprites_ok={} sprites_fail={} actions={}",
-           info->_name, count, spriteOk, spriteFail, info->_actions.size());
-    if (_batchNode)
-        AXLOGW("DIAG init: batchNode scale={:.4f}, scaleFactor={:.4f}",
-               _batchNode->getScale(), info->getScaleFactor());
-
-    setContentSize(Size(200, 200));
     scheduleUpdate();
     return true;
 }
@@ -147,6 +145,7 @@ bool LegendAnimation::setAction(const char* name, bool bRemoveQueue)
     _curActionElapsed = 0;
     _frameDuration = 1.0f / action->fps;
     _isTerminated = false;
+    _externalTimeCtrl = false;
 
     if (bRemoveQueue)
         _nextActionName.clear();
@@ -155,6 +154,13 @@ bool LegendAnimation::setAction(const char* name, bool bRemoveQueue)
     applyFrame(action->frames[0]);
     _currentFrame = 0;
     return true;
+}
+
+float LegendAnimation::getActionNaturalDuration() const
+{
+    if (!_currentAction || _currentAction->fps <= 0)
+        return 0;
+    return (float)_currentAction->frames.size() / _currentAction->fps;
 }
 
 void LegendAnimation::setNextAction(const char* actionName)
@@ -169,7 +175,32 @@ void LegendAnimation::setLoop(bool val)
 
 void LegendAnimation::setActionElapsed(float elapsed)
 {
+    if (!_currentAction || _frameDuration <= 0)
+    {
+        _curActionElapsed = elapsed;
+        return;
+    }
+
     _curActionElapsed = elapsed;
+    _externalTimeCtrl = true;
+
+    int newFrame = (int)(elapsed * _currentAction->fps);
+    int totalFrames = (int)_currentAction->frames.size();
+
+    if (newFrame >= totalFrames)
+    {
+        if (_isLoop)
+            newFrame = newFrame % totalFrames;
+        else
+            newFrame = totalFrames - 1;
+    }
+    if (newFrame < 0) newFrame = 0;
+
+    if (newFrame != _currentFrame)
+    {
+        _currentFrame = newFrame;
+        applyFrame(_currentAction->frames[_currentFrame]);
+    }
 }
 
 void LegendAnimation::setActionSpeeder(float speeder)
@@ -197,7 +228,10 @@ void LegendAnimation::update(float dt)
         return;
     }
 
-    _curActionElapsed += dt * _speeder;
+    if (!_externalTimeCtrl)
+    {
+        _curActionElapsed += dt * _speeder;
+    }
 
     int newFrame = (int)(_curActionElapsed * _currentAction->fps);
     int totalFrames = (int)_currentAction->frames.size();
@@ -206,8 +240,14 @@ void LegendAnimation::update(float dt)
     {
         if (_isLoop)
         {
-            _curActionElapsed = 0;
-            newFrame = 0;
+            if (!_externalTimeCtrl)
+                _curActionElapsed = 0;
+            newFrame = newFrame % totalFrames;
+        }
+        else if (_externalTimeCtrl)
+        {
+            // External control: hold on last frame, don't self-terminate
+            newFrame = totalFrames - 1;
         }
         else
         {
@@ -355,11 +395,6 @@ void LegendAnimation::applyFrame(const LegendAnimationFrame& frame)
 {
     if (!_aniFileInfo) return;
 
-    // DIAG: 打印前2帧的前2个元素的变换
-    static int diagFrameCount = 0;
-    bool doDiag = (diagFrameCount < 2);
-    diagFrameCount++;
-
     // Hide all element sprites
     for (size_t i = 0; i < _elementSprites.size(); i++)
     {
@@ -397,16 +432,6 @@ void LegendAnimation::applyFrame(const LegendAnimationFrame& frame)
         Mat4 transformMat;
         CGAffineToGL(felem.transform, transformMat.m);
         child->setNodeToParentTransform(transformMat);
-
-        // DIAG: 打印前2帧的前2个元素
-        if (doDiag && i < 2) {
-            AXLOGW("DIAG applyFrame: ani={} action={} frame={} elem={} alpha={} pos=({:.1f},{:.1f})",
-                   _aniFileName, _currentActionName, _currentFrame, idx, (int)felem.alpha,
-                   transformMat.m[12], transformMat.m[13]);
-            AXLOGW("DIAG applyFrame: m=[{:.4f},{:.4f},{:.4f},{:.4f}] anchor=({:.1f},{:.1f}) visible={}",
-                   transformMat.m[0], transformMat.m[1], transformMat.m[4], transformMat.m[5],
-                   child->getAnchorPoint().x, child->getAnchorPoint().y, child->isVisible());
-        }
     }
 
     // Update batch rendering order if needed

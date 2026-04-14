@@ -63,6 +63,13 @@ local function createSprite(resource)
 		spr:setScale(scale)
 		return spr
 	else
+		-- sprite frame not found, try loading from file directly
+		local spr = CCSprite:create(resource)
+		if spr then
+			local scale = getSpriteOriginalScale(resource)
+			spr:setScale(scale)
+			return spr
+		end
 		LegendLog("Failed to creating sprite from " .. (resource or "nil"))
 		return CCSprite:create()
 	end

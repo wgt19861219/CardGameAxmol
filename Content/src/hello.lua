@@ -59,70 +59,19 @@ local initFont = function()
 	ed.selfFont = selfFont
 end
 function loadAllFiles()
-	-- 只同步加载 logo → main 场景链路必需的模块
-	-- 其余 ~160 个模块由后台分帧加载器处理
-	local criticalModules = {
-		-- 核心基础设施（大部分已被 main.lua coreModules 加载，这里确保不漏）
-		"pb", "util/utils", "util/json", "datatable", "GameConfig",
-		"resource_manager", "event/event", "event/systemevent",
-		"stringutil", "stringbuffer", "utf8",
-		"gamedatatables/gamedatatables", "gamedatatables/rechargemetatable",
-		"gamedatatables/battlemetatable",
-		"network", "soundres", "sound",
-		-- UI 控制器
-		"ui/controllers/button", "ui/controllers/panel",
-		"ui/controllers/listview", "ui/controllers/editttf",
-		"ui/controllers/superlink", "ui/controllers/richtext",
-		"ui/controllers/editbox",
-		-- UI 基类
-		"ui/basetouchnode", "ui/basenode", "ui/basescene",
-		"ui/draglist", "ui/scrollview", "ui/readaction",
-		-- 参数/资源
-		"ui/parameter/parameter", "ui/parameter/baseres",
-		"ui/parameter/uires", "ui/parameter/mainres",
-		-- 玩家系统
-		"record", "playertools", "player", "mercenary", "playerlimit",
-		"enhancement", "fragment", "equip", "equipcraft", "hero_equip",
-		-- UI 通用组件
-		"ui/popwindow/popwindow",
-		"ui/announce/announce", "ui/announce/dialog",
-		"ui/announce/toast", "ui/announce/confirmdialog",
-		"ui/readconfig", "ui/readnode", "ui/readequip", "ui/readhero",
-		"ui/stonedetail", "ui/widget/widget", "ui/widget/complexlabel",
-		"ui/statusbar", "ui/shortcut",
-		-- logo → main 必需的 listener 和场景
-		"ui/listener/baselsr", "ui/listener/frameworklsr", "ui/listener/mainlsr",
-		"ui/parameter/loadingres",
-		"ui/loading", "ui/logo", "ui/platformlogo", "ui/serverlogin",
-		"ui/framework", "ui/main",
-		-- 教程
-		"tutorial/tutorialres", "tutorial/tutorialmaker",
-		"tutorial/tutorial", "tutorial/5v5",
-		-- 配置表与事件
-		"gametable/gametable", "gametable/storytableconfig",
-		"gametable/uiconfigres", "gametable/fontconfigs",
-		"gametable/errorinfo", "gametable/fontcfg",
-		"event/gameevents",
-		-- 其他基础
-		"localnotify", "notifymsgdata", "dirtyword",
-		"edebug", "exitgame",
-	}
-	local criticalSet = {}
-	for _, m in ipairs(criticalModules) do criticalSet[m] = true end
-
 	local _ok_n, _fail_n = 0, 0
 	for i, v in ipairs(ed.needLoadFiles) do
-		if criticalSet[v] then
-			local ok, err = pcall(require, v)
-			if ok then
-				_ok_n = _ok_n + 1
-			else
-				_fail_n = _fail_n + 1
-				print("[loadAllFiles] FAIL: " .. v .. " - " .. tostring(err):match("[^\n]+"))
+		local ok, err = pcall(require, v)
+		if ok then
+			_ok_n = _ok_n + 1
+		else
+			_fail_n = _fail_n + 1
+			if _fail_n <= 20 then
+				print("[loadAllFiles] FAIL: " .. v .. " - " .. tostring(err):sub(1, 200))
 			end
 		end
 	end
-	print("[loadAllFiles] " .. _ok_n .. " OK, " .. _fail_n .. " FAIL / " .. #criticalModules .. " critical, " .. #ed.needLoadFiles .. " total (rest deferred)")
+	print("[loadAllFiles] " .. _ok_n .. " OK, " .. _fail_n .. " FAIL / " .. #ed.needLoadFiles .. " total")
 	end
 
 	-- ====== 后台分帧加载器 ======

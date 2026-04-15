@@ -348,7 +348,7 @@ local function refreshDailyloginTag(self)
     button:addChild(tag, 5)
     ui.dlTag = tag
   end
-  ed.ui.activitiesButton.refesh(button)
+  if ed.ui.activitiesButton then ed.ui.activitiesButton.refesh(button) end
 end
 local function refreshWorldcupButton(self)
   local ui = getuiList(self)
@@ -357,10 +357,10 @@ local function refreshWorldcupButton(self)
   end
   if ed.getServerTime() < 1403884800 or ed.getServerTime() > 1405353600 then
     ui.worldcup:setVisible(false)
-    ed.ui.activitiesButton.refesh(self.infoLayer, res.third_pos)
+    if ed.ui.activitiesButton then ed.ui.activitiesButton.refesh(self.infoLayer, res.third_pos) end
   else
     ui.worldcup:setVisible(true)
-    ed.ui.activitiesButton.refesh(self.infoLayer, res.fourth_pos)
+    if ed.ui.activitiesButton then ed.ui.activitiesButton.refesh(self.infoLayer, res.fourth_pos) end
   end
 end
 class.refreshWorldcupButton = refreshWorldcupButton

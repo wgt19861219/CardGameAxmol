@@ -288,8 +288,8 @@ local function checkTavernTag(self)
 	local isShow
 	for k, v in pairs(keys) do
 		local blt, bcd
-		blt = ed.ui.tavern.getLeftTimes(v) or 0
-		if not ed.ui.tavern.getCountdown(v) then
+		blt = (ed.ui.tavern and ed.ui.tavern.getLeftTimes or function() return 0 end)(v) or 0
+		if not (ed.ui.tavern and ed.ui.tavern.getCountdown or function() return nil end)(v) then
 			bcd = true
 		end
 		if blt > 0 and bcd then

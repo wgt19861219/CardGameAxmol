@@ -115,11 +115,13 @@ function loadAllFiles()
 		while bg_index <= #bg_queue and loaded < bg_per_frame do
 			local item = bg_queue[bg_index]
 			if item:sub(1, 13) == "__datatable__" then
-				local tname = item:sub(14)
-				pcall(function() ed.getDataTable(tname) end)
-			else
-				pcall(require, item)
-			end
+					local tname = item:sub(14)
+					local ok, err = pcall(function() ed.getDataTable(tname) end)
+					if not ok then print("[BG-LOAD-FAIL] datatable " .. tname .. ": " .. tostring(err):match("[^\n]+")) end
+				else
+					local ok, err = pcall(require, item)
+					if not ok then print("[BG-LOAD-FAIL] module " .. item .. ": " .. tostring(err):match("[^\n]+")) end
+				end
 			bg_index = bg_index + 1
 			loaded = loaded + 1
 		end

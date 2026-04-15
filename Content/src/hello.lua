@@ -72,9 +72,115 @@ function loadAllFiles()
 		end
 	end
 	print("[loadAllFiles] " .. _ok_n .. " OK, " .. _fail_n .. " FAIL / " .. #ed.needLoadFiles .. " total")
-end
-local scene_stack = {}
-ed.scene_stack = scene_stack
+	end
+
+	-- ====== 后台分帧加载器 ======
+	local bg_queue = {}
+	local bg_index = 1
+	local bg_per_frame = 3
+	local bg_entry_id = nil
+
+	local function buildBackgroundQueue()
+		bg_queue = {}
+		bg_index = 1
+		-- 收集未加载的 needLoadFiles 模块
+		if ed.needLoadFiles then
+			for _, v in ipairs(ed.needLoadFiles) do
+				if not package.loaded[v] then
+					table.insert(bg_queue, v)
+				end
+			end
+		end
+		-- 收集延迟数据表
+		if ed.deferredDataTables then
+			for _, v in ipairs(ed.deferredDataTables) do
+				table.insert(bg_queue, "__datatable__" .. v)
+			end
+		end
+		print("[BG-LOAD] Queue built: " .. #bg_queue .. " items")
+	end
+
+	local function backgroundLoadStep()
+		if bg_index > #bg_queue then
+			if bg_entry_id then
+				local sched = CCDirector:sharedDirector():getScheduler()
+				if sched then sched:unscheduleScriptEntry(bg_entry_id) end
+				bg_entry_id = nil
+			end
+			ed.bg_load_complete = true
+			print("[BG-LOAD] Complete")
+			return
+		end
+		local loaded = 0
+		while bg_index <= #bg_queue and loaded < bg_per_frame do
+			local item = bg_queue[bg_index]
+			if item:sub(1, 13) == "__datatable__" then
+				local tname = item:sub(14)
+				pcall(function() ed.getDataTable(tname) end)
+			else
+				pcall(require, item)
+			end
+			bg_index = bg_index + 1
+			loaded = loaded + 1
+		end
+	end
+
+	local function startBackgroundLoad()
+		if bg_entry_id then return end
+		buildBackgroundQueue()
+		if #bg_queue == 0 then
+			ed.bg_load_complete = true
+			return
+		end
+		local sched = CCDirector:sharedDirector():getScheduler()
+		if sched then
+			bg_entry_id = sched:scheduleScriptFunc(backgroundLoadStep, 0, false)
+		end
+	end
+	ed.startBackgroundLoad = startBackgroundLoad
+
+	-- ====== 按需同步加载 ======
+	local sceneModules = {
+		battle = {
+			modules = {
+				"battle/battle_scene", "battle/battle_engine",
+				"battle/edp", "battle/popup", "battle/loot",
+				"battle/entity", "battle/unit", "battle/skill",
+				"battle/buff", "battle/stage", "battle/npc",
+				"battle/ai", "battle/projectile", "battle/chain",
+				"battle/effect", "battle/preload", "battle/puppet",
+				"battle/ball", "battle/energyball", "battle/battle_check",
+				"ui/battleStatistics", "ui/battle_share",
+			},
+			dataTables = { "Battle", "Buff", "SkillGroup", "AnimDuration", "AnimAtkFrame", "affixcount" },
+		},
+		pvp = {
+			modules = { "ui/pvp" },
+			dataTables = { "PVPEmeny", "PVPRankReward" },
+		},
+		guild = {
+			modules = { "ui/guild/guild", "ui/guild/guildreward", "ui/guild/guildspecialreward" },
+			dataTables = { "GuildWorship", "GuildHirePrice" },
+		},
+	}
+
+	local function ensureSceneModules(sceneName)
+		local group = sceneModules[sceneName]
+		if not group then return true end
+		for _, mod in ipairs(group.modules) do
+			if not package.loaded[mod] then
+				pcall(require, mod)
+			end
+		end
+		for _, dt in ipairs(group.dataTables or {}) do
+			pcall(function() ed.getDataTable(dt) end)
+		end
+		return true
+	end
+		ed.ensureSceneModules = ensureSceneModules
+
+	local scene_stack = {}
+	ed.scene_stack = scene_stack
 
 --add by xinghui
 local function registerFont()
@@ -346,11 +452,13 @@ end
 ed.createAnimation = createAnimation;
 
 xpcall(function()
-	local ed = ed
-	ed.run_with_scene = true
-	loadAllFiles()
-	initFont()
-	initGcTime()
-	main()
-end, EDDebug)
+		local ed = ed
+			ed.run_with_scene = true
+			loadAllFiles()  -- UI模块仍需同步加载（main()依赖ed.ui.logo等）
+			initFont()
+			initGcTime()
+			main()
+			-- 主场景创建后后台加载延迟数据表
+			ed.startBackgroundLoad()
+	end, EDDebug)
 		

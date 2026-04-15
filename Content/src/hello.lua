@@ -59,25 +59,76 @@ local initFont = function()
 	ed.selfFont = selfFont
 end
 function loadAllFiles()
+	-- 只同步加载 logo → main 场景链路必需的模块
+	-- 其余 ~160 个模块由后台分帧加载器处理
+	local criticalModules = {
+		-- 核心基础设施（大部分已被 main.lua coreModules 加载，这里确保不漏）
+		"pb", "util/utils", "util/json", "datatable", "GameConfig",
+		"resource_manager", "event/event", "event/systemevent",
+		"stringutil", "stringbuffer", "utf8",
+		"gamedatatables/gamedatatables", "gamedatatables/rechargemetatable",
+		"gamedatatables/battlemetatable",
+		"network", "soundres", "sound",
+		-- UI 控制器
+		"ui/controllers/button", "ui/controllers/panel",
+		"ui/controllers/listview", "ui/controllers/editttf",
+		"ui/controllers/superlink", "ui/controllers/richtext",
+		"ui/controllers/editbox",
+		-- UI 基类
+		"ui/basetouchnode", "ui/basenode", "ui/basescene",
+		"ui/draglist", "ui/scrollview", "ui/readaction",
+		-- 参数/资源
+		"ui/parameter/parameter", "ui/parameter/baseres",
+		"ui/parameter/uires", "ui/parameter/mainres",
+		-- 玩家系统
+		"record", "playertools", "player", "mercenary", "playerlimit",
+		"enhancement", "fragment", "equip", "equipcraft", "hero_equip",
+		-- UI 通用组件
+		"ui/popwindow/popwindow",
+		"ui/announce/announce", "ui/announce/dialog",
+		"ui/announce/toast", "ui/announce/confirmdialog",
+		"ui/readconfig", "ui/readnode", "ui/readequip", "ui/readhero",
+		"ui/stonedetail", "ui/widget/widget", "ui/widget/complexlabel",
+		"ui/statusbar", "ui/shortcut",
+		-- logo → main 必需的 listener 和场景
+		"ui/listener/baselsr", "ui/listener/frameworklsr", "ui/listener/mainlsr",
+		"ui/parameter/loadingres",
+		"ui/loading", "ui/logo", "ui/platformlogo", "ui/serverlogin",
+		"ui/framework", "ui/main",
+		-- 教程
+		"tutorial/tutorialres", "tutorial/tutorialmaker",
+		"tutorial/tutorial", "tutorial/5v5",
+		-- 配置表与事件
+		"gametable/gametable", "gametable/storytableconfig",
+		"gametable/uiconfigres", "gametable/fontconfigs",
+		"gametable/errorinfo", "gametable/fontcfg",
+		"event/gameevents",
+		-- 其他基础
+		"localnotify", "notifymsgdata", "dirtyword",
+		"edebug", "exitgame",
+	}
+	local criticalSet = {}
+	for _, m in ipairs(criticalModules) do criticalSet[m] = true end
+
 	local _ok_n, _fail_n = 0, 0
 	for i, v in ipairs(ed.needLoadFiles) do
-		local ok, err = pcall(require, v)
-		if ok then
-			_ok_n = _ok_n + 1
-		else
-			_fail_n = _fail_n + 1
-			if _fail_n <= 80 then
+		if criticalSet[v] then
+			local ok, err = pcall(require, v)
+			if ok then
+				_ok_n = _ok_n + 1
+			else
+				_fail_n = _fail_n + 1
 				print("[loadAllFiles] FAIL: " .. v .. " - " .. tostring(err):match("[^\n]+"))
 			end
 		end
 	end
-	print("[loadAllFiles] " .. _ok_n .. " OK, " .. _fail_n .. " FAIL / " .. #ed.needLoadFiles .. " total")
+	print("[loadAllFiles] " .. _ok_n .. " OK, " .. _fail_n .. " FAIL / " .. #criticalModules .. " critical, " .. #ed.needLoadFiles .. " total (rest deferred)")
 	end
 
 	-- ====== 后台分帧加载器 ======
 	local bg_queue = {}
 	local bg_index = 1
-	local bg_per_frame = 3
+	local bg_per_frame = 5
 	local bg_entry_id = nil
 
 	local function buildBackgroundQueue()
@@ -163,6 +214,79 @@ function loadAllFiles()
 		guild = {
 			modules = { "ui/guild/guild", "ui/guild/guildreward", "ui/guild/guildspecialreward" },
 			dataTables = { "GuildWorship", "GuildHirePrice" },
+		},
+		tavern = {
+			modules = {
+				"ui/tavern", "ui/listener/tavernlsr",
+				"ui/parameter/tavernres", "ui/popwindow/poptavernloot",
+				"ui/listener/poptavernlootlsr",
+			},
+		},
+		stageselect = {
+			modules = {
+				"ui/stageselect", "ui/listener/stageselectlsr",
+				"ui/parameter/stageselectres", "ui/stagedetail",
+				"ui/listener/stagedetaillsr", "ui/parameter/stagedetailres",
+				"ui/battleprepare", "ui/listener/battlepreparelsr",
+				"ui/stagedone", "ui/listener/stagedonelsr",
+				"ui/stagefailed", "ui/listener/stagefailedlsr",
+			},
+		},
+		shop = {
+			modules = {
+				"ui/market/marketconfig", "ui/market/market", "ui/market/shop",
+				"ui/listener/shoplsr",
+			},
+		},
+		package = {
+			modules = {
+				"ui/package", "ui/listener/packagelsr",
+				"ui/heropackage", "ui/listener/heropackagelsr",
+				"ui/heroitem", "ui/equipablelist",
+			},
+		},
+		equip = {
+			modules = {
+				"ui/equipstrengthen", "ui/listener/equipstrengthenlsr",
+				"ui/equipdetail", "ui/listener/equipdetaillsr",
+				"ui/equipcraft", "ui/listener/equipcraftlsr",
+				"ui/fragmentcompose", "ui/listener/fragmentcomposelsr",
+				"ui/parameter/packageres",
+			},
+		},
+		task = {
+			modules = { "ui/task", "ui/listener/tasklsr" },
+		},
+		herodetail = {
+			modules = {
+				"ui/herodetail/param", "ui/herodetail/listener",
+				"ui/herodetail/controller", "ui/herodetail/net",
+				"ui/herodetail/herofca", "ui/herodetail/window",
+				"ui/herodetail/attributes", "ui/herodetail/skillstren",
+				"ui/herodetail/card", "ui/herodetail/evolveequip",
+				"ui/herosplit/split", "ui/herosplit/window",
+				"ui/selectwindow/base", "ui/selectwindow/ofavatar",
+				"ui/selectwindow/ofhero", "ui/selectwindow/ofitem",
+				"ui/listener/heroselectlsr",
+				"ui/popwindow/popherocard", "ui/listener/popherocardlsr",
+				"ui/popwindow/eatexplist", "ui/listener/eatexplistlsr",
+				"ui/popwindow/bename", "ui/popwindow/fastsell", "ui/popwindow/buyconfirm",
+			},
+		},
+		handbook = {
+			modules = { "ui/handbook", "ui/listener/handbooklsr" },
+		},
+		recharge = {
+			modules = {
+				"ui/recharge", "ui/newrecharge", "ui/listener/rechargelsr",
+				"activity/ContinueChargeDialog", "activity/ContinueRecharge",
+				"activity/ActivityPage", "activity/LottoPage",
+				"activity/ActiveRechargeRebate", "activity/EveryDayHappy",
+				"activity/BigPackagePage",
+			},
+		},
+		exercise = {
+			modules = { "ui/exercise", "ui/listener/exerciselsr", "ui/parameter/exerciseres" },
 		},
 	}
 
@@ -456,11 +580,19 @@ ed.createAnimation = createAnimation;
 xpcall(function()
 		local ed = ed
 			ed.run_with_scene = true
-			loadAllFiles()  -- UI模块仍需同步加载（main()依赖ed.ui.logo等）
+			LegendLog("[HELLO] loadAllFiles START")
+			loadAllFiles()
+			LegendLog("[HELLO] loadAllFiles DONE")
+LegendLog("[HELLO] initFont START")
 			initFont()
+			LegendLog("[HELLO] initFont DONE")
 			initGcTime()
+LegendLog("[HELLO] main() START")
 			main()
+			LegendLog("[HELLO] main() DONE")
 			-- 主场景创建后后台加载延迟数据表
+LegendLog("[HELLO] startBackgroundLoad START")
 			ed.startBackgroundLoad()
+			LegendLog("[HELLO] startBackgroundLoad DONE")
 	end, EDDebug)
 		

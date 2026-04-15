@@ -163,7 +163,7 @@ local function createLoading(self)
   local func = CCCallFunc:create(function()
     xpcall(function()
       LegendLog("[createLoading] inside CCCallFunc callback START")
-      self:loadShaders()
+      -- self:loadShaders()  -- SKIPPED: shader files don't exist, each call takes ~3s searching filesystem
       LegendLog("[createLoading] loadShaders done")
       self:loadTable()
       LegendLog("[createLoading] loadTable done")

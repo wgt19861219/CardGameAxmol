@@ -211,7 +211,7 @@ if not rawget(_G, "LegendExit") then rawset(_G, "LegendExit", function() os.exit
 if not rawget(_G, "LegendRestartApplication") then rawset(_G, "LegendRestartApplication", function() end) end
 if not rawget(_G, "CloseEvent") then rawset(_G, "CloseEvent", function() end) end
 if not rawget(_G, "ListenEvent") then rawset(_G, "ListenEvent", function() end) end
-if not rawget(_G, "LegendLoadShader") then rawset(_G, "LegendLoadShader", function() end) end
+rawset(_G, "LegendLoadShader", function() end)  -- force no-op: shader files don't exist
 if not rawget(_G, "LegendGetShopPriceInfo") then rawset(_G, "LegendGetShopPriceInfo", function() end) end
 if not rawget(_G, "LegendCancelNotification") then rawset(_G, "LegendCancelNotification", function() end) end
 if not rawget(_G, "LegendUpdateSvr") then rawset(_G, "LegendUpdateSvr", function() end) end
@@ -446,6 +446,15 @@ local function saveGame()
     if not json or not json.encode then return false end
     local ok, result = pcall(function()
         local data = deepCopy(ed.player.data)
+        -- 清理酒馆历史记录（409KB+，占存档99%），只保留最近10条
+        if data._tavern_record and type(data._tavern_record) == "table" then
+            local tr = data._tavern_record
+            if #tr > 10 then
+                local recent = {}
+                for i = #tr - 9, #tr do table.insert(recent, tr[i]) end
+                data._tavern_record = recent
+            end
+        end
         local encoded = json.encode(data)
         local path = getSavePath()
         local f = io.open(path, "w")
@@ -474,8 +483,15 @@ local function loadSaveData()
         local content = f:read("*a")
         f:close()
         if not content or #content == 0 then return nil end
+        -- 存档超过 50KB 说明包含了大量酒馆历史记录，json.decode 会极慢
+        -- 直接删掉旧存档，让游戏从默认数据开始（saveGame 会保存精简版）
+        if #content > 50000 then
+            print("[SAVE] Large save file (" .. #content .. " bytes), removing and using defaults")
+            os.remove(path)
+            return nil
+        end
         local data = json.decode(content)
-        print("[SAVE] Loaded " .. #content .. " bytes")
+        print("[SAVE] Loaded " .. #content .. " bytes (tavern_record truncated)")
         return data
     end)
     if not ok then

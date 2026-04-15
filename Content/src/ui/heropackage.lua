@@ -219,7 +219,8 @@ local function doClickInHeroLayer(self)
         listIndex = tempIndex
       end
     end
-    local heroDetailLayer = ed.ui.herodetail.initWindow(self.heroIcon[tid].hero, nil, {
+    if ed.ensureSceneModules then ed.ensureSceneModules("herodetail") end
+local heroDetailLayer = ed.ui.herodetail.initWindow(self.heroIcon[tid].hero, nil, {
       index = listIndex,
       list = list,
       openMode = "card"

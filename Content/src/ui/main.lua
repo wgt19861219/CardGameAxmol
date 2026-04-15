@@ -1348,6 +1348,7 @@ local function getMainButtonHandler(self, key)
 				return
 			end
 			lsr:report("clickcot")
+			if ed.ensureSceneModules then ed.ensureSceneModules("exercise") end
 			ed.pushScene(ed.ui.exercise.create("em"))
 			self.isPushScene = true
 		end,
@@ -1361,6 +1362,7 @@ local function getMainButtonHandler(self, key)
             --
 			ed.endTeach("gotoSelectStage")
 			lsr:report("clickpve")
+			if ed.ensureSceneModules then ed.ensureSceneModules("stageselect") end
 			ed.pushScene(ed.ui.stageselect.create())
 			self.isPushScene = true
 		end,
@@ -1387,6 +1389,7 @@ local function getMainButtonHandler(self, key)
 				return
 			end
 			lsr:report("clickshop")
+			if ed.ensureSceneModules then ed.ensureSceneModules("shop") end
 			ed.pushScene(ed.ui.shop.create())
 			self.isPushScene = true
 			ed.endTeach("openShop")
@@ -1395,6 +1398,7 @@ local function getMainButtonHandler(self, key)
 			local type = self.shopButtonType.sshop
 			if type == "into" then
 				lsr:report("clicksshop")
+				if ed.ensureSceneModules then ed.ensureSceneModules("shop") end
 				ed.pushScene(ed.ui.shop.create(2))
 				self.isPushScene = true
 				ed.endTeach("openSpecialShop")
@@ -1406,6 +1410,7 @@ local function getMainButtonHandler(self, key)
 			local type = self.shopButtonType.ssshop
 			if type == "into" then
 				lsr:report("clickssshop")
+				if ed.ensureSceneModules then ed.ensureSceneModules("shop") end
 				ed.pushScene(ed.ui.shop.create(3))
 				self.isPushScene = true
 				ed.endTeach("openSoSpecialShop")
@@ -1415,6 +1420,7 @@ local function getMainButtonHandler(self, key)
 		end,
 		starshop = function()
 			lsr:report("clickstarshop")
+			if ed.ensureSceneModules then ed.ensureSceneModules("shop") end
 			ed.pushScene(ed.ui.shop.create("starshop"))
 			self.isPushScene = true
 			ed.endTeach("openStarshop")
@@ -1436,6 +1442,7 @@ local function getMainButtonHandler(self, key)
 				return
 			end
 			lsr:report("clickestren")
+			if ed.ensureSceneModules then ed.ensureSceneModules("equip") end
 			ed.pushScene(ed.ui.equipstrengthen.create())
 			self.isPushScene = true
 		end,
@@ -1447,6 +1454,7 @@ local function getMainButtonHandler(self, key)
                 ed.sendDotInfoToServer(ed.tutorialres.t_key["FTintoMain"].id)
             end
             --
+			if ed.ensureSceneModules then ed.ensureSceneModules("tavern") end
 			ed.pushScene(ed.ui.tavern.create())
 			self.isPushScene = true
 		end,
@@ -1457,6 +1465,7 @@ local function getMainButtonHandler(self, key)
 				return
 			end
 			lsr:report("clickexercise")
+			if ed.ensureSceneModules then ed.ensureSceneModules("exercise") end
 			ed.pushScene(ed.ui.exercise.create("equip"))
 			self.isPushScene = true
 		end,

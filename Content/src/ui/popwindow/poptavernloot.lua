@@ -504,7 +504,15 @@ local function createLootAnim(self, index, param)
     local fo = CCFadeOut:create(0.4)
     shadow:runAction(fo)
   end
-  local bpos = self.box:getParent():convertToWorldSpace(ccp(self.box:getPosition()))
+  local bpos = ccp(400, 240)
+  pcall(function()
+    if self.box and type(self.box.getParent) == "function" then
+      local parent = self.box:getParent()
+      if parent and type(parent.convertToWorldSpace) == "function" then
+        bpos = parent:convertToWorldSpace(ccp(self.box:getPosition()))
+      end
+    end
+  end)
   local x, y = self:getLootPos(index)
   local epos = ccp(x, y)
   local s

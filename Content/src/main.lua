@@ -672,19 +672,29 @@ for _, mod in ipairs(coreModules) do
             end
             return ls
         end
-        -- 辅助：addHero 后自动设置英雄等级为玩家等级（否则技能升级不可用）
-        local function addHeroWithLevel(tid)
+        -- 辅助：addHero 后设置英雄初始属性
+        -- fromGM=true 时设置高等级（GM命令获取所有英雄用）
+        local function addHeroWithLevel(tid, fromGM)
             if not ed.player or not ed.player.addHero then return end
             local isNew = not ed.player.heroes[tid]
             ed.player:addHero(tid)
             if isNew and ed.player.heroes[tid] then
                 pcall(function()
                     local hero = ed.player.heroes[tid]
-                    local playerLevel = ed.player._level or 30
-                    hero._level = playerLevel
-                    hero._rank = math.max(hero._rank or 1, 5)
-                    hero._stars = math.max(hero._stars or 1, 2)
-                    hero._gs = (hero._gs or 0) + playerLevel * 10
+                    if fromGM then
+                        local playerLevel = ed.player._level or 30
+                        hero._level = playerLevel
+                        hero._rank = math.max(hero._rank or 1, 5)
+                        hero._stars = math.max(hero._stars or 1, 2)
+                        hero._gs = (hero._gs or 0) + playerLevel * 10
+                    else
+                        local unitTable = ed.getDataTable("Unit")
+                        local initStars = (unitTable and unitTable[tid]) and unitTable[tid]["Initial Stars"] or 1
+                        hero._level = 1
+                        hero._rank = 1
+                        hero._stars = initStars
+                        hero._gs = 0
+                    end
                 end)
             end
         end
@@ -800,23 +810,109 @@ for _, mod in ipairs(coreModules) do
             elseif msgType == "job_rewards" then
                 -- 任务奖励，忽略
             elseif msgType == "tavern_draw" then
-                -- 酒馆抽取：直接在 stubSend 中处理，不依赖 pb_loader/local_server
                 LegendLog("[STUB-NET] tavern_draw: handling directly")
                 local drawType = obj._draw_type or 0
                 local boxType = obj._box_type or 1
                 local drawCount = drawType == 1 and 10 or 1
-                -- 生成随机掉落
+
+                -- 品质上限: bronze=3, gold/magic=4+
+                local maxQuality = 3
+                if boxType >= 3 then maxQuality = 6 end
+
+                -- 识别灵魂石和装备
+                local soulStoneIds = {}
+                local normalEquips = {}
+                pcall(function()
+                    local fragTable = ed.getDataTable("fragment")
+                    if fragTable then
+                        for fid, frow in pairs(fragTable) do
+                            if type(fid) == "number" and frow["Fragment ID"] then
+                                soulStoneIds[frow["Fragment ID"]] = true
+                            end
+                        end
+                    end
+                    local equipTable = ed.getDataTable("equip")
+                    if equipTable then
+                        for eid, row in pairs(equipTable) do
+                            if type(eid) == "number" and eid > 0 and row.Quality then
+                                if not soulStoneIds[eid] and row.Quality <= maxQuality then
+                                    normalEquips[row.Quality] = normalEquips[row.Quality] or {}
+                                    table.insert(normalEquips[row.Quality], eid)
+                                end
+                            end
+                        end
+                    end
+                end)
+
+                -- 收集英雄→灵魂石映射（用于掉落完整英雄）
+                local heroSummonList = {}
+                pcall(function()
+                    local unitTable = ed.getDataTable("Unit")
+                    local fragTable = ed.getDataTable("fragment")
+                    local heroStars = ed.getDataTable("HeroStars")
+                    if not unitTable or not fragTable or not heroStars then return end
+                    for tid, unit in pairs(unitTable) do
+                        if type(tid) == "number" and tid > 0 and tid < 100
+                            and unit["Unit Type"] == "Hero" and unit.Portrait then
+                            local frag = fragTable[tid]
+                            if frag then
+                                local stoneId = frag["Fragment ID"]
+                                local initStars = unit["Initial Stars"] or 1
+                                local convertAmount = (heroStars[initStars] or {})["Convert Fragments"] or 80
+                                if stoneId then
+                                    table.insert(heroSummonList, { stoneId = stoneId, heroId = tid, amount = convertAmount })
+                                end
+                            end
+                        end
+                    end
+                end)
+
+                local soulStoneList = {}
+                for sid, _ in pairs(soulStoneIds) do table.insert(soulStoneList, sid) end
+
+                -- 生成掉落
                 local loot = {}
+                local function pickEquip(maxQ)
+                    for q = maxQ, 1, -1 do
+                        local pool = normalEquips[q]
+                        if pool and #pool > 0 then return pool[math.random(1, #pool)] end
+                    end
+                    return math.random(100, 120)
+                end
+
+                local heroChance = boxType >= 3 and 8 or 0
+                local soulChance = boxType >= 3 and 12 or 10
+
                 for i = 1, drawCount do
-                    local equipId = math.random(100, 120)
-                    table.insert(loot, ed.makebits(11, 1, 10, equipId))
+                    local q = 1
+                    local r = math.random(1, 100)
+                    if boxType >= 3 then
+                        if r <= 1 then q = 6
+                        elseif r <= 5 then q = 5
+                        elseif r <= 15 then q = 4
+                        elseif r <= 35 then q = 3
+                        elseif r <= 65 then q = 2
+                        else q = 1 end
+                    else
+                        if r <= 25 then q = 3
+                        elseif r <= 60 then q = 2
+                        else q = 1 end
+                    end
+
+                    local roll = math.random(1, 100)
+                    if roll <= heroChance and #heroSummonList > 0 then
+                        local entry = heroSummonList[math.random(1, #heroSummonList)]
+                        table.insert(loot, ed.makebits(11, entry.amount, 10, entry.stoneId))
+                    elseif roll <= heroChance + soulChance and #soulStoneList > 0 then
+                        local sid = soulStoneList[math.random(1, #soulStoneList)]
+                        table.insert(loot, ed.makebits(11, math.random(1, 3), 10, sid))
+                    else
+                        local equipId = pickEquip(q)
+                        table.insert(loot, ed.makebits(11, math.random(1, 3), 10, equipId))
+                    end
                 end
-                -- 小概率给英雄碎片
-                if math.random(1, 10) <= 3 then
-                    local heroId = math.random(1, 5)
-                    table.insert(loot, ed.makebits(11, math.random(1, 3), 10, heroId))
-                end
-                -- 处理掉落物品（添加到玩家背包）
+
+                -- 处理掉落物品
                 for k, v in pairs(loot) do
                     pcall(function()
                         local id = ed.bits(v, 0, 10)
@@ -825,7 +921,27 @@ for _, mod in ipairs(coreModules) do
                         if it == "hero" then
                             addHeroWithLevel(id)
                         elseif it == "equip" then
-                            if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
+                            local mhid = ed.readhero and ed.readhero.getMakeid(id)
+                            if mhid and ed.itemType(mhid) == "hero" then
+                                local isConvert = false
+                                pcall(function()
+                                    local heroStars = ed.getDataTable("HeroStars")
+                                    if heroStars then
+                                        for _, row in pairs(heroStars) do
+                                            if type(row) == "table" and row["Convert Fragments"] == amount then
+                                                isConvert = true; break
+                                            end
+                                        end
+                                    end
+                                end)
+                                if isConvert then
+                                    addHeroWithLevel(mhid)
+                                else
+                                    if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
+                                end
+                            else
+                                if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
+                            end
                         end
                     end)
                 end
@@ -846,7 +962,6 @@ for _, mod in ipairs(coreModules) do
                         nd.tavern = nil
                     end
                 end)
-                -- 调用回调（重置 isTaverning）
                 LegendLog("[STUB-NET] tavern_draw: loot_count=" .. tostring(#loot) .. ", calling netreply.tavern")
                 local handler = ed.netreply and ed.netreply.tavern
                 if handler then
@@ -911,7 +1026,7 @@ for _, mod in ipairs(coreModules) do
                                 if type(tid) == "number" and tid > 0 and unit.Name
                                     and unit["Unit Type"] == "Hero" and unit.Portrait then
                                     if not ed.player.heroes[tid] then
-                                        local ok_h = pcall(function() addHeroWithLevel(tid) end)
+                                        local ok_h = pcall(function() addHeroWithLevel(tid, true) end)
                                         if ok_h then count = count + 1 end
                                     else
                                         -- 已有英雄也刷新等级（修复之前 addHero 默认 level=1 的英雄）
@@ -984,6 +1099,89 @@ for _, mod in ipairs(coreModules) do
                         end)
                         LegendLog("[STUB-NET] gm_cmd: set_vitality=" .. tostring(gmObj._set_vitality))
                     end
+
+                    -- 重置账号（删号）
+                    if gmObj._reset_device then
+                        LegendLog("[GM] _reset_device: resetting account...")
+                        pcall(function()
+                            -- 用与登录相同的 mockUser 结构重置
+                            local resetUser = {
+                                _userid = 1,
+                                _name_card = {
+                                    _name = "Player",
+                                    _last_set_name_time = 0,
+                                    _avatar = 1,
+                                },
+                                _level = 1,
+                                _recharge_sum = 0,
+                                _exp = 0,
+                                _money = 10000,
+                                _rmb = 1000,
+                                _vitality = {
+                                    _current = 120,
+                                    _lastchange = 0,
+                                    _todaybuy = 0,
+                                    _lastbuy = 0,
+                                },
+                                _items = {},
+                                _heroes = {},
+                                _userstage = {
+                                    _normal_stage_stars = {},
+                                    _elite_stage_stars = {},
+                                    _elite_daily_record = {},
+                                    _elite_reset_time = 0,
+                                    _sweep = { _last_reset_time = 0, _today_free_sweep_times = 0 },
+                                    _act_reset_time = 0,
+                                },
+                                _skill_level_up = {
+                                    _skill_levelup_chance = 5,
+                                    _skill_levelup_cd = os.time(),
+                                    _reset_times = 0,
+                                    _last_reset_date = 0,
+                                },
+                                _tutorial = (function()
+                                    local t = {}
+                                    for i = 1, 96 do t[i] = 10 end
+                                    return t
+                                end)(),
+                                _task = {},
+                                _task_finished = {},
+                                _last_login = 0,
+                                _dailyjob = {},
+                                _tavern_record = {},
+                                _usermidas = {
+                                    _last_change = 0,
+                                    _today_times = 0,
+                                },
+                                _daily_login = {
+                                    _status = "nothing",
+                                    _frequency = 0,
+                                    _last_login_date = 0,
+                                },
+                                _shop = {
+                                    { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
+                                },
+                            }
+                            -- 清空旧数据再 setup，否则 heroes 等缓存表不会被清除
+                            if ed.player then
+                                ed.player.heroes = {}
+                                ed.player._heroes_cache = nil
+                            end
+                            if ed.player and ed.player.setup then
+                                ed.player:setup(resetUser)
+                            end
+                            -- 删除存档文件
+                            local FileUtils = cc.FileUtils and cc.FileUtils:getInstance()
+                            if FileUtils then
+                                local savePath = FileUtils:getWritablePath() .. "save.json"
+                                FileUtils:removeFile(savePath)
+                                LegendLog("[GM] _reset_device: save file removed: " .. savePath)
+                            end
+                            LegendLog("[GM] _reset_device: account reset complete")
+                        end)
+                    end
+
+
 
                     -- 设置英雄信息
                     if gmObj._set_hero_info then

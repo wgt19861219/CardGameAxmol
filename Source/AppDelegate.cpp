@@ -102,6 +102,12 @@ bool AppDelegate::applicationDidFinishLaunching()
     dbg("[B3c] LegendLog registered");
 
     LuaStack* stack = engine->getLuaStack();
+    // 添加 writable path 到搜索路径最前面，允许 sdcard 上的 hotfix 文件覆盖 APK 内的文件
+    std::string writablePath = FileUtils::getInstance()->getWritablePath();
+    if (!writablePath.empty()) {
+        FileUtils::getInstance()->addSearchPath(writablePath);
+        dbg("[B4a] writable search path: %s", writablePath.c_str());
+    }
     stack->addSearchPath("src");
     FileUtils::getInstance()->addSearchPath("res");
     dbg("[B4] search paths set");

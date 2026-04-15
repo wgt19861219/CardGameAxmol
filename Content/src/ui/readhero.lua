@@ -696,7 +696,7 @@ local function getMissList()
   local ht = ed.getDataTable("Unit")
   for k, v in pairs(ht) do
     if type(k) == "number" and ed.unitType(k) == "hero" and not ed.player.heroes[k] then
-      if v.Enable or ((ed.player.equip_qunty[getStoneid(k)] or 0)>0) then
+      if (ed.player.equip_qunty[getStoneid(k)] or 0) > 0 then
         table.insert(list, k)
       end
     end

@@ -671,6 +671,71 @@ for _, mod in ipairs(coreModules) do
                 LegendLog("[STUB-NET] local_server NOT found by any method: " .. tostring(err))
             end
             return ls
+            return ls
+        end
+        -- 生成默认用户数据（登录和删号共用）
+        local function createDefaultUserData(overrides)
+            local data = {
+                _userid = 1,
+                _name_card = {
+                    _name = "Player",
+                    _last_set_name_time = 0,
+                    _avatar = 1,
+                },
+                _level = 30,
+                _recharge_sum = 0,
+                _exp = 0,
+                _money = 100000,
+                _rmb = 5000,
+                _vitality = {
+                    _current = 120,
+                    _lastchange = 0,
+                    _todaybuy = 0,
+                    _lastbuy = 0,
+                },
+                _items = {},
+                _heroes = {},
+                _userstage = {
+                    _normal_stage_stars = {},
+                    _elite_stage_stars = {},
+                    _elite_daily_record = {},
+                    _elite_reset_time = 0,
+                    _sweep = { _last_reset_time = 0, _today_free_sweep_times = 0 },
+                    _act_reset_time = 0,
+                },
+                _skill_level_up = {
+                    _skill_levelup_chance = 5,
+                    _skill_levelup_cd = os.time(),
+                    _reset_times = 0,
+                    _last_reset_date = 0,
+                },
+                _tutorial = (function()
+                    local t = {}
+                    for i = 1, 96 do t[i] = 10 end
+                    return t
+                end)(),
+                _task = {},
+                _task_finished = {},
+                _last_login = 0,
+                _dailyjob = {},
+                _tavern_record = {},
+                _usermidas = {
+                    _last_change = 0,
+                    _today_times = 0,
+                },
+                _daily_login = {
+                    _status = "nothing",
+                    _frequency = 0,
+                    _last_login_date = 0,
+                },
+                _shop = {
+                    { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
+                },
+            }
+            if overrides then
+                for k, v in pairs(overrides) do data[k] = v end
+            end
+            return data
         end
         -- 辅助：addHero 后设置英雄初始属性
         -- fromGM=true 时设置高等级（GM命令获取所有英雄用）
@@ -716,63 +781,7 @@ for _, mod in ipairs(coreModules) do
                                 ed.player:setup(savedData)
                             else
                                 print("[STUB-NET] No save data, using default mockUser")
-                                local mockUser = {
-                                    _userid = 1,
-                                    _name_card = {
-                                        _name = "Player",
-                                        _last_set_name_time = 0,
-                                        _avatar = 1,
-                                    },
-                                    _level = 30,
-                                    _recharge_sum = 0,
-                                    _exp = 0,
-                                    _money = 100000,
-                                    _rmb = 5000,
-                                    _vitality = {
-                                        _current = 120,
-                                        _lastchange = 0,
-                                        _todaybuy = 0,
-                                        _lastbuy = 0,
-                                    },
-                                    _items = {},
-                                    _heroes = {},
-                                    _userstage = {
-                                        _normal_stage_stars = {},
-                                        _elite_stage_stars = {},
-                                        _elite_daily_record = {},
-                                        _elite_reset_time = 0,
-                                        _sweep = { _last_reset_time = 0, _today_free_sweep_times = 0 },
-                                        _act_reset_time = 0,
-                                    },
-                                    _skill_level_up = {
-                                        _skill_levelup_chance = 5,
-                                        _skill_levelup_cd = os.time(),
-                                        _reset_times = 0,
-                                        _last_reset_date = 0,
-                                    },
-                                    _tutorial = (function()
-                                        local t = {}
-                                        for i = 1, 96 do t[i] = 10 end
-                                        return t
-                                    end)(),
-                                    _task = {},
-                                    _task_finished = {},
-                                    _last_login = 0,
-                                    _dailyjob = {},
-                                    _tavern_record = {},
-                                    _usermidas = {
-                                        _last_change = 0,
-                                        _today_times = 0,
-                                    },
-                                    _daily_login = {
-                                        _status = "nothing",
-                                        _frequency = 0,
-                                        _last_login_date = 0,
-                                    },
-                                    _shop = {
-                                        { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
-                                    },
-                                }
+                                local mockUser = createDefaultUserData()
                                 ed.player:setup(mockUser)
                             end
                             print("[STUB-NET] Player setup complete")
@@ -1104,68 +1113,14 @@ for _, mod in ipairs(coreModules) do
                     if gmObj._reset_device then
                         LegendLog("[GM] _reset_device: resetting account...")
                         pcall(function()
-                            -- 用与登录相同的 mockUser 结构重置
-                            local resetUser = {
-                                _userid = 1,
-                                _name_card = {
-                                    _name = "Player",
-                                    _last_set_name_time = 0,
-                                    _avatar = 1,
-                                },
+                            local resetUser = createDefaultUserData({
                                 _level = 1,
-                                _recharge_sum = 0,
-                                _exp = 0,
                                 _money = 10000,
                                 _rmb = 1000,
-                                _vitality = {
-                                    _current = 120,
-                                    _lastchange = 0,
-                                    _todaybuy = 0,
-                                    _lastbuy = 0,
-                                },
-                                _items = {},
-                                _heroes = {},
-                                _userstage = {
-                                    _normal_stage_stars = {},
-                                    _elite_stage_stars = {},
-                                    _elite_daily_record = {},
-                                    _elite_reset_time = 0,
-                                    _sweep = { _last_reset_time = 0, _today_free_sweep_times = 0 },
-                                    _act_reset_time = 0,
-                                },
-                                _skill_level_up = {
-                                    _skill_levelup_chance = 5,
-                                    _skill_levelup_cd = os.time(),
-                                    _reset_times = 0,
-                                    _last_reset_date = 0,
-                                },
-                                _tutorial = (function()
-                                    local t = {}
-                                    for i = 1, 96 do t[i] = 10 end
-                                    return t
-                                end)(),
-                                _task = {},
-                                _task_finished = {},
-                                _last_login = 0,
-                                _dailyjob = {},
-                                _tavern_record = {},
-                                _usermidas = {
-                                    _last_change = 0,
-                                    _today_times = 0,
-                                },
-                                _daily_login = {
-                                    _status = "nothing",
-                                    _frequency = 0,
-                                    _last_login_date = 0,
-                                },
-                                _shop = {
-                                    { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
-                                },
-                            }
+                            })
                             -- 清空旧数据再 setup，否则 heroes 等缓存表不会被清除
                             if ed.player then
                                 ed.player.heroes = {}
-                                ed.player._heroes_cache = nil
                             end
                             if ed.player and ed.player.setup then
                                 ed.player:setup(resetUser)
@@ -1179,10 +1134,13 @@ for _, mod in ipairs(coreModules) do
                             end
                             LegendLog("[GM] _reset_device: account reset complete")
                         end)
+                        -- 触发 UI 刷新
+                        pcall(function()
+                            if FireEvent then FireEvent("LoginSuc") end
+                        end)
                     end
 
-
-
+                    -- 设置英雄信息
                     -- 设置英雄信息
                     if gmObj._set_hero_info then
                         for _, heroMsg in ipairs(gmObj._set_hero_info) do
@@ -2098,41 +2056,7 @@ local function ensureStubsAfterTools()
                                 print("[STUB-NET] Loading saved game data (ensureStubs)")
                                 ed.player:setup(savedData)
                             else
-                                local mockUser = {
-                                    _userid = 1,
-                                    _name_card = {_name="Player",_last_set_name_time=0,_avatar=1},
-                                    _level = 30, _recharge_sum = 0, _exp = 0,
-                                    _money = 100000, _rmb = 5000,
-                                    _vitality = {_current=120,_lastchange=0,_todaybuy=0,_lastbuy=0},
-                                    _items = {}, _heroes = {},
-                                    _userstage = {
-                                        _normal_stage_stars = {},
-                                        _elite_stage_stars = {},
-                                        _elite_daily_record = {},
-                                        _elite_reset_time = 0,
-                                        _sweep = {_last_reset_time=0,_today_free_sweep_times=0},
-                                        _act_reset_time = 0,
-                                    },
-                                    _skill_level_up = {
-                                        _skill_levelup_chance = 5,
-                                        _skill_levelup_cd = os.time(),
-                                        _reset_times = 0,
-                                        _last_reset_date = 0,
-                                    },
-                                    _tutorial = (function()
-                                        local t = {}
-                                        for i = 1, 96 do t[i] = 10 end
-                                        return t
-                                    end)(),
-                                    _task = {}, _task_finished = {},
-                                    _last_login = 0, _dailyjob = {},
-                                    _tavern_record = {},
-                                    _usermidas = {_last_change=0,_today_times=0},
-                                    _daily_login = {_status="nothing",_frequency=0,_last_login_date=0},
-                                    _shop = {
-                                        {id=1,last_auto_refresh_time=0,expire_time=0,last_manual_refresh_time=0,today_times=0,goods={}}
-                                    },
-                                }
+                                local mockUser = createDefaultUserData()
                                 ed.player:setup(mockUser)
                             end
                             print("[STUB-NET] Player setup OK (ensureStubs)")

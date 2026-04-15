@@ -182,7 +182,9 @@ void LegendAnimation::setActionElapsed(float elapsed)
     }
 
     _curActionElapsed = elapsed;
-    _externalTimeCtrl = true;
+    // 不设置 _externalTimeCtrl = true
+    // 让 puppet 的 update() 继续自行累加时间（保持60fps流畅）
+    // per-tick 的 setActionElapsed 只做微小校正（误差<1ms，不可感知）
 
     int newFrame = (int)(elapsed * _currentAction->fps);
     int totalFrames = (int)_currentAction->frames.size();

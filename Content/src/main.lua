@@ -395,6 +395,109 @@ if _bit_ok and type(_bit_mod) == "table" then
 end
 
 -----------------------------------------------------------------
+-- 加载 JSON 模块（存档系统需要）
+-----------------------------------------------------------------
+local _json_ok, _json_mod = pcall(require, "util/json")
+-- util/json.lua 内部调用 module("json")，注册到 package.loaded["json"] 而非 "util/json"
+-- require 返回值可能是 true 而非 table，需要从 package.loaded["json"] 取回实际模块表
+if _json_ok and type(_json_mod) ~= "table" then
+    _json_mod = package.loaded["json"]
+end
+-- Lua 5.5 的 debug.setfenv 不存在，module() 无法切换环境，
+-- 导致 json.lua 中的 encode/decode 被定义在 _G 上而非模块表上
+if type(_json_mod) == "table" then
+    if not _json_mod.encode and rawget(_G, "encode") then
+        _json_mod.encode = rawget(_G, "encode")
+    end
+    if not _json_mod.decode and rawget(_G, "decode") then
+        _json_mod.decode = rawget(_G, "decode")
+    end
+    rawset(_G, "json", _json_mod)
+    print("[JSON] json module loaded OK")
+else
+    print("[JSON] json module failed: " .. tostring(_json_mod))
+end
+
+-----------------------------------------------------------------
+-- 存档系统
+-----------------------------------------------------------------
+local SAVE_FILE_NAME = "cardgame_save.json"
+
+local function getSavePath()
+    local fu = CCFileUtils:sharedFileUtils()
+    local writablePath = fu:getWritablePath()
+    if writablePath and #writablePath > 0 then
+        return writablePath .. SAVE_FILE_NAME
+    end
+    return SAVE_FILE_NAME
+end
+
+local function deepCopy(obj)
+    if type(obj) ~= "table" then return obj end
+    local copy = {}
+    for k, v in pairs(obj) do
+        copy[k] = deepCopy(v)
+    end
+    return copy
+end
+
+local function saveGame()
+    if not ed.player or not ed.player.data then return false end
+    if not json or not json.encode then return false end
+    local ok, result = pcall(function()
+        local data = deepCopy(ed.player.data)
+        local encoded = json.encode(data)
+        local path = getSavePath()
+        local f = io.open(path, "w")
+        if f then
+            f:write(encoded)
+            f:close()
+            print("[SAVE] Saved " .. #encoded .. " bytes")
+            return true
+        end
+        return false
+    end)
+    if not ok then
+        print("[SAVE] Error: " .. tostring(result))
+        return false
+    end
+    return result
+end
+ed.saveGame = saveGame
+
+local function loadSaveData()
+    if not json or not json.decode then return nil end
+    local ok, result = pcall(function()
+        local path = getSavePath()
+        local f = io.open(path, "r")
+        if not f then return nil end
+        local content = f:read("*a")
+        f:close()
+        if not content or #content == 0 then return nil end
+        local data = json.decode(content)
+        print("[SAVE] Loaded " .. #content .. " bytes")
+        return data
+    end)
+    if not ok then
+        print("[SAVE] Load error: " .. tostring(result))
+        return nil
+    end
+    return result
+end
+ed.loadSaveData = loadSaveData
+
+-- 定时自动保存（每60秒）
+local function startAutoSave()
+    local scheduler = ax.Director:getInstance():getScheduler()
+    if scheduler then
+        scheduler:scheduleScriptFunc(function()
+            saveGame()
+        end, 60, false)
+    end
+end
+ed.startAutoSave = startAutoSave
+
+-----------------------------------------------------------------
 -- 加载 Axmol 核心扩展（提供 ax.vec2, ax.size, ax.rect, ax.p 等）
 -----------------------------------------------------------------
 local axmolCoreOk, axmolCoreErr = pcall(require, "axmol.core.Axmol")
@@ -596,69 +699,81 @@ for _, mod in ipairs(coreModules) do
                     print("[STUB-NET] doLoginReply called")
                     local ok_setup, err_setup = pcall(function()
                         if ed.player and ed.player.setup then
-                            local mockUser = {
-                                _userid = 1,
-                                _name_card = {
-                                    _name = "Player",
-                                    _last_set_name_time = 0,
-                                    _avatar = 1,
-                                },
-                                _level = 30,
-                                _recharge_sum = 0,
-                                _exp = 0,
-                                _money = 100000,
-                                _rmb = 5000,
-                                _vitality = {
-                                    _current = 120,
-                                    _lastchange = 0,
-                                    _todaybuy = 0,
-                                    _lastbuy = 0,
-                                },
-                                _items = {},
-                                _heroes = {},
-                                _userstage = {
-                                    _normal_stage_stars = {},
-                                    _elite_stage_stars = {},
-                                    _elite_daily_record = {},
-                                    _elite_reset_time = 0,
-                                    _sweep = { _last_reset_time = 0, _today_free_sweep_times = 0 },
-                                    _act_reset_time = 0,
-                                },
-                                _skill_level_up = {
-                                    _skill_levelup_chance = 5,
-                                    _skill_levelup_cd = os.time(),
-                                    _reset_times = 0,
-                                    _last_reset_date = 0,
-                                },
-                                _tutorial = (function()
-                                    local t = {}
-                                    for i = 1, 96 do t[i] = 10 end
-                                    return t
-                                end)(),
-                                _task = {},
-                                _task_finished = {},
-                                _last_login = 0,
-                                _dailyjob = {},
-                                _tavern_record = {},
-                                _usermidas = {
-                                    _last_change = 0,
-                                    _today_times = 0,
-                                },
-                                _daily_login = {
-                                    _status = "nothing",
-                                    _frequency = 0,
-                                    _last_login_date = 0,
-                                },
-                                _shop = {
-                                    { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
-                                },
-                            }
-                            ed.player:setup(mockUser)
+                            -- 尝试从存档加载
+                            local savedData = ed.loadSaveData and ed.loadSaveData()
+                            if savedData and savedData._userid then
+                                print("[STUB-NET] Loading saved game data")
+                                ed.player:setup(savedData)
+                            else
+                                print("[STUB-NET] No save data, using default mockUser")
+                                local mockUser = {
+                                    _userid = 1,
+                                    _name_card = {
+                                        _name = "Player",
+                                        _last_set_name_time = 0,
+                                        _avatar = 1,
+                                    },
+                                    _level = 30,
+                                    _recharge_sum = 0,
+                                    _exp = 0,
+                                    _money = 100000,
+                                    _rmb = 5000,
+                                    _vitality = {
+                                        _current = 120,
+                                        _lastchange = 0,
+                                        _todaybuy = 0,
+                                        _lastbuy = 0,
+                                    },
+                                    _items = {},
+                                    _heroes = {},
+                                    _userstage = {
+                                        _normal_stage_stars = {},
+                                        _elite_stage_stars = {},
+                                        _elite_daily_record = {},
+                                        _elite_reset_time = 0,
+                                        _sweep = { _last_reset_time = 0, _today_free_sweep_times = 0 },
+                                        _act_reset_time = 0,
+                                    },
+                                    _skill_level_up = {
+                                        _skill_levelup_chance = 5,
+                                        _skill_levelup_cd = os.time(),
+                                        _reset_times = 0,
+                                        _last_reset_date = 0,
+                                    },
+                                    _tutorial = (function()
+                                        local t = {}
+                                        for i = 1, 96 do t[i] = 10 end
+                                        return t
+                                    end)(),
+                                    _task = {},
+                                    _task_finished = {},
+                                    _last_login = 0,
+                                    _dailyjob = {},
+                                    _tavern_record = {},
+                                    _usermidas = {
+                                        _last_change = 0,
+                                        _today_times = 0,
+                                    },
+                                    _daily_login = {
+                                        _status = "nothing",
+                                        _frequency = 0,
+                                        _last_login_date = 0,
+                                    },
+                                    _shop = {
+                                        { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
+                                    },
+                                }
+                                ed.player:setup(mockUser)
+                            end
                             print("[STUB-NET] Player setup complete")
                         end
                     end)
                     if not ok_setup then print("[STUB-NET] Player setup error: " .. tostring(err_setup)) end
                     if ed.setUserid then ed.setUserid(1) end
+                    -- 保存游戏数据（首通或加载后立即保存一次）
+                    if ed.saveGame then ed.saveGame() end
+                    -- 启动定时自动保存
+                    if ed.startAutoSave then ed.startAutoSave() end
                     FireEvent("LoginSuc")
                     if ed.netreply and ed.netreply.loginReply then
                         print("[STUB-NET] Simulating loginReply")
@@ -1119,9 +1234,55 @@ for _, mod in ipairs(coreModules) do
                                 _hero = heroReply,
                             }
                         elseif msgType == "enter_stage" then
+                            local loots = {}
+                            pcall(function()
+                                local stageId = obj._stage_id
+                                local stageTable = ed.getDataTable("Stage")
+                                local battleTable = ed.getDataTable("Battle")
+                                if stageTable and stageTable[stageId] then
+                                    local stageInfo = stageTable[stageId]
+                                    local waves = stageInfo["Waves"] or 3
+                                    -- 找到最后一波的 Boss Position 作为掉落位置
+                                    local targetWave = waves
+                                    local bossPos = 1
+                                    if battleTable and battleTable[stageId] then
+                                        local lastWave = battleTable[stageId][targetWave]
+                                        if lastWave then
+                                            bossPos = lastWave["Boss Position"] or 1
+                                            if bossPos == 0 then bossPos = 1 end
+                                        end
+                                    end
+                                    -- 根据 Stage 表的 UI reward 字段生成掉落
+                                    for i = 1, 7 do
+                                        local lootId = stageInfo["UI reward" .. i]
+                                        if lootId and lootId > 0 then
+                                            -- 概率判定：使用 UI reward{i} Pro，默认 34%
+                                            local lootPro = stageInfo["UI reward" .. i .. " Pro"] or 34
+                                            local randVal = math.random(1, 100)
+                                            if randVal <= lootPro then
+                                                -- 检查是否有碎片ID（Frag ID）
+                                                local realItem = lootId
+                                                local equipDataTable = ed.getDataTable("equip")
+                                                if equipDataTable and equipDataTable[lootId] then
+                                                    local fragId = tonumber(equipDataTable[lootId]["Frag ID"]) or 0
+                                                    if fragId > 0 then
+                                                        realItem = fragId
+                                                    end
+                                                end
+                                                -- 位打包: wave_idx(3) | monster_idx(3) | item_id(10)
+                                                local packed = ed.makebits(3, targetWave - 1, 3, bossPos - 1, 10, realItem)
+                                                table.insert(loots, packed)
+                                            end
+                                        end
+                                    end
+                                    -- 首通奖励: FD Bonus 1-5 每波
+                                    -- (暂时跳过，需要追踪首通状态)
+                                    LegendLog("[LOOT] stage=" .. tostring(stageId) .. " loot_count=" .. tostring(#loots))
+                                end
+                            end)
                             data._enter_stage_reply = {
                                 _rseed = math.random(1, 2147483647),
-                                _loots = {},
+                                _loots = loots,
                             }
                         elseif msgType == "exit_stage" then
                             data._exit_stage_reply = {
@@ -1240,9 +1401,33 @@ for _, mod in ipairs(coreModules) do
                         elseif msgType == "query_data" then
                             data._query_data_reply = { heroes = {}, recharge_limit = {}, _month_card = {} }
                         elseif msgType == "sync_vitality" then
-                            data._sync_vitality_reply = { _vitality = { _current = 120, _lastchange = 0, _todaybuy = 0, _lastbuy = 0 } }
+                            -- 使用玩家实际体力数据（含自然恢复计算）
+                            local vit = ed.player and ed.player._vitality
+                            if vit then
+                                -- 自然恢复：每6分钟恢复1点
+                                local now = os.time()
+                                local elapsed = now - (vit._lastchange or 0)
+                                local recovered = math.floor(elapsed / 360)
+                                if recovered > 0 then
+                                    vit._current = math.min((vit._current or 0) + recovered, 120)
+                                    vit._lastchange = now
+                                end
+                            else
+                                vit = { _current = 120, _lastchange = 0, _todaybuy = 0, _lastbuy = 0 }
+                            end
+                            data._sync_vitality_reply = { _vitality = vit }
                         elseif msgType == "buy_vitality" then
-                            data._sync_vitality_reply = { _vitality = { _current = 240, _lastchange = 0, _todaybuy = 1, _lastbuy = 0 } }
+                            -- 购买体力：+120，扣除钻石
+                            local vit = ed.player and ed.player._vitality
+                            if vit then
+                                vit._current = (vit._current or 0) + 120
+                                vit._todaybuy = (vit._todaybuy or 0) + 1
+                                vit._lastbuy = os.time()
+                                pcall(function() ed.player:addrmb(-50) end)
+                            else
+                                vit = { _current = 240, _lastchange = 0, _todaybuy = 1, _lastbuy = os.time() }
+                            end
+                            data._sync_vitality_reply = { _vitality = vit }
                         elseif msgType == "ask_daily_login" then
                             data._ask_daily_login_reply = { _result = "success", _items = {}, _hero = {}, _diamond = 0 }
                         elseif msgType == "sdk_login" then
@@ -1317,6 +1502,7 @@ for _, mod in ipairs(coreModules) do
                                 if ed.netreply.heroUpgradeReply then
                                     ed.netreply.heroUpgradeReply(result, props)
                                     ed.netreply.heroUpgradeReply = nil
+                                    if ed.saveGame then ed.saveGame() end
                                 end
                             end
                             -- hero_evolve 回复
@@ -1341,6 +1527,7 @@ for _, mod in ipairs(coreModules) do
                                 if ed.netreply.evolve then
                                     ed.netreply.evolve(result)
                                     ed.netreply.evolve = nil
+                                    if ed.saveGame then ed.saveGame() end
                                 end
                             end
                             -- wear_equip 回复
@@ -1360,6 +1547,7 @@ for _, mod in ipairs(coreModules) do
                                 if ed.netreply.putonReply then
                                     ed.netreply.putonReply(result)
                                     ed.netreply.putonReply = nil
+                                    if ed.saveGame then ed.saveGame() end
                                 end
                             end
                             -- enter_stage 回复
@@ -1372,12 +1560,14 @@ for _, mod in ipairs(coreModules) do
                                 pcall(function() ed.srand(data._enter_stage_reply._rseed) end)
                                 if ed.player then ed.player.loots = data._enter_stage_reply._loots or {} end
                             end
-                            -- exit_stage 回复
+                            -- exit_stage 回复（战斗结算后保存）
                             if data._exit_stage_reply then
                                 local result = data._exit_stage_reply._result == "known"
                                 if ed.netreply.exitStageReply then
                                     ed.netreply.exitStageReply(result)
                                     ed.netreply.exitStageReply = nil
+                                    -- 战斗结束后自动保存
+                                    if ed.saveGame then ed.saveGame() end
                                 end
                                 ed.netdata.exitStageReply = nil
                             end
@@ -1704,47 +1894,56 @@ local function ensureStubsAfterTools()
                 local function doLoginReply()
                     local ok_s, err_s = pcall(function()
                         if ed.player and ed.player.setup then
-                            local mockUser = {
-                                _userid = 1,
-                                _name_card = {_name="Player",_last_set_name_time=0,_avatar=1},
-                                _level = 30, _recharge_sum = 0, _exp = 0,
-                                _money = 100000, _rmb = 5000,
-                                _vitality = {_current=120,_lastchange=0,_todaybuy=0,_lastbuy=0},
-                                _items = {}, _heroes = {},
-                                _userstage = {
-                                    _normal_stage_stars = {},
-                                    _elite_stage_stars = {},
-                                    _elite_daily_record = {},
-                                    _elite_reset_time = 0,
-                                    _sweep = {_last_reset_time=0,_today_free_sweep_times=0},
-                                    _act_reset_time = 0,
-                                },
-                                _skill_level_up = {
-                                    _skill_levelup_chance = 5,
-                                    _skill_levelup_cd = os.time(),
-                                    _reset_times = 0,
-                                    _last_reset_date = 0,
-                                },
-                                _tutorial = (function()
-                                    local t = {}
-                                    for i = 1, 96 do t[i] = 10 end
-                                    return t
-                                end)(),
-                                _task = {}, _task_finished = {},
-                                _last_login = 0, _dailyjob = {},
-                                _tavern_record = {},
-                                _usermidas = {_last_change=0,_today_times=0},
-                                _daily_login = {_status="nothing",_frequency=0,_last_login_date=0},
-                                _shop = {
-                                    {id=1,last_auto_refresh_time=0,expire_time=0,last_manual_refresh_time=0,today_times=0,goods={}}
-                                },
-                            }
-                            ed.player:setup(mockUser)
+                            -- 尝试从存档加载
+                            local savedData = ed.loadSaveData and ed.loadSaveData()
+                            if savedData and savedData._userid then
+                                print("[STUB-NET] Loading saved game data (ensureStubs)")
+                                ed.player:setup(savedData)
+                            else
+                                local mockUser = {
+                                    _userid = 1,
+                                    _name_card = {_name="Player",_last_set_name_time=0,_avatar=1},
+                                    _level = 30, _recharge_sum = 0, _exp = 0,
+                                    _money = 100000, _rmb = 5000,
+                                    _vitality = {_current=120,_lastchange=0,_todaybuy=0,_lastbuy=0},
+                                    _items = {}, _heroes = {},
+                                    _userstage = {
+                                        _normal_stage_stars = {},
+                                        _elite_stage_stars = {},
+                                        _elite_daily_record = {},
+                                        _elite_reset_time = 0,
+                                        _sweep = {_last_reset_time=0,_today_free_sweep_times=0},
+                                        _act_reset_time = 0,
+                                    },
+                                    _skill_level_up = {
+                                        _skill_levelup_chance = 5,
+                                        _skill_levelup_cd = os.time(),
+                                        _reset_times = 0,
+                                        _last_reset_date = 0,
+                                    },
+                                    _tutorial = (function()
+                                        local t = {}
+                                        for i = 1, 96 do t[i] = 10 end
+                                        return t
+                                    end)(),
+                                    _task = {}, _task_finished = {},
+                                    _last_login = 0, _dailyjob = {},
+                                    _tavern_record = {},
+                                    _usermidas = {_last_change=0,_today_times=0},
+                                    _daily_login = {_status="nothing",_frequency=0,_last_login_date=0},
+                                    _shop = {
+                                        {id=1,last_auto_refresh_time=0,expire_time=0,last_manual_refresh_time=0,today_times=0,goods={}}
+                                    },
+                                }
+                                ed.player:setup(mockUser)
+                            end
                             print("[STUB-NET] Player setup OK (ensureStubs)")
                         end
                     end)
                     if not ok_s then print("[STUB-NET] player setup err: " .. tostring(err_s)) end
                     if ed.setUserid then ed.setUserid(1) end
+                    if ed.saveGame then ed.saveGame() end
+                    if ed.startAutoSave then ed.startAutoSave() end
                     FireEvent("LoginSuc")
                     if ed.netreply and ed.netreply.loginReply then
                         print("[STUB-NET] Simulating loginReply (ensureStubs)")
@@ -1859,6 +2058,10 @@ local function ensureStubsAfterTools()
     end
     if not ed.getMillionTime then ed.getMillionTime = function() return os.time() * 1000 end end
     if not ed.tick_interval then ed.tick_interval = 0.1 end
+    -- 重新绑定存档系统（tools.lua 的 ed={} 会清除之前的 saveGame/loadSaveData）
+    ed.saveGame = saveGame
+    ed.loadSaveData = loadSaveData
+    ed.startAutoSave = startAutoSave
 end
 ensureStubsAfterTools()
 

@@ -585,7 +585,7 @@ local playButtonAnim = function(self)
   elseif ed.isElementInTable(ed.stageType(stage), {"elite", "normal"}) then
     replay:runAction(action)
   end
-  next:runAction(tolua.cast(action:copy():autorelease(), "CCAction"))
+  next:runAction(CCFadeIn:create(0.2))
 end
 class.playButtonAnim = playButtonAnim
 local function createListLayer(self)

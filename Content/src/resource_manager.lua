@@ -482,23 +482,17 @@ function createAnimateWithFrameNames(name_list, delay)
 end
 ed.createAnimateWithFrameNames = createAnimateWithFrameNames
 local setSpriteGray = function(sprite)
-	if not CCShaderCache then return end
-	local ok, shader = pcall(function()
-		return CCShaderCache:sharedShaderCache():programForKey("GrayScalingShader")
-	end)
-	if ok and shader then
-		pcall(function() sprite:setShaderProgram(shader) end)
-		pcall(function() sprite:getShaderProgram():use() end)
-	end
+	if not sprite then return end
+	-- GrayScalingShader 在 Axmol 中不可用，改用颜色着色 + 降低不透明度实现灰化效果
+	pcall(function() sprite:setCascadeColorEnabled(true) end)
+	pcall(function() sprite:setColor(ccc3(100, 100, 100)) end)
+	pcall(function() sprite:setOpacity(180) end)
 end
 ed.setSpriteGray = setSpriteGray
 local resetSpriteShader = function(sprite)
-	if not CCShaderCache then return end
-	local ok, s = pcall(function() return CCSprite:create() end)
-	if ok and s then
-		pcall(function() sprite:setShaderProgram(s:getShaderProgram()) end)
-		pcall(function() sprite:getShaderProgram():use() end)
-	end
+	if not sprite then return end
+	pcall(function() sprite:setColor(ccc3(255, 255, 255)) end)
+	pcall(function() sprite:setOpacity(255) end)
 end
 ed.resetSpriteShader = resetSpriteShader
 local setSpriteBlur = function(sprite, radius)

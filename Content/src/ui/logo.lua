@@ -31,52 +31,27 @@ class.loadShaders = loadShaders
 local function loadTable(self)
   local firstLoadTitle = T(LSTR("LOGO.READING_INFORMATION"))
   local firstLoadProgress = 0
-  local list = {
-    "ActStageGroup",
-    "affixcount",
-    "AnimDuration",
-    "AnimAtkFrame",
-    "Battle",
-    "Buff",
-    "Chapter",
-    "enhancement",
-    "equip",
-    "equipcraft",
-    "fragment",
-    "hero_equip",
-    "HeroStars",
-    "GradientPrice",
-    "Levels",
-    "MerchantTalk",
-    "PlayerLevel",
-    "Privilege",
-    "PVPEmeny",
-    "PVPRankReward",
-    "Recharge",
-    "Shop",
-    "Skill",
-    "SkillGroup",
-    "SkillLevels",
-    "Stage",
-    "Task",
-    "TavernType",
-    "TextureConfig",
-    "Todolist",
-    "TodoTriggers",
-    "Triggers",
-    "Unit",
-    "UnitRank",
-    "VIP",
-    "GuildAvatar",
-    "GuildWorship",
-    "GuildHirePrice",
-    "activity/ActivityConfig",
-	"activity/ContinueChargeConfig"
+  -- 主界面必需的数据表
+  local criticalTables = {
+    "Unit", "UnitRank", "equip", "VIP", "PlayerLevel", "Privilege",
+    "Stage", "Chapter", "Shop", "Recharge", "TavernType", "hero_equip",
+    "fragment", "Skill", "SkillLevels", "Task", "GradientPrice", "Levels",
+    "Todolist", "ActStageGroup", "TextureConfig", "GuildAvatar",
+    "enhancement", "equipcraft", "HeroStars",
   }
-  for i = 1, #list do
-    ed.getDataTable(list[i])
-    firstLoadProgress = i / #list
+  for i = 1, #criticalTables do
+    ed.getDataTable(criticalTables[i])
+    firstLoadProgress = i / #criticalTables
   end
+  -- 延迟加载的数据表（大文件：Battle 80949行等），后台按需加载
+  ed.deferredDataTables = {
+    "Battle", "Buff", "SkillGroup", "AnimDuration", "AnimAtkFrame",
+    "affixcount", "PVPEmeny", "PVPRankReward", "MerchantTalk",
+    "TodoTriggers", "Triggers", "Midas",
+    "GuildWorship", "GuildHirePrice",
+    "activity/ActivityConfig", "activity/ContinueChargeConfig",
+    "DailyLoginReward",
+  }
 end
 class.loadTable = loadTable
 local doLoginReply = function(self)

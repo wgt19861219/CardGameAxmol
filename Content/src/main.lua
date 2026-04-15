@@ -671,7 +671,6 @@ for _, mod in ipairs(coreModules) do
                 LegendLog("[STUB-NET] local_server NOT found by any method: " .. tostring(err))
             end
             return ls
-            return ls
         end
         -- 生成默认用户数据（登录和删号共用）
         local function createDefaultUserData(overrides)
@@ -2195,7 +2194,7 @@ local gameModules = {
     "record", "playertools", "player", "mercenary",
     "playerlimit", "enhancement", "fragment",
     "equip", "equipcraft", "hero_equip",
-    "battle/battle_scene",
+    -- "battle/battle_scene" 已移至延迟加载，它链式加载74个英雄AI脚本
     "ui/parameter/parameter", "ui/parameter/baseres",
     "ui/parameter/uires", "ui/parameter/mainres",
     "ui/listener/baselsr",

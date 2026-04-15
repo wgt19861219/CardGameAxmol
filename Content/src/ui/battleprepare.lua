@@ -194,6 +194,8 @@ local function getBattleHeros(self, newHeroList)
 end
 local function gotoBattle(self)
   local function handler(enemyList, isBot, selfList, enemyDyna, guildInstanceData)
+    -- 确保战斗模块已加载
+    if ed.ensureSceneModules then ed.ensureSceneModules("battle") end
     xpcall(function()
       LegendLog("[GOTO_BATTLE] enter, stage=" .. tostring(self.stage))
       if not self then

@@ -1092,10 +1092,6 @@ local function downExit(self, result)
 		if not self then
 			return
 		end
-		if tolua.isnull(ed.scene.node) then
-			return
-		end
-
 		local stage = self.stage_info["Stage ID"]
 		if isKnown then
 			if result == 0 then

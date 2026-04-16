@@ -1468,6 +1468,7 @@ for _, mod in ipairs(coreModules) do
                                 _rseed = math.random(1, 2147483647),
                                 _loots = loots,
                             }
+                        elseif msgType == "exit_stage" then
                             data._exit_stage_reply = {
                                 _result = "known",
                             }

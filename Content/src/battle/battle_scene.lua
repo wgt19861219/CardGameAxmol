@@ -51,8 +51,6 @@ local function reset(self, stage_info, battle_info, extraInfo)
 		if unit.actor then unit.actor._inScene = nil end
 	end
 	self.effect_list = {}
-
-	self.effect_list = {}
 	self.ui_list = {}
 	self.frames = 0
 	self.auto_combat = ed.config and ed.config.localMode

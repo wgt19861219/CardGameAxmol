@@ -1227,15 +1227,9 @@ for _, mod in ipairs(coreModules) do
                 local handled = false
                 local ls = rawget(_G, "local_server")
                 if ls and ls.handle then
-                    if msgType == "exit_stage" then
-                        LegendLog("[STUB-NET] calling local_server.handle for exit_stage")
-                    end
                     local ok_ls, result_ls = pcall(function() return ls.handle(msgType, obj) end)
                     if ok_ls and result_ls then
                         handled = true
-                        if msgType == "exit_stage" then
-                            LegendLog("[STUB-NET] local_server.handle SUCCEEDED for exit_stage")
-                        end
                     else
                         if not ok_ls then
                             LegendLog("[STUB-NET] local_server error: " .. tostring(result_ls))
@@ -1244,7 +1238,6 @@ for _, mod in ipairs(coreModules) do
                         end
                     end
                 else
-                    LegendLog("[STUB-NET] local_server NOT available for: " .. tostring(msgType))
                 end
 
                 if not handled then
@@ -1475,7 +1468,6 @@ for _, mod in ipairs(coreModules) do
                                 _rseed = math.random(1, 2147483647),
                                 _loots = loots,
                             }
-                        elseif msgType == "exit_stage" then
                             data._exit_stage_reply = {
                                 _result = "known",
                             }
@@ -1754,14 +1746,12 @@ for _, mod in ipairs(coreModules) do
                             -- exit_stage 回复（战斗结算后保存）
                             if data._exit_stage_reply then
                                 local result = data._exit_stage_reply._result == "known"
-                                LegendLog("[DISPATCH-MAIN] exit_stage_reply: _result=" .. tostring(data._exit_stage_reply._result) .. " result=" .. tostring(result) .. " handler=" .. tostring(ed.netreply.exitStageReply ~= nil))
                                 if ed.netreply.exitStageReply then
                                     ed.netreply.exitStageReply(result)
                                     ed.netreply.exitStageReply = nil
                                     -- 战斗结束后自动保存
                                     if ed.saveGame then ed.saveGame() end
                                 else
-                                    LegendLog("[DISPATCH-MAIN] WARNING: exitStageReply handler is nil!")
                                 end
                                 ed.netdata.exitStageReply = nil
                             end

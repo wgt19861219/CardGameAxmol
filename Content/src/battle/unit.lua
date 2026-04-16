@@ -884,11 +884,6 @@ local function update(self, dt)
 		local elapsed = self.action_elapsed + dt_action
 		local duration = self.action_duration
 		if duration > 0 and elapsed > duration then
-			local _df = io.open("/data/data/dev.axmol.cardgame/files/diag.txt", "a")
-			if _df then
-				_df:write("[ACTEND] tick=" .. ed.engine.ticks .. " action=" .. tostring(self.action_name) .. " elapsed=" .. string.format("%.4f", elapsed) .. " duration=" .. string.format("%.4f", duration) .. " speeder=" .. string.format("%.2f", speeder) .. "\n")
-				_df:close()
-			end
 			elapsed = elapsed - duration
 			self:onActionFinished()
 		end
@@ -1751,23 +1746,6 @@ local function update(self, dt)
 		local v = self.velocity
 		pos[1] = pos[1] + v[1] * dt
 		pos[2] = pos[2] + v[2] * dt
-	end
-	-- Diagnostic: log every 60 frames for first unit
-	if self._diag == nil then self._diag = 0 end
-	self._diag = self._diag + 1
-	if self._diag % 60 == 1 and u.camp == ed.emCampPlayer and u.info then
-		local from = self.interp_from
-		local to = self.interp_to
-		local name = u.info["Display Name"] or "?"
-		print("[DIAG] " .. name ..
-			" state=" .. tostring(u.state) ..
-			" tick=" .. tostring(self.tick) ..
-			" alpha=" .. string.format("%.2f", self.interp_alpha or -1) ..
-			" from=" .. (from and string.format("%.1f,%.1f", from[1], from[2]) or "nil") ..
-			" to=" .. (to and string.format("%.1f,%.1f", to[1], to[2]) or "nil") ..
-			" pos=" .. string.format("%.1f,%.1f", self.position[1], self.position[2]) ..
-			" model=" .. string.format("%.1f,%.1f", u.position[1], u.position[2]) ..
-			" dt=" .. string.format("%.4f", dt))
 	end
 	if not tolua.isnull(self.puppet) then
 		pcall(function() self.puppet:update(dt, false) end)

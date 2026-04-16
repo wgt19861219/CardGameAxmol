@@ -722,9 +722,6 @@ local function tick(self)
 		self[list_name] = new_list
 	end
 	self.ticks = self.ticks + 1
-	if self.ticks % 300 == 1 then
-		print("[ENGINE] tick=" .. self.ticks .. " wave=" .. self.wave_id .. " alive_enemy=" .. self.alive_enemy_count .. " alive_alliance=" .. self.alive_alliance_count .. " running=" .. tostring(self.running))
-	end
 	if do_battle_log then
 		btlog(tostring(self))
 	end
@@ -1091,22 +1088,20 @@ end
 
 local function downExit(self, result)
 	local function handler(isKnown, bestRankReward)
-		print("[downExit-HANDLER] isKnown=" .. tostring(isKnown) .. " type=" .. type(isKnown) .. " result=" .. tostring(result))
 		bestRankReward = bestRankReward or {}
 		if not self then
-			print("[downExit-HANDLER] self=nil, abort")
 			return
 		end
-		print("[downExit-HANDLER] ed.scene=" .. tostring(ed.scene ~= nil) .. " node=" .. tostring(ed.scene and ed.scene.node ~= nil))
+		if tolua.isnull(ed.scene.node) then
+			return
+		end
 
 		local stage = self.stage_info["Stage ID"]
 		if isKnown then
-			print("[downExit-HANDLER] isKnown=true, result=" .. tostring(result))
 			if result == 0 then
-				print("[downExit-HANDLER] result=0, entering victory processing")
-					do
-						local ok_v, err_v
-						ok_v, err_v = pcall(function()
+				do
+					local ok_v, err_v
+					ok_v, err_v = pcall(function()
 						local type = ed.stageType(stage)
 						local s = ed.elite2NormalStage(stage)
 						if type == "elite" then
@@ -1124,29 +1119,23 @@ local function downExit(self, result)
 						end
 						local id = ed.playEffect(ed.sound.battle.win)
 						ed.audioParam.effects.battleResult = id
-						end)
-						if not ok_v then print("[downExit] reward processing ERROR: " .. tostring(err_v)) end
+					end)
+					if not ok_v then print("[downExit] reward ERROR: " .. tostring(err_v)) end
 
-						local args = {
-							stage_id = stage,
-							victory = result == 0,
-							heroes = self.hero_id_list,
-							stars = pveMode(self) and self.exitStageMSG._stars - getMercenaryNum(self) or {},
-							loots = ed.player:getStageLoots(),
-							replayMode = self.replayMode,
-							bestRankReward = bestRankReward,
-							mercenaryInfo = getTeamMercenaryInfo(self),
-							excavate_mode = self.excavate_mode,
-							isPveMode = pveMode(self)
-						}
-						print("[downExit] calling stageaccount.initialize DIRECTLY")
-						print("[downExit] ed.ui.stageaccount=" .. tostring(ed.ui.stageaccount ~= nil))
-						xpcall(function() ed.ui.stageaccount.initialize(args) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
-
-					end
-
-
-
+					local args = {
+						stage_id = stage,
+						victory = result == 0,
+						heroes = self.hero_id_list,
+						stars = pveMode(self) and self.exitStageMSG._stars - getMercenaryNum(self) or {},
+						loots = ed.player:getStageLoots(),
+						replayMode = self.replayMode,
+						bestRankReward = bestRankReward,
+						mercenaryInfo = getTeamMercenaryInfo(self),
+						excavate_mode = self.excavate_mode,
+						isPveMode = pveMode(self)
+					}
+					xpcall(function() ed.ui.stageaccount.initialize(args) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
+				end
 			elseif result == 1 then
 				self:doFailed({
 					stage_id = stage,
@@ -1156,20 +1145,16 @@ local function downExit(self, result)
 					excavate_mode = self.excavate_mode,
 					isPveMode = pveMode(self)
 				})
-				--ed.player:takeStageExp(stage)
 			end
 		else
-			print("[downExit-HANDLER] isKnown=FALSE! Calling doFailed")
 			self:doFailed({
-
 				stage_id = stage,
 				victory = false,
-				heroes = self.hero_id_list,
-				loseType = "fail",
-				excavate_mode = self.excavate_mode,
-				isPveMode = pveMode(self)
+					heroes = self.hero_id_list,
+					loseType = "fail",
+					excavate_mode = self.excavate_mode,
+					isPveMode = pveMode(self)
 			})
-			--ed.player:takeStageExp(stage)
 		end
 	end
 	return handler
@@ -1537,9 +1522,7 @@ local function exitStage(self, result, exitFlag)
 		self.battleResult = result
 		self.exitStageMSG = msg
 		self.exitStageMsgName = msgName
-		print("[exitStage] calling ed.send for exit_stage, netreply.exitStageReply=" .. tostring(ed.netreply.exitStageReply ~= nil))
 			ed.send(msg, msgName)
-		print("[exitStage] ed.send returned, netreply.exitStageReply=" .. tostring(ed.netreply.exitStageReply ~= nil))
 
 		end
 end
@@ -1551,7 +1534,6 @@ end
 class.enterGmMode = enterGmMode
 
 local function victory(self, skip)
-	print("[VICTORY] wave=" .. self.wave_id .. " totalWaves=" .. tostring(self.stage_info.Waves) .. " ticks=" .. self.ticks)
 	self.running = false
 
 	if self.wave_id < self.stage_info.Waves and not skip then

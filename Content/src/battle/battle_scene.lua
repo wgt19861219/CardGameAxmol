@@ -46,6 +46,12 @@ end
 local function reset(self, stage_info, battle_info, extraInfo)
 	self.identity = "battle"
 	self.actor_list = {}
+	-- Clear _inScene flags on existing actors so syncActors can reparent them
+	for unit in ed.engine:foreachAliveUnit(ed.emCampBoth) do
+		if unit.actor then unit.actor._inScene = nil end
+	end
+	self.effect_list = {}
+
 	self.effect_list = {}
 	self.ui_list = {}
 	self.frames = 0
@@ -429,9 +435,19 @@ local function syncActors(self)
 				end)
 				if ok and actor then
 					unit.actor = actor
+					actor._inScene = true
 					self:addActor(actor)
-				else
 				end
+			elseif not unit.actor._inScene then
+				-- Reparent existing actor to current scene (wave transition)
+				self:addActor(unit.actor)
+				unit.actor.offline = false
+				unit.actor.interp_from = nil
+				unit.actor.interp_to = nil
+				unit.actor.interp_alpha = 0
+				unit.actor.position = {unit.position[1], unit.position[2]}
+				unit.actor.tick = ed.engine.ticks
+				unit.actor._inScene = true
 			end
 		end
 		for npc in ed.engine:foreachNpc() do
@@ -443,13 +459,13 @@ local function syncActors(self)
 				end)
 				if ok and ret then
 					self:addActor(ret)
-				else
 				end
 			end
 		end
 	end
 end
 class.syncActors = syncActors
+
 
 local function createActorIcon(actor, size)
 	local unit = actor.model

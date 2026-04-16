@@ -803,6 +803,17 @@ for _, mod in ipairs(coreModules) do
                         end
                     end)
                     if not ok_setup then print("[STUB-NET] Player setup error: " .. tostring(err_setup)) end
+                    -- 登录后重算所有英雄GS（修正旧存档或初始值的GS=0问题）
+                    pcall(function()
+                        if ed.player and ed.player.heroes and ed.recalcHeroGs then
+                            for tid, hero in pairs(ed.player.heroes) do
+                                ed.recalcHeroGs(hero)
+                            end
+                            print("[GS] login recalc done")
+                        else
+                            print("[GS] no player/heroes/recalcFn: p=" .. tostring(ed.player ~= nil) .. " h=" .. tostring(ed.player and ed.player.heroes ~= nil) .. " fn=" .. tostring(ed.recalcHeroGs ~= nil))
+                        end
+                    end)
                     if ed.setUserid then ed.setUserid(1) end
                     -- 保存游戏数据（首通或加载后立即保存一次）
                     if ed.saveGame then ed.saveGame() end
@@ -1216,9 +1227,15 @@ for _, mod in ipairs(coreModules) do
                 local handled = false
                 local ls = rawget(_G, "local_server")
                 if ls and ls.handle then
+                    if msgType == "exit_stage" then
+                        LegendLog("[STUB-NET] calling local_server.handle for exit_stage")
+                    end
                     local ok_ls, result_ls = pcall(function() return ls.handle(msgType, obj) end)
                     if ok_ls and result_ls then
                         handled = true
+                        if msgType == "exit_stage" then
+                            LegendLog("[STUB-NET] local_server.handle SUCCEEDED for exit_stage")
+                        end
                     else
                         if not ok_ls then
                             LegendLog("[STUB-NET] local_server error: " .. tostring(result_ls))
@@ -1226,7 +1243,10 @@ for _, mod in ipairs(coreModules) do
                             LegendLog("[STUB-NET] local_server returned false for: " .. tostring(msgType))
                         end
                     end
+                else
+                    LegendLog("[STUB-NET] local_server NOT available for: " .. tostring(msgType))
                 end
+
                 if not handled then
                     -- 直接构造 down_msg 回复并通过 ed.dispatch 处理
                     pcall(function()
@@ -1734,14 +1754,18 @@ for _, mod in ipairs(coreModules) do
                             -- exit_stage 回复（战斗结算后保存）
                             if data._exit_stage_reply then
                                 local result = data._exit_stage_reply._result == "known"
+                                LegendLog("[DISPATCH-MAIN] exit_stage_reply: _result=" .. tostring(data._exit_stage_reply._result) .. " result=" .. tostring(result) .. " handler=" .. tostring(ed.netreply.exitStageReply ~= nil))
                                 if ed.netreply.exitStageReply then
                                     ed.netreply.exitStageReply(result)
                                     ed.netreply.exitStageReply = nil
                                     -- 战斗结束后自动保存
                                     if ed.saveGame then ed.saveGame() end
+                                else
+                                    LegendLog("[DISPATCH-MAIN] WARNING: exitStageReply handler is nil!")
                                 end
                                 ed.netdata.exitStageReply = nil
                             end
+
                             -- shop_refresh / shop_consume 回复
                             if data._shop_refresh_reply then
                                 pcall(function() ed.ui.market.dealRefresh(data._shop_refresh_reply) end)

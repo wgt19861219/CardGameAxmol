@@ -884,6 +884,11 @@ local function update(self, dt)
 		local elapsed = self.action_elapsed + dt_action
 		local duration = self.action_duration
 		if duration > 0 and elapsed > duration then
+			local _df = io.open("/data/data/dev.axmol.cardgame/files/diag.txt", "a")
+			if _df then
+				_df:write("[ACTEND] tick=" .. ed.engine.ticks .. " action=" .. tostring(self.action_name) .. " elapsed=" .. string.format("%.4f", elapsed) .. " duration=" .. string.format("%.4f", duration) .. " speeder=" .. string.format("%.2f", speeder) .. "\n")
+				_df:close()
+			end
 			elapsed = elapsed - duration
 			self:onActionFinished()
 		end
@@ -1510,10 +1515,15 @@ local function UnitActorCreate(model)
 		bar_shield = nil,
 		bar_group = nil,
 		puppetName = nil,
-		tick = 0,
-		position = {0, 0},
+		tick = ed.engine and ed.engine.ticks or 0,
+
+		position = {model.position[1] or 0, model.position[2] or 0},
 		velocity = {0, 0},
+		interp_from = nil,
+		interp_to = nil,
+		interp_alpha = 0,
 		speeder = 1,
+
 		height = 0,
 		zSpeed = nil,
 		offline = false,
@@ -1712,12 +1722,11 @@ local function update(self, dt)
 			setScaleX(node, x)
 			setScaleY(node, y)
 		end
-		do
-			local p1 = self.position
-			local p2 = u.position
-			p1[1] = p2[1]
-			p1[2] = p2[2]
-		end
+			-- Double-buffer interpolation: COPY positions (not references!)
+			self.interp_from = {u.previous_position[1], u.previous_position[2]}
+			self.interp_to = {u.position[1], u.position[2]}
+			self.interp_alpha = 0
+
 		do
 			local v1 = self.velocity
 			local v2 = u.velocity
@@ -1725,15 +1734,40 @@ local function update(self, dt)
 			v1[2] = v2[2] * speeder
 		end
 		self.puppet:setActionSpeeder(u.buff_effects.frozen and 0 or speeder)
-		-- sync model time to visual for non-loop actions
-		if not u.action_loop and u.action_duration and u.action_duration > 0 then
-			self.puppet:setActionElapsed(u.action_elapsed or 0)
+	end
+	-- Interpolate position smoothly between ticks
+	if self.interp_from then
+		self.interp_alpha = self.interp_alpha + dt / ed.tick_interval
+		if self.interp_alpha > 1 then
+			self.interp_alpha = 1
 		end
+		local a = self.interp_alpha
+		local f = self.interp_from
+		local t = self.interp_to
+		self.position[1] = f[1] + (t[1] - f[1]) * a
+		self.position[2] = f[2] + (t[2] - f[2]) * a
 	else
 		local pos = self.position
 		local v = self.velocity
 		pos[1] = pos[1] + v[1] * dt
 		pos[2] = pos[2] + v[2] * dt
+	end
+	-- Diagnostic: log every 60 frames for first unit
+	if self._diag == nil then self._diag = 0 end
+	self._diag = self._diag + 1
+	if self._diag % 60 == 1 and u.camp == ed.emCampPlayer and u.info then
+		local from = self.interp_from
+		local to = self.interp_to
+		local name = u.info["Display Name"] or "?"
+		print("[DIAG] " .. name ..
+			" state=" .. tostring(u.state) ..
+			" tick=" .. tostring(self.tick) ..
+			" alpha=" .. string.format("%.2f", self.interp_alpha or -1) ..
+			" from=" .. (from and string.format("%.1f,%.1f", from[1], from[2]) or "nil") ..
+			" to=" .. (to and string.format("%.1f,%.1f", to[1], to[2]) or "nil") ..
+			" pos=" .. string.format("%.1f,%.1f", self.position[1], self.position[2]) ..
+			" model=" .. string.format("%.1f,%.1f", u.position[1], u.position[2]) ..
+			" dt=" .. string.format("%.4f", dt))
 	end
 	if not tolua.isnull(self.puppet) then
 		pcall(function() self.puppet:update(dt, false) end)
@@ -1754,7 +1788,11 @@ local function update(self, dt)
 		self.bar_group:update(dt)
 	end
 end
+
+
+
 class.update = update
+
 
 local addEffect = function(self, name, zorder)
 	local puppet = self.puppet
@@ -1850,7 +1888,12 @@ local function gotoNextBattle(self)
 	self.node:setScaleX(1)
 	self.node:setScaleY(1)
 	self.offline = true
+	-- Clear interpolation so actor uses velocity-based movement
+	self.interp_from = nil
+	self.interp_to = nil
+	self.interp_alpha = 0
 end
+
 class.gotoNextBattle = gotoNextBattle
 
 local waitAfterBattle = function(self)

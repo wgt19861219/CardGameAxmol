@@ -830,7 +830,15 @@ local function doBuyVitality(self)
 end
 class.doBuyVitality = doBuyVitality
 local function doClickGo(self)
+  -- Ensure battleprepare module is loaded
+  if not ed.ui.battleprepare then
+    print("[STAGEDETAIL] loading ui/battleprepare")
+    pcall(require, "ui/battleprepare")
+    print("[STAGEDETAIL] ed.ui.battleprepare=" .. tostring(ed.ui.battleprepare))
+  end
   local ul = ed.getDataTable("Stage")[self.stage]["Unlock Level"]
+
+
   if ul > ed.player:getLevel() then
     ed.showToast(T(LSTR("BATTLEPREPARE.REACH_LEVEL__D_TO_ENTER_THIS_CHAPTER"), ul))
     return

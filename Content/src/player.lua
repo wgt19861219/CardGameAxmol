@@ -1332,8 +1332,31 @@ local function takeStageReward(self, stage, stars, hero_list, loots)
     end
   end
   self:setStageStars(stage, stars)
+  -- 战斗结算后重算参战英雄GS
+  for i = 1, #hero_list do
+    local hero = hero_list[i]
+    if hero:getMercenaryData() == nil then
+      ed.recalcHeroGs(hero)
+    end
+  end
 end
 class.takeStageReward = takeStageReward
+local function recalcHeroGs(hero)
+  if not hero or not hero._tid then return end
+  local oldGs = hero._gs or 0
+  local ok, err = pcall(function()
+    local unit = ed.UnitCreate(hero)
+    if unit and unit.gs then
+      hero._gs = math.floor(unit.gs + 0.5)
+    end
+  end)
+  if not ok then
+    print("[GS] recalcHeroGs FAILED tid=" .. tostring(hero._tid) .. " err=" .. tostring(err))
+  end
+  print("[GS] recalcHeroGs tid=" .. tostring(hero._tid) .. " old=" .. tostring(oldGs) .. " new=" .. tostring(hero._gs))
+end
+class.recalcHeroGs = recalcHeroGs
+ed.recalcHeroGs = recalcHeroGs
 local function checkLevelMax(self, level)
   local pm = ed.parameter
   local ml = pm.team_level_max

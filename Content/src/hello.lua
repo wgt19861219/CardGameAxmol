@@ -470,10 +470,7 @@ local function gameUpdate()
 		end
 			local raw_dt = update_timestamp ~= 0 and (time - update_timestamp) / 1000 or 0
 			local dt = math.min(raw_dt, ed.tick_interval)
-			-- 诊断：每300帧打印原始dt
-			if _gu_tick % 300 == 1 then
-				print("[GU_DIAG] raw_dt=" .. string.format("%.4f", raw_dt) .. " clamped=" .. string.format("%.4f", dt) .. " time=" .. tostring(time) .. " prev=" .. tostring(update_timestamp))
-			end
+
 		update_timestamp = time
 		ed.proc_net()
 		local scene = scene_stack[#scene_stack] or {}

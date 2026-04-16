@@ -405,16 +405,6 @@ end
 class.startPhase = startPhase
 
 local function onAttackFrame(self)
-	-- Diagnostic: log to file
-	local _df = io.open("/data/data/dev.axmol.cardgame/files/diag.txt", "a")
-	if _df then
-		local _pd = 0
-		if self.caster.actor and self.caster.actor.puppet then
-			_pd = self.caster.actor.puppet:getActionNaturalDuration()
-		end
-		_df:write("[ATKFRAME] tick=" .. ed.engine.ticks .. " elapsed=" .. string.format("%.4f", self.current_phase_elapsed) .. " speeder=" .. string.format("%.2f", self.caster.speeder) .. " action=" .. (self.current_phase and self.current_phase.action_name or "?") .. " dataDur=" .. (self.current_phase and string.format("%.4f", self.current_phase.duration) or "?") .. " puppetDur=" .. string.format("%.4f", _pd) .. "\n")
-		_df:close()
-	end
 	if self.caster.manually_casting then
 		ed.engine:unfreeze()
 		self.caster.manually_casting = false

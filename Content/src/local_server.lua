@@ -500,16 +500,25 @@ end
 -- obj: { _heroid = N }
 M.handlers.hero_evolve = function(data, obj, localdata)
     local tid = obj._heroid
-    local hero, idx = findHero(localdata, tid)
+    local hero = ed.player and ed.player.heroes[tid]
 
     if hero then
-        hero.stars = (hero.stars or 1) + 1
-        hero.gs = (hero.gs or 100) + 100
-        LocalData.save(localdata)
+        local newStars = (hero._stars or 1) + 1
+        local gs = hero._gs or 0
 
         data._hero_evolve_reply = {
             _result = "success",
-            _hero = buildHero(hero),
+            _hero = {
+                _tid = tid,
+                _rank = hero._rank or 1,
+                _level = hero._level or 1,
+                _stars = newStars,
+                _exp = hero._exp or 0,
+                _gs = gs,
+                _state = "idle",
+                _skill_levels = hero._skill_levels or {1,1,1,1},
+                _items = hero._items or {},
+            },
         }
     else
         data._hero_evolve_reply = {
@@ -729,33 +738,25 @@ end
 -- packed order: ed.makebits(11, amount, 4, slot)
 M.handlers.skill_levelup = function(data, obj, localdata)
     local tid = obj._heroid or obj._tid
-    local hero, idx = findHero(localdata, tid)
+    local hero = ed.player and ed.player.heroes[tid]
 
     if hero then
-        -- 解析 _order（packed 格式）
-        local orders = obj._order or {}
+        -- 只计算 gs 增量，不修改 _skill_levels
+        -- dealSkillLevelup 会通过 strenHeroSkill 处理技能等级
         local totalUpgrades = 0
+        local orders = obj._order or {}
         for i, packed in ipairs(orders) do
-            local slot = ed.bits(packed, 4, 11)
             local amount = ed.bits(packed, 0, 4)
-            if slot >= 1 and slot <= #(hero.skill_levels or {}) then
-                hero.skill_levels[slot] = (hero.skill_levels[slot] or 1) + (amount or 1)
-                totalUpgrades = totalUpgrades + (amount or 1)
-            end
+            totalUpgrades = totalUpgrades + (amount or 1)
         end
-        -- 也兼容旧的 _skill_index 格式
         if totalUpgrades == 0 and obj._skill_index then
-            local skillIdx = obj._skill_index
-            if skillIdx >= 1 and skillIdx <= #(hero.skill_levels or {}) then
-                hero.skill_levels[skillIdx] = (hero.skill_levels[skillIdx] or 1) + 1
-            end
+            totalUpgrades = 1
         end
-        hero.gs = (hero.gs or 100) + 10
-        LocalData.save(localdata)
+        hero._gs = (hero._gs or 0) + totalUpgrades * 10
 
         data._skill_levelup_reply = {
             _result = "success",
-            _gs = hero.gs,
+            _gs = hero._gs,
         }
     else
         data._skill_levelup_reply = {
@@ -784,16 +785,23 @@ end
 -- ========== hero_equip_upgrade ==========
 -- obj: { _tid = hero_tid, _slot = N }
 M.handlers.hero_equip_upgrade = function(data, obj, localdata)
-    local tid = obj._tid
-    local hero, idx = findHero(localdata, tid)
+    local tid = obj._tid or obj._hero_id
+    local hero = ed.player and ed.player.heroes[tid]
 
     if hero then
-        hero.gs = (hero.gs or 100) + 30
-        LocalData.save(localdata)
-
         data._hero_equip_upgrade_reply = {
             _result = "success",
-            _hero = buildHero(hero),
+            _hero = {
+                _tid = tid,
+                _rank = hero._rank or 1,
+                _level = hero._level or 1,
+                _stars = hero._stars or 1,
+                _exp = hero._exp or 0,
+                _gs = hero._gs or 0,
+                _state = "idle",
+                _skill_levels = hero._skill_levels or {1,1,1,1},
+                _items = hero._items or {},
+            },
         }
     else
         data._hero_equip_upgrade_reply = {
@@ -1077,13 +1085,13 @@ M.handlers.gm_cmd = function(data, obj, localdata)
         for _, heroMsg in ipairs(obj._set_hero_info) do
             local tid = heroMsg._tid
             if tid then
-                local hero, idx = findHero(localdata, tid)
+                local hero = ed.player and ed.player.heroes[tid]
                 if hero then
-                    if heroMsg._rank then hero.rank = heroMsg._rank end
-                    if heroMsg._level then hero.level = heroMsg._level end
-                    if heroMsg._stars then hero.stars = heroMsg._stars end
-                    if heroMsg._exp then hero.exp = heroMsg._exp end
-                    if heroMsg._gs then hero.gs = heroMsg._gs end
+                    if heroMsg._rank then hero._rank = heroMsg._rank end
+                    if heroMsg._level then hero._level = heroMsg._level end
+                    if heroMsg._stars then hero._stars = heroMsg._stars end
+                    if heroMsg._exp then hero._exp = heroMsg._exp end
+                    if heroMsg._gs then hero._gs = heroMsg._gs end
                 end
             end
         end

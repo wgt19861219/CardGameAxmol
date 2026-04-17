@@ -80,7 +80,7 @@ local function playAttAnim(self, id)
   local effect = ed.createFcaNode("eff_UI_skill_level_up")
   effect:setPosition(ccp(32, 30))
   icon:addChild(effect)
-  self:getScene():addFca(effect)
+  self:getScene():addFcaOnce(effect)
   local dt = 0.2
   for i = 1, #att do
     do

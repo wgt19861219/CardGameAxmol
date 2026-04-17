@@ -1795,16 +1795,22 @@ for _, mod in ipairs(coreModules) do
                                 local reply = data._wear_equip_reply
                                 local result = reply._result == "success"
                                 local gs = reply._gs
+                                LegendLog("[WEAR-REPLY] result=" .. tostring(result) .. " gs=" .. tostring(gs))
                                 if ed.netdata.putonReply then
-                                    pcall(function()
+                                    local ok_equip, err_equip = pcall(function()
                                         local rdata = ed.netdata.putonReply
+                                        LegendLog("[WEAR-REPLY] hid=" .. tostring(rdata.hid) .. " slot=" .. tostring(rdata.sid) .. " eid=" .. tostring(rdata.eid))
                                         ed.player:consumeEquip(rdata.eid, 1)
                                         ed.player.heroes[rdata.hid]:equip(rdata.sid)
-                                        ed.player.heroes[rdata.hid]:resetgs(gs)
+                                        local hero = ed.player.heroes[rdata.hid]
+                                        LegendLog("[WEAR-REPLY] after equip: _items[" .. rdata.sid .. "]._item_id=" .. tostring(hero._items[rdata.sid]._item_id))
+                                        hero:resetgs(gs)
                                     end)
+                                    if not ok_equip then LegendLog("[WEAR-REPLY] ERROR: " .. tostring(err_equip)) end
                                     ed.netdata.putonReply = nil
                                 end
                                 if ed.netreply.putonReply then
+                                    LegendLog("[WEAR-REPLY] calling putonReply callback")
                                     ed.netreply.putonReply(result)
                                     ed.netreply.putonReply = nil
                                     if ed.saveGame then ed.saveGame() end

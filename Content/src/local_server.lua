@@ -467,17 +467,26 @@ end
 -- ========== hero_upgrade ==========
 -- obj: { _tid = N } (英雄类型ID)
 M.handlers.hero_upgrade = function(data, obj, localdata)
-    local tid = obj._tid
-    local hero, idx = findHero(localdata, tid)
+    local tid = obj._hero_id or obj._tid
+    local hero = ed.player and ed.player.heroes[tid]
 
     if hero then
-        hero.rank = (hero.rank or 0) + 1
-        hero.gs = (hero.gs or 100) + 50
-        LocalData.save(localdata)
+        local newRank = (hero._rank or 1) + 1
+        local gs = hero._gs or 0
 
         data._hero_upgrade_reply = {
             _result = "success",
-            _hero = buildHero(hero),
+            _hero = {
+                _tid = tid,
+                _rank = newRank,
+                _level = hero._level or 1,
+                _stars = hero._stars or 1,
+                _exp = hero._exp or 0,
+                _gs = gs,
+                _state = "idle",
+                _skill_levels = hero._skill_levels or {1,1,1,1},
+                _items = hero._items or {},
+            },
             _items = {},
         }
     else
@@ -535,39 +544,33 @@ end
 -- ========== wear_equip ==========
 -- obj: { _tid = hero_tid, _slot = slot_index, _equip_id = equip_id }
 M.handlers.wear_equip = function(data, obj, localdata)
-    local tid = obj._tid
-    local hero, idx = findHero(localdata, tid)
+    local tid = obj._hero_id or obj._tid
+    local slot = obj._item_pos or obj._slot
 
-    if hero then
-        -- 从 hero_equip 数据表获取该槽位对应的装备ID
+    -- 使用运行时 ed.player 数据计算 GS（localdata 可能不同步）
+    local gs = 0
+    pcall(function()
+        local hero = ed.player and ed.player.heroes[tid]
+        local curGs = hero and hero._gs or 0
         local equipTable = ed.getDataTable("hero_equip")
-        local rankEquip = equipTable and equipTable[tid] and equipTable[tid][hero.rank or 1]
-        local gsDelta = 0
-        if rankEquip and obj._slot then
-            local newItemId = rankEquip[string.format("Equip%d ID", obj._slot)]
-            if newItemId then
-                local equipDataTable = ed.getDataTable("equip")
-                local row = equipDataTable and equipDataTable[newItemId]
-                if row then
-                    gsDelta = (row["+GS"] or 0) * 1  -- 新装备等级为1
-                end
+        local equipDataTable = ed.getDataTable("equip")
+        local rank = hero and hero._rank or 1
+        local rankEquip = equipTable and equipTable[tid] and equipTable[tid][rank]
+        local delta = 0
+        if rankEquip and slot then
+            local newItemId = rankEquip[string.format("Equip%d ID", slot)]
+            if newItemId and equipDataTable and equipDataTable[newItemId] then
+                local equipLevel = rankEquip.EquipLevel or 1
+                delta = (tonumber(equipDataTable[newItemId]["GS"]) or 0) * equipLevel
             end
         end
-        local gs = (hero.gs or 100) + gsDelta
-        hero.gs = gs
+        gs = math.max(math.floor(curGs + delta), 0)
+    end)
 
-        LocalData.save(localdata)
-
-        data._wear_equip_reply = {
-            _result = "success",
-            _gs = gs,
-        }
-    else
-        data._wear_equip_reply = {
-            _result = "fail",
-            _gs = 0,
-        }
-    end
+    data._wear_equip_reply = {
+        _result = "success",
+        _gs = gs,
+    }
 end
 
 -- ========== shop_refresh ==========
@@ -1669,7 +1672,16 @@ local function local_dispatch(msg)
             pcall(function() ed.player:addEquip(id, amount) end)
             props[i] = {id = id, amount = amount}
         end
-        if result and hero then pcall(function() ed.player:resetHero(hero) end) end
+        if result and hero then
+            pcall(function()
+                -- 进阶后清空装备槽，用新阶的空槽替换
+                hero._items = {}
+                for i = 1, 6 do
+                    hero._items[i] = {_item_id = 0, _exp = 0}
+                end
+                ed.player:resetHero(hero)
+            end)
+        end
         if ed.netreply and ed.netreply.heroUpgradeReply then
             ed.netreply.heroUpgradeReply(result, props)
             ed.netreply.heroUpgradeReply = nil

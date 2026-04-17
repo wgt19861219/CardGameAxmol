@@ -503,6 +503,7 @@ M.handlers.hero_evolve = function(data, obj, localdata)
     local hero = ed.player and ed.player.heroes[tid]
 
     if hero then
+        -- 已有英雄：进化（星星+1）
         local newStars = (hero._stars or 1) + 1
         local gs = hero._gs or 0
 
@@ -521,8 +522,39 @@ M.handlers.hero_evolve = function(data, obj, localdata)
             },
         }
     else
+        -- 新英雄召唤：构造初始数据（与 addHero 保持一致）
+        local initRank = 1
+        local initStars = 1
+        pcall(function()
+            initRank = ed.lookupDataTable("Unit", "Initial Rank", tid) or 1
+            initStars = ed.getDataTable("Unit")[tid]["Initial Stars"] or 1
+        end)
+        local items = {}
+        for i = 1, 6 do
+            items[i] = {_item_id = 0, _exp = 0, _index = i}
+        end
+        local skill_levels = {1,1,1,1}
+        pcall(function()
+            local sg = ed.getDataTable("SkillGroup")
+            for i = 1, 4 do
+                if sg and sg[tid] and sg[tid][i] then
+                    skill_levels[i] = sg[tid][i]["Init Level"] or 1
+                end
+            end
+        end)
         data._hero_evolve_reply = {
-            _result = "fail",
+            _result = "success",
+            _hero = {
+                _tid = tid,
+                _rank = initRank,
+                _level = 1,
+                _stars = initStars,
+                _exp = 0,
+                _gs = 5,
+                _state = "idle",
+                _skill_levels = skill_levels,
+                _items = items,
+            },
         }
     end
 end
@@ -1696,26 +1728,33 @@ local function local_dispatch(msg)
         end
     end
 
-    -- hero_evolve 回复（英雄进化）
+    -- hero_evolve 回复（英雄进化/召唤）
     if data._hero_evolve_reply then
         local reply = data._hero_evolve_reply
         local result = reply._result == "success"
         local hero = reply._hero
+        LegendLog("[LD] _hero_evolve_reply: result=" .. tostring(result) .. " tid=" .. tostring(hero and hero._tid) .. " stars=" .. tostring(hero and hero._stars))
         local ndata = ed.netdata and ed.netdata.evolve
         if ndata and result then
+            LegendLog("[LD] evolve ndata: hid=" .. tostring(ndata.hid) .. " exists=" .. tostring(ed.player.heroes[ndata.hid] ~= nil))
             pcall(function()
                 ed.player:addMoney(-(ndata.cost or 0))
                 ed.player:consumeEquip(ndata.id, ndata.amount)
                 if ed.player.heroes[ndata.hid] then
                     ed.player.heroes[ndata.hid]:evolve()
+                else
+                    ed.player:addHero(ndata.hid)
                 end
                 ed.player:resetHero(hero)
             end)
             ed.netdata.evolve = nil
         end
         if ed.netreply and ed.netreply.evolve then
+            LegendLog("[LD] calling evolve callback")
             ed.netreply.evolve(result)
             ed.netreply.evolve = nil
+        else
+            LegendLog("[LD] no evolve callback!")
         end
     end
 

@@ -348,7 +348,7 @@ local function create(param)
   local actor = ed.readhero.getActor(hid, "Move")
   if actor then
     actor:setPosition(ccp(400, 160))
-    ed.getCurrentScene():addFca(actor)
+    ed.getCurrentScene():addFcaOnce(actor)
     container:addChild(actor, 5)
   end
   pcall(function()

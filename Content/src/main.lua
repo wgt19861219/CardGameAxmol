@@ -903,15 +903,21 @@ for _, mod in ipairs(coreModules) do
                 local maxQuality = 3
                 if boxType >= 3 then maxQuality = 6 end
 
-                -- 识别灵魂石和装备
+                -- 识别灵魂石和装备（只收集英雄碎片，过滤非英雄条目）
                 local soulStoneIds = {}
                 local normalEquips = {}
                 pcall(function()
                     local fragTable = ed.getDataTable("fragment")
+                    local unitTable = ed.getDataTable("Unit")
                     if fragTable then
                         for fid, frow in pairs(fragTable) do
                             if type(fid) == "number" and frow["Fragment ID"] then
-                                soulStoneIds[frow["Fragment ID"]] = true
+                                -- 只将实际英雄的碎片加入灵魂石池
+                                local isHero = unitTable and unitTable[fid]
+                                    and unitTable[fid]["Unit Type"] == "Hero"
+                                if isHero then
+                                    soulStoneIds[frow["Fragment ID"]] = true
+                                end
                             end
                         end
                     end
@@ -1003,27 +1009,20 @@ for _, mod in ipairs(coreModules) do
                         local amount = ed.bits(v, 10, 11)
                         local it = ed.itemType(id)
                         if it == "hero" then
+                            LegendLog("[TAVERN] hero direct: id=" .. id .. " amount=" .. amount)
                             addHeroWithLevel(id)
                         elseif it == "equip" then
                             local mhid = ed.readhero and ed.readhero.getMakeid(id)
                             if mhid and ed.itemType(mhid) == "hero" then
-                                local isConvert = false
-                                pcall(function()
-                                    local heroStars = ed.getDataTable("HeroStars")
-                                    if heroStars then
-                                        for _, row in pairs(heroStars) do
-                                            if type(row) == "table" and row["Convert Fragments"] == amount then
-                                                isConvert = true; break
-                                            end
-                                        end
-                                    end
-                                end)
-                                if isConvert then
-                                    addHeroWithLevel(mhid)
+                                if ed.player and ed.player.heroes and ed.player.heroes[mhid] then
+                                    LegendLog("[TAVERN] fragment→equip: frag=" .. id .. " hero=" .. mhid .. " amount=" .. amount)
+                                    if ed.player.addEquip then ed.player:addEquip(id, amount) end
                                 else
-                                    if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
+                                    LegendLog("[TAVERN] fragment→hero: frag=" .. id .. " hero=" .. mhid)
+                                    addHeroWithLevel(mhid)
                                 end
                             else
+                                LegendLog("[TAVERN] equip: id=" .. id .. " amount=" .. amount)
                                 if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
                             end
                         end

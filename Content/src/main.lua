@@ -644,33 +644,45 @@ for _, mod in ipairs(coreModules) do
         local function getLocalServer()
             local ls = rawget(_G, "local_server")
             if ls then return ls end
-            print("[STUB-NET] getLocalServer: attempting to load local_server directly")
-            -- 尝试多种方式加载
+            -- 检查 package.loaded（可能已被其他方式加载）
+            ls = package.loaded["local_server"]
+            if ls then
+                rawset(_G, "local_server", ls)
+                print("[STUB-NET] local_server found in package.loaded")
+                return ls
+            end
+            print("[STUB-NET] getLocalServer: attempting to load local_server")
+            -- 诊断：打印 package.path
+            print("[STUB-NET] package.path = " .. tostring(package.path):sub(1, 300))
             local ok, err
-            -- 方式1: 直接 require
+            -- 方式1: require（先清除可能的缓存）
+            package.loaded["local_server"] = nil
             ok, err = pcall(function()
                 ls = require("local_server")
             end)
-            -- 方式2: 如果 require 失败，尝试手动 loadfile
-            if not ok or not ls then
-                print("[STUB-NET] require failed: " .. tostring(err) .. ", trying loadfile")
-                local paths_to_try = {
-                    "src/local_server.lua",
-                    "Content/src/local_server.lua",
-                    "local_server.lua",
-                }
-                for _, p in ipairs(paths_to_try) do
-                    local f = io.open(p, "r")
-                    if f then
-                        f:close()
-                        print("[STUB-NET] found file at: " .. p)
-                        local chunk, loadErr = loadfile(p)
-                        if chunk then
-                            ls = chunk()
-                        else
-                            print("[STUB-NET] loadfile error: " .. tostring(loadErr))
+            if ok and ls then
+                print("[STUB-NET] local_server loaded via require")
+            else
+                print("[STUB-NET] require failed: " .. tostring(err):sub(1, 200))
+                -- 诊断：检查 package.loaders
+                local loaders = package.loaders or package.searchers
+                print("[STUB-NET] package.loaders count: " .. tostring(loaders and #loaders or "nil"))
+                -- 方式2: 手动通过 Axmol 加载器查找
+                if loaders then
+                    for i, loader in ipairs(loaders) do
+                        local ok2, result = pcall(function() return loader("local_server") end)
+                        print("[STUB-NET] loader[" .. i .. "] ok=" .. tostring(ok2) .. " type=" .. type(result) .. " val=" .. tostring(result):sub(1, 100))
+                        if ok2 and type(result) == "function" then
+                            print("[STUB-NET] loader[" .. i .. "] found local_server!")
+                            local ok3, result3 = pcall(result)
+                            if ok3 then
+                                ls = result3
+                                print("[STUB-NET] local_server loaded via loader[" .. i .. "]")
+                                break
+                            else
+                                print("[STUB-NET] loader[" .. i .. "] exec failed: " .. tostring(result3):sub(1, 200))
+                            end
                         end
-                        break
                     end
                 end
             end
@@ -814,6 +826,28 @@ for _, mod in ipairs(coreModules) do
                             print("[GS] no player/heroes/recalcFn: p=" .. tostring(ed.player ~= nil) .. " h=" .. tostring(ed.player and ed.player.heroes ~= nil) .. " fn=" .. tostring(ed.recalcHeroGs ~= nil))
                         end
                     end)
+                    -- 强制初始化商店数据（确保有商品避免 market.lua 崩溃）
+                    pcall(function()
+                        if ed.player and ed.player.refreshShopData then
+                            local existing = ed.player:getShopData(1)
+                            local goods = existing and existing._current_goods
+                            -- 如果商品为空或不存在，强制填充占位商品
+                            if not goods or #goods == 0 then
+                                ed.player:refreshShopData({
+                                    _id = 1,
+                                    _last_auto_refresh_time = os.time(),
+                                    _expire_time = 0,
+                                    _last_manual_refresh_time = os.time(),
+                                    _today_times = 0,
+                                    _current_goods = {
+                                        {_id = 1, _type = "gold", _price = 100, _amount = 1, _is_sale = false},
+                                        {_id = 2, _type = "gold", _price = 200, _amount = 1, _is_sale = false},
+                                    },
+                                })
+                                print("[LL]\t[DIAG] shop data force-initialized with placeholder goods")
+                            end
+                        end
+                    end)
                     if ed.setUserid then ed.setUserid(1) end
                     -- 保存游戏数据（首通或加载后立即保存一次）
                     if ed.saveGame then ed.saveGame() end
@@ -825,6 +859,21 @@ for _, mod in ipairs(coreModules) do
                         local ok, err = pcall(ed.netreply.loginReply)
                         if not ok then print("[STUB-NET] loginReply error: " .. tostring(err)) end
                         ed.netreply.loginReply = nil
+                    end
+                    -- 修复 market.lua upsetShopGoods 空数组崩溃
+                    -- 直接覆盖 Player 类上的方法，避免依赖 writable path overlay
+                    if ed.Player then
+                        print("[DIAG-SHOP] overriding upsetShopGoods...")
+                        local origUpset = ed.Player.upsetShopGoods
+                        ed.Player.upsetShopGoods = function(self, id, goods)
+                            if not goods or #goods == 0 then return {} end
+                            local gl = {}
+                            for i = 1, #goods do
+                                gl[i] = { good = goods[i], slot = i }
+                            end
+                            return gl
+                        end
+                        print("[DIAG-SHOP] override done, orig=" .. tostring(origUpset ~= nil))
                     end
                 end
                 -- 使用 scheduler 延迟 1 帧执行（确保 logo scene 的 mainLayer 已创建）
@@ -1479,28 +1528,56 @@ for _, mod in ipairs(coreModules) do
                                 _smash_idx = {},
                             }
                         elseif msgType == "shop_refresh" then
-                            data._shop_refresh_reply = {
-                                _id = 1,
-                                _last_auto_refresh_time = os.time(),
-                                _expire_time = 0,
-                                _last_manual_refresh_time = os.time(),
-                                _today_times = 0,
-                                _current_goods = {},
-                            }
-                        elseif msgType == "open_shop" then
-                            data._open_shop_reply = {
-                                _result = "success",
-                                _shop = {
+                            -- 尝试走 local_server 生成商品
+                            local ls = rawget(_G, "local_server")
+                            if ls and ls.handle then
+                                local ok_ls, result_ls = pcall(function() return ls.handle(msgType, obj) end)
+                                if ok_ls and result_ls then
+                                    data._shop_refresh_reply = result_ls._shop_refresh_reply
+                                end
+                            end
+                            if not data._shop_refresh_reply then
+                                data._shop_refresh_reply = {
                                     _id = 1,
                                     _last_auto_refresh_time = os.time(),
                                     _expire_time = 0,
                                     _last_manual_refresh_time = os.time(),
                                     _today_times = 0,
                                     _current_goods = {},
-                                },
-                            }
+                                }
+                            end
+                        elseif msgType == "open_shop" then
+                            local ls = rawget(_G, "local_server")
+                            if ls and ls.handle then
+                                local ok_ls, result_ls = pcall(function() return ls.handle(msgType, obj) end)
+                                if ok_ls and result_ls then
+                                    data._open_shop_reply = result_ls._open_shop_reply
+                                end
+                            end
+                            if not data._open_shop_reply then
+                                data._open_shop_reply = {
+                                    _result = "success",
+                                    _shop = {
+                                        _id = 1,
+                                        _last_auto_refresh_time = os.time(),
+                                        _expire_time = 0,
+                                        _last_manual_refresh_time = os.time(),
+                                        _today_times = 0,
+                                        _current_goods = {},
+                                    },
+                                }
+                            end
                         elseif msgType == "shop_consume" then
-                            data._shop_consume_reply = { _result = "success" }
+                            local ls = rawget(_G, "local_server")
+                            if ls and ls.handle then
+                                local ok_ls, result_ls = pcall(function() return ls.handle(msgType, obj) end)
+                                if ok_ls and result_ls then
+                                    data._shop_consume_reply = result_ls._shop_consume_reply
+                                end
+                            end
+                            if not data._shop_consume_reply then
+                                data._shop_consume_reply = { _result = "success" }
+                            end
                         elseif msgType == "wear_equip" then
                             -- 计算穿戴后的 GS：直接用 equip 表的 GS 字段 × EquipLevel
                             local newGs = 0
@@ -2018,6 +2095,8 @@ for _, mod in ipairs(coreModules) do
         package.loaded["network"] = nw; rawset(_G, "network", nw)
         ed.send = stubSend
         okCount = okCount + 1
+        -- 加载 local_server 模块（供 stubSend 的 else 分支调用）
+        getLocalServer()
         -- network.lua 会设置这些表，stub 也需要初始化
         if not ed.netreply then ed.netreply = {} end
         if not ed.netdata then ed.netdata = {} end

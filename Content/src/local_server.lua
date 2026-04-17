@@ -572,37 +572,151 @@ end
 
 -- ========== shop_refresh ==========
 -- obj: 刷新商店请求
+-- VIP经验商品使用特殊ID "vip_exp"
+local VIP_EXP_SLOT = 1
+local VIP_EXP_REWARD = 100
+local VIP_EXP_PRICE = 200
+
+local function generateShopGoods()
+    local goods = {}
+    -- Slot 1: VIP经验商品（固定）
+    goods[1] = {
+        _id = "vip_exp",
+        _type = "diamond",
+        _price = VIP_EXP_PRICE,
+        _amount = 1,
+        _is_sale = false,
+    }
+    -- Slot 2-6: 随机装备商品
+    local equipIds = {101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
+                      111, 112, 113, 114, 115, 116, 117, 118, 119, 120}
+    local shuffled = {}
+    for _, id in ipairs(equipIds) do shuffled[#shuffled + 1] = id end
+    for i = #shuffled, 2, -1 do
+        local j = math.random(1, i)
+        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+    end
+    for i = 1, math.min(5, #shuffled) do
+        goods[i + 1] = {
+            _id = shuffled[i],
+            _type = "gold",
+            _price = math.random(50, 500),
+            _amount = 1,
+            _is_sale = false,
+        }
+    end
+    return goods
+end
+
 M.handlers.shop_refresh = function(data, obj, localdata)
+    local shopId = (obj and obj._shop_id) or (obj and obj._id) or 1
+    local goods = generateShopGoods()
+    LegendLog("[shop_refresh] shopId=" .. tostring(shopId) .. " goods_count=" .. tostring(#goods))
+    -- 存储商品数据供 shop_consume 查找
+    localdata.shop_data = localdata.shop_data or {}
+    local slotMap = {}
+    for i, g in ipairs(goods) do
+        slotMap[i] = g
+    end
+    localdata.shop_data[shopId] = slotMap
+    LocalData.save(localdata)
     data._shop_refresh_reply = {
-        _id = 1,
+        _id = shopId,
         _last_auto_refresh_time = getTimestamp(),
         _expire_time = 0,
         _last_manual_refresh_time = getTimestamp(),
         _today_times = 0,
-        _current_goods = {},
+        _current_goods = goods,
     }
 end
 
 -- ========== shop_consume ==========
 -- obj: 购买商品请求
 M.handlers.shop_consume = function(data, obj, localdata)
-    data._shop_consume_reply = {
-        _result = "success",
-    }
+    local shopId = obj._sid or 1
+    local slotId = obj._slotid
+    local shopData = localdata.shop_data and localdata.shop_data[shopId]
+    local goodsItem = shopData and shopData[slotId]
+
+    if not goodsItem then
+        data._shop_consume_reply = { _result = "fail" }
+        return
+    end
+
+    if not localdata.player then
+        data._shop_consume_reply = { _result = "fail" }
+        return
+    end
+
+    local payType = goodsItem._type
+    local price = goodsItem._price or 0
+    local amount = obj._amount or 1
+    local totalCost = price * amount
+
+    -- 余额检查使用运行时 ed.player（localdata.player.money/rmb 可能为 nil）
+    local playerMoney = (ed.player and ed.player._money) or 0
+    local playerRmb = (ed.player and ed.player._rmb) or 0
+    if payType == "gold" then
+        if playerMoney < totalCost then
+            data._shop_consume_reply = { _result = "fail" }
+            return
+        end
+    elseif payType == "diamond" then
+        if playerRmb < totalCost then
+            data._shop_consume_reply = { _result = "fail" }
+            return
+        end
+    end
+
+    -- VIP经验商品：增加充值额度
+    if goodsItem._id == "vip_exp" then
+        localdata.player.recharge_sum = (localdata.player.recharge_sum or 0) + totalCost
+    else
+        -- 普通装备：添加到背包
+        local eid = goodsItem._id
+        if eid then
+            localdata.player.equips = localdata.player.equips or {}
+            local found = false
+            for _, e in ipairs(localdata.player.equips) do
+                if e.id == eid then
+                    e.count = (e.count or 1) + amount
+                    found = true
+                    break
+                end
+            end
+            if not found then
+                table.insert(localdata.player.equips, { id = eid, count = amount })
+            end
+        end
+    end
+
+    -- 商品售罄
+    goodsItem._amount = 0
+    LocalData.save(localdata)
+    data._shop_consume_reply = { _result = "success" }
 end
 
 -- ========== open_shop ==========
 -- obj: { _shopid = N }
 M.handlers.open_shop = function(data, obj, localdata)
+    local shopId = obj._shopid or 1
+    local goods = generateShopGoods()
+    localdata.shop_data = localdata.shop_data or {}
+    local slotMap = {}
+    for i, g in ipairs(goods) do
+        slotMap[i] = g
+    end
+    localdata.shop_data[shopId] = slotMap
+    LocalData.save(localdata)
     data._open_shop_reply = {
         _result = "success",
         _shop = {
-            _id = obj._shopid or 1,
+            _id = shopId,
             _last_auto_refresh_time = getTimestamp(),
             _expire_time = 0,
             _last_manual_refresh_time = getTimestamp(),
             _today_times = 0,
-            _current_goods = {},
+            _current_goods = goods,
         },
     }
 end
@@ -1457,6 +1571,41 @@ local function local_dispatch(msg)
             LegendLog("[local_dispatch] MISSING: user=" .. tostring(user ~= nil) .. " player=" .. tostring(ed.player ~= nil) .. " setup=" .. tostring(ed.player and ed.player.setup ~= nil))
         end
         -- 刷新主界面显示
+        -- 修复商店数据：确保有商品避免 market.lua upsetShopGoods 崩溃
+        pcall(function()
+            if ed.player and ed.player.refreshShopData then
+                local existing = ed.player:getShopData(1)
+                local goods = existing and existing._current_goods
+                if not goods or #goods == 0 then
+                    ed.player:refreshShopData({
+                        _id = 1,
+                        _last_auto_refresh_time = os.time(),
+                        _expire_time = 0,
+                        _last_manual_refresh_time = os.time(),
+                        _today_times = 0,
+                        _current_goods = {
+                            {_id = 101, _type = "gold", _price = 100, _amount = 1, _is_sale = false},
+                            {_id = 102, _type = "gold", _price = 200, _amount = 1, _is_sale = false},
+                            {_id = "vip_exp", _type = "diamond", _price = 200, _amount = 1, _is_sale = false},
+                        },
+                    })
+                    LegendLog("[local_dispatch] shop data force-initialized with placeholder goods")
+                end
+            end
+        end)
+        -- 覆盖 upsetShopGoods 防止空数组/单商品时 math.random 崩溃
+        if ed.Player and ed.Player.upsetShopGoods then
+            local _origUpset = ed.Player.upsetShopGoods
+            ed.Player.upsetShopGoods = function(self, id, goods)
+                if not goods or #goods == 0 then return {} end
+                local gl = {}
+                for i = 1, #goods do
+                    gl[i] = { good = goods[i], slot = i }
+                end
+                return gl
+            end
+            LegendLog("[local_dispatch] upsetShopGoods override applied")
+        end
         pcall(function()
             if FireEvent then
                 LegendLog("[local_dispatch] firing LoginSuc")
@@ -1750,7 +1899,6 @@ local function local_dispatch(msg)
         end
     end
 
-    end
 end
 
 -----------------------------------------------------------------------
@@ -1758,17 +1906,23 @@ end
 -----------------------------------------------------------------------
 function M.init()
     M.data = LocalData.load()
-    -- 确保 down 模块已加载
+    -- 确保 down 模块可用（供 M.handle 创建 down_msg 对象）
     if not down then
-        local ok, err = pcall(function() pb_loader("down")() end)
-        if ok then
-            LegendLog("[local_server] init: pb_loader('down') OK, down=" .. tostring(down ~= nil))
-        else
-            LegendLog("[local_server] init: pb_loader('down') FAILED: " .. tostring(err))
+        -- 方式1: 从 ed.downmsg 获取（main.lua stub 会设置）
+        if ed.downmsg then
+            down = ed.downmsg
+            LegendLog("[local_server] init: got 'down' from ed.downmsg")
         end
     end
     if not down then
-        LegendLog("[local_server] init: WARNING: 'down' is still nil after loading attempt!")
+        -- 方式2: 从全局查找
+        down = rawget(_G, "down")
+        if down then
+            LegendLog("[local_server] init: got 'down' from _G")
+        end
+    end
+    if not down then
+        LegendLog("[local_server] init: WARNING: 'down' is nil, M.handle may not work")
     end
 end
 
@@ -1787,20 +1941,32 @@ function M.handle(msg_type, obj)
     end
 
     -- 创建 down_msg 对象并获取 .data 表
-    local ok_down, msg = pcall(function() return down.down_msg() end)
-    if not ok_down or not msg then
-        LegendLog("[local_server] ERROR: down.down_msg() failed: " .. tostring(msg))
-        return false
+    local msg
+    if down and down.down_msg then
+        local ok_down
+        ok_down, msg = pcall(function() return down.down_msg() end)
+        if not ok_down then
+            LegendLog("[local_server] ERROR: down.down_msg() failed: " .. tostring(msg))
+            msg = nil
+        end
+    end
+    -- 如果 down 不可用或返回空表，手动创建带 .data 的消息对象
+    if not msg or not rawget(msg, ".data") then
+        msg = setmetatable({[".data"] = {}}, {
+            __index = function(m, k) return rawget(m, ".data")[k] end,
+            __newindex = function(m, k, v) rawget(m, ".data")[k] = v end,
+        })
     end
     local data = rawget(msg, ".data")
-    if not data then
-        LegendLog("[local_server] ERROR: rawget(msg, '.data') returned nil")
-        return false
-    end
 
     -- 诊断：exit_stage 的处理追踪
     if msg_type == "exit_stage" then
         LegendLog("[local_server] handle exit_stage: obj._result=" .. tostring(obj._result) .. " handler=" .. tostring(M.handlers[msg_type] ~= nil))
+    end
+
+    -- 诊断：shop_refresh 的处理追踪
+    if msg_type == "shop_refresh" then
+        LegendLog("[local_server] handle shop_refresh: obj._shop_id=" .. tostring(obj and obj._shop_id) .. " handler=" .. tostring(M.handlers[msg_type] ~= nil))
     end
 
     local handler = M.handlers[msg_type]
@@ -1820,6 +1986,9 @@ function M.handle(msg_type, obj)
 
     -- 使用 network.lua 的 dispatch 处理所有回复类型（40+ 消息类型）
     -- 注意：proc_net 在 localMode 下是空操作，必须直接调用 dispatch
+    if msg_type == "shop_refresh" then
+        LegendLog("[local_server] shop_refresh: _reply=" .. tostring(data._shop_refresh_reply ~= nil) .. " goods=" .. tostring(data._shop_refresh_reply and #data._shop_refresh_reply._current_goods or "nil") .. " dispatch=" .. tostring(ed.dispatch ~= nil))
+    end
     if ed.dispatch then
         local ok_d, err_d = xpcall(function() ed.dispatch(msg) end, function(err)
             LegendLog("[local_server|dispatch ERROR] " .. tostring(err))

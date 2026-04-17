@@ -293,14 +293,26 @@ local initTitle = function(self, addition)
   local param = self.param
   local id = param.id
   local level = param.level or 0
-  if level > 0 then
-    ui.icon = ed.readequip.createIconWithLevel(id, level)
+  local ok_icon, icon = pcall(function()
+    if level > 0 then
+      return ed.readequip.createIconWithLevel(id, level)
+    else
+      return ed.readequip.createIcon(id)
+    end
+  end)
+  if ok_icon and icon then
+    ui.icon = icon
   else
-    ui.icon = ed.readequip.createIcon(id)
+    local iconRes = param.res or "UI/alpha/HVGA/shop_head.png"
+    ui.icon = ed.createNode({
+      t = "Sprite",
+      base = {res = iconRes},
+      layout = {},
+    })
   end
   ui.icon:setPosition(ccp(50, 328))
   titleContainer:addChild(ui.icon)
-  local name = ed.readequip.value(id, "Name")
+  local name = ed.readequip.value(id, "Name") or param.name or tostring(id)
   ui.name = ed.createNode({
     t = "Label",
     base = {text = name, size = 24},

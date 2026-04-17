@@ -55,6 +55,9 @@ end
 class.getShopData = getShopData
 local function upsetShopGoods(self, id, goods)
   local gl = {}
+  if not goods or #goods == 0 then
+    return gl
+  end
   local seed = 0
   local isShowHotTag = config.isShowHotTag(id)
   if isShowHotTag == true then
@@ -64,7 +67,7 @@ local function upsetShopGoods(self, id, goods)
         tag = "",
         slot = i
       }
-      seed = seed + goods[i]._id
+      seed = seed + (type(goods[i]._id) == "number" and goods[i]._id or 0)
     end
   elseif isShowHotTag == false then
     for i = 1, #goods do
@@ -72,7 +75,7 @@ local function upsetShopGoods(self, id, goods)
         good = goods[i],
         slot = i
       }
-      seed = seed + goods[i]._id
+      seed = seed + (type(goods[i]._id) == "number" and goods[i]._id or 0)
     end
   else
     for i = 1, #goods do
@@ -80,15 +83,15 @@ local function upsetShopGoods(self, id, goods)
     end
     return gl
   end
-  if not ed.isElementInTable(id, {
+  if #gl > 1 and not ed.isElementInTable(id, {
     4,
     5,
     7
   }) then
     math.randomseed(seed)
     for i = 1, 20 do
-      local a = math.random(1, #goods)
-      local b = math.random(2, #goods)
+      local a = math.random(1, #gl)
+      local b = math.random(1, #gl)
       local temp = gl[a]
       gl[a] = gl[b]
       gl[b] = temp

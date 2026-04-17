@@ -1310,6 +1310,12 @@ class.takeStageExp = takeStageExp
 local function takeStageReward(self, stage, stars, hero_list, loots)
   local reward = ed.lookupDataTable("Stage", nil, stage)
   self:addMoney(reward["Money Reward"])
+  local stageType = ed.stageType(stage)
+  local diamondReward = 20
+  if stageType == "elite" then diamondReward = 50
+  elseif stageType == "act" then diamondReward = 100
+  end
+  self:addrmb(diamondReward)
   self:addExp(reward["Exp Reward"], "battle")
   local heroexp = math.floor(reward["Heroexp Reward"] / #hero_list)
   for i = 1, #hero_list do

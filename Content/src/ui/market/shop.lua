@@ -105,14 +105,27 @@ local function refreshGoods(self, result, index)
       self.buyLayer:destroy()
     end
     local goods = self.goods[index]
-    goods.data.amount = 0
-    goods.ui.noneTag:setVisible(true)
+    if goods then
+      goods.data.amount = 0
+      if goods.ui.noneTag then
+        goods.ui.noneTag:setVisible(true)
+      end
+      -- 售罄：面板变灰 + 隐藏价格
+      pcall(function()
+        if goods.ui.panel then goods.ui.panel:setOpacity(120) end
+        if goods.ui.icon then goods.ui.icon:setVisible(false) end
+        if goods.ui.coinIcon then goods.ui.coinIcon:setVisible(false) end
+        if goods.ui.costLabel then goods.ui.costLabel:setVisible(false) end
+      end)
+    end
     self:refreshCostLabel()
+    ed.showToast("购买成功")
     if config.hasRefreshButton(self.shop) then
       self:showTutorialHandler()
     end
   else
     lsr:report("buyFailed")
+    ed.showToast("购买失败")
   end
   self:showTalk("Purchase")
   if config.willAutoExit(self.shop) and ed.player:checkShopGoodsEmpty(self.shop) then
@@ -127,7 +140,15 @@ local buyReply = function(self)
     if result and data then
       local shop = data.shop
       local goods = data.goods
-      ed.player:addEquip(goods.id, goods.amount)
+      if goods.id == "vip_exp" then
+        -- VIP经验不进背包，增加充值总额
+        local vipAmount = goods.cost
+        pcall(function()
+          ed.player._recharge_sum = (ed.player._recharge_sum or 0) + vipAmount
+        end)
+      else
+        ed.player:addEquip(goods.id, goods.amount)
+      end
       ed.player:addPoint(goods.pay, -goods.cost)
       ed.player:buyShopGoods(shop, goods.slot)
     end
@@ -153,7 +174,7 @@ end
 class.upBuy = upBuy
 local function doBuy(self, data)
   local function handler()
-    if config.checkPackageFull(data.id, data.amount) then
+    if data.id ~= "vip_exp" and config.checkPackageFull(data.id, data.amount) then
       ed.showToast(T(LSTR("SHOP.YOUR_PACKAGE_DOESNT_HAVE_ENOUGH_SPACE")))
     elseif not config.checkMoneyEnough(data.pay, data.cost, data.payid) then
       if data.pay == "gold" then
@@ -319,6 +340,7 @@ local function createCommon(self)
   local container = self.listContainer
   local equipInfo = ed.getDataTable("equip")
   local shopData = ed.player:getShopGoods(self.shop)
+  print("[LL]\t[DIAG] createCommon: shop=" .. tostring(self.shop) .. " shopData=" .. tostring(shopData ~= nil) .. " count=" .. tostring(shopData and #shopData or "nil"))
   for k, v in pairs(shopData or {}) do
     local tag, slot
     local isShowHotTag = config.isShowHotTag(self.shop)
@@ -331,7 +353,27 @@ local function createCommon(self)
       v = v.good
     end
     local info = equipInfo[v._id]
-    if info and info.Icon then
+    -- VIP经验商品特殊处理
+    if v._id == "vip_exp" then
+      table.insert(goods, {
+        data = {
+          index = #goods + 1,
+          id = v._id,
+          pay = v._type,
+          payid = nil,
+          price = v._price,
+          amount = v._amount,
+          cost = v._price * math.max(v._amount, 1),
+          slot = slot or k,
+          res = "UI/alpha/HVGA/shop_head.png",
+          name = "VIP Experience",
+          tag = tag,
+          category = "VIP",
+          sale = v._is_sale
+        },
+        ui = {}
+      })
+    elseif info and info.Icon then
       table.insert(goods, {
         data = {
           index = #goods + 1,
@@ -690,6 +732,7 @@ local function timeRefresh(self)
 end
 class.timeRefresh = timeRefresh
 local enterRefresh = function(self)
+  print("[LL]\t[DIAG] enterRefresh: shop=" .. tostring(self.shop))
   ed.registerNetReply("refresh_shop", self:refreshList(), {
     id = self.shop,
     type = 1
@@ -697,6 +740,7 @@ local enterRefresh = function(self)
   local msg = ed.upmsg.shop_refresh()
   msg._type = 1
   msg._shop_id = self.shop
+  print("[LL]\t[DIAG] enterRefresh: sending shop_refresh for shop_id=" .. tostring(self.shop))
   ed.send(msg, "shop_refresh")
 end
 class.enterRefresh = enterRefresh
@@ -1000,9 +1044,14 @@ local function onEnterShop(self)
       self:enterRefresh()
     end
     if config.needFastSell(self.shop) then
-      ed.ui.fastsell.pop({
-        callback = self:refreshCostHandler()
-      }, 200)
+      local ok_fs, err_fs = pcall(function()
+        ed.ui.fastsell.pop({
+          callback = self:refreshCostHandler()
+        }, 200)
+      end)
+      if not ok_fs then
+        print("[LL]\t[DIAG] fastsell.pop failed: " .. tostring(err_fs))
+      end
     end
   end
   return handler

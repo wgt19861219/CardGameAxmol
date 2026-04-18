@@ -423,6 +423,50 @@ M.handlers.enter_stage = function(data, obj, localdata)
     }
 end
 
+-- ========== enter_act_stage ==========
+-- obj: { _stage = N, _stage_group = N }
+-- 与 enter_stage 共用 _enter_stage_reply，local_dispatch 已处理
+M.handlers.enter_act_stage = function(data, obj, localdata)
+    local stage_id = obj._stage or 0
+    local stage_group = obj._stage_group or 0
+
+    local StageTable = ed.getDataTable("Stage")
+    if not StageTable or not StageTable[stage_id] then return end
+    local stageCfg = StageTable[stage_id]
+
+    -- 校验 stage group 匹配
+    if (stageCfg["Stage Group"] or 0) ~= stage_group then return end
+
+    -- 等级检查
+    local unlockLv = stageCfg["Unlock Level"] or 0
+    local plyLevel = (ed.player and ed.player:getLevel()) or 1
+    if plyLevel < unlockLv then return end
+
+    -- 体力消耗（净消耗 = Vitality Cost - Vit Return）
+    local costVit = stageCfg["Vitality Cost"] or 0
+    local returnVit = stageCfg["Vit Return"] or 0
+    local enterCost = math.max(0, costVit - returnVit)
+    if enterCost > 0 and ed.player then
+        ed.player:addVitality(-enterCost)
+    end
+
+    local rseed = makeRandomSeed()
+    local loots = generateLoots(stage_id)
+
+    localdata.battle = {
+        stage_id = stage_id,
+        stage_group = stage_group,
+        enter_time = getTimestamp(),
+        srand = rseed,
+    }
+    LocalData.save(localdata)
+
+    data._enter_stage_reply = {
+        _rseed = rseed,
+        _loots = loots,
+    }
+end
+
 -- ========== exit_stage ==========
 -- obj: { _result = "victory"/"defeat"/..., _stars = N, _heroes = {...}, ... }
 M.handlers.exit_stage = function(data, obj, localdata)
@@ -869,32 +913,51 @@ end
 -- ========== sweep_stage ==========
 -- obj: { _stage_id = N, ... }
 M.handlers.sweep_stage = function(data, obj, localdata)
-    local stage_id = obj._stage_id or 0
+    local stage_id = obj._stageid or obj._stage_id or 0
+    local times = obj._times or 1
     local expReward, moneyReward = getStageRewards(stage_id)
-    local sweepLoot = {
-        {
+    local sweepLoot = {}
+
+    for t = 1, times do
+        local loot = {
             _exp = expReward,
             _money = moneyReward,
             _items = {},
-        },
-    }
+        }
+        -- 生成掉落物品
+        local StageTable = ed.getDataTable("Stage")
+        if StageTable and StageTable[stage_id] then
+            local stageCfg = StageTable[stage_id]
+            for i = 1, 7 do
+                local rewardId = stageCfg["UI reward" .. i]
+                local rewardPro = stageCfg["UI reward" .. i .. " Pro"] or 0
+                if rewardId and rewardId ~= 0 and math_random(1, 100) <= (rewardPro or 0) then
+                    table_insert(loot._items, ed.makebits(11, 1, 10, rewardId))
+                end
+            end
+        end
+        table_insert(sweepLoot, loot)
+    end
 
-    -- 生成掉落物品
+    -- Raid Bonus（扫荡额外奖励，按次数倍增）
+    local bonusItems = {}
     local StageTable = ed.getDataTable("Stage")
     if StageTable and StageTable[stage_id] then
         local stageCfg = StageTable[stage_id]
-        for i = 1, 7 do
-            local rewardId = stageCfg["UI reward" .. i]
-            local rewardPro = stageCfg["UI reward" .. i .. " Pro"] or 0
-            if rewardId and rewardId ~= 0 and math_random(1, 100) <= (rewardPro or 0) then
-                table_insert(sweepLoot[1]._items, ed.makebits(11, 1, 10, rewardId))
+        for i = 1, 4 do
+            local bType = stageCfg["Raid Bonus Type " .. i]
+            local bId = stageCfg["Raid Bonus ID " .. i] or 0
+            local bAmt = stageCfg["Raid Bonus Amount " .. i] or 0
+            if bType == "Item" and bId ~= 0 and bAmt > 0 then
+                local totalAmt = bAmt * times
+                table_insert(bonusItems, ed.makebits(11, totalAmt, 10, bId))
             end
         end
     end
 
     data._sweep_stage_reply = {
         _loot = sweepLoot,
-        _items = {},
+        _items = bonusItems,
     }
 end
 
@@ -1831,6 +1894,40 @@ local function local_dispatch(msg)
         if result and hero then pcall(function() ed.player:resetHero(hero) end) end
         local handler = ed.netreply and ed.netreply.equipUpgrade
         if handler then handler(result); ed.netreply.equipUpgrade = nil end
+    end
+
+    -- sweep_stage 回复（扫荡）
+    if data._sweep_stage_reply then
+        local reply = data._sweep_stage_reply
+        pcall(function()
+            for k, v in pairs(reply._loot or {}) do
+                ed.player:addExp(v._exp, "sweep")
+                ed.player:addMoney(v._money)
+                for ck, cv in pairs(v._items or {}) do
+                    ed.player:addEquip(ed.bits(cv, 0, 10), ed.bits(cv, 10, 11))
+                end
+            end
+            -- Raid Bonus 额外奖励
+            for ck, cv in pairs(reply._items or {}) do
+                ed.player:addEquip(ed.bits(cv, 0, 10), ed.bits(cv, 10, 11))
+            end
+        end)
+        local sdata = ed.netdata and ed.netdata.sweep
+        if sdata then
+            pcall(function()
+                ed.player:addVitality(-(sdata.power or 0) * (sdata.times or 1))
+                if sdata.type == "free" then
+                    ed.player:useSweepTimes(sdata.times)
+                else
+                    ed.player._rmb = (ed.player._rmb or 0) - (sdata.cost or 0)
+                end
+            end)
+            ed.netdata.sweep = nil
+        end
+        if ed.netreply and ed.netreply.sweep then
+            ed.netreply.sweep(reply)
+            ed.netreply.sweep = nil
+        end
     end
 
     -- consume_item 回复（消耗品/吃经验）

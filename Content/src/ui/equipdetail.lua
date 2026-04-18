@@ -303,7 +303,20 @@ local function createIcon(self, id)
   icon:setPosition(ccp(120 + offsetX, 360))
   self.ui.icon = icon
   self.layer:addChild(icon)
+  -- 显示拥有数量
+  local amount = ed.player.equip_qunty[id] or 0
+  local amountLabel = ed.createttf("x" .. amount, 18)
+  amountLabel:setAnchorPoint(ccp(0, 0.5))
+  amountLabel:setPosition(ccp(145 + offsetX, 300))
+  if amount > 0 then
+    ed.setLabelColor(amountLabel, ccc3(0, 200, 0))
+  else
+    ed.setLabelColor(amountLabel, ccc3(255, 0, 0))
+  end
+  ed.setLabelShadow(amountLabel, ccc3(0, 0, 0), ccp(0, 1))
+  self.layer:addChild(amountLabel)
 end
+
 class.createIcon = createIcon
 local function createList(self, id)
   local info = {
@@ -372,6 +385,7 @@ local function create(id)
   }
   local readnode = ed.readnode.create(layer, ui)
   readnode:addNode(ui_info)
+
   self:createIcon(id)
   self:createList(id)
   self:show()

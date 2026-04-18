@@ -1072,18 +1072,9 @@ local function resetUI(self, stage_info, battle_info)
 	end
 	--add by xinghui
 	local stars = ed.player:getStageStar(stage_info["Stage ID"])
-    local speedBtn = nil
-    local speedUnableBtn = nil
-	if stars == 3 then
-		--todo:显示加速按钮
-		local vipLevel = ed.player:getvip()
-		if vipLevel > 0 then
-			speedBtn = CCMenuItemImage:create("UI/alpha/HVGA/CombatAcceleration_1.png", "UI/alpha/HVGA/CombatAcceleration_1.png")
-		else
-			--todo:加速按钮不可用
-			speedUnableBtn = CCMenuItemImage:create("UI/alpha/HVGA/CombatAcceleration_0.png", "UI/alpha/HVGA/CombatAcceleration_0.png")
-		end
-	end
+	    local speedBtn = CCMenuItemImage:create("UI/alpha/HVGA/CombatAcceleration_1.png", "UI/alpha/HVGA/CombatAcceleration_1.png")
+	    local speedUnableBtn = nil
+
 	if speedBtn then
 		class.speedBtn = speedBtn
 		speedBtn:setPosition(ccp(735, 120))

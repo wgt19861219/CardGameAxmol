@@ -348,9 +348,17 @@ end
 
 local function pushScene(scene)
 	table.insert(scene_stack, scene)
-	CCDirector:sharedDirector():pushScene(scene:ccScene())
+	-- Never use C++ pushScene: causes UAF crash in Director::setNextScene
+	collectgarbage("stop")
+	CCDirector:sharedDirector():replaceScene(scene:ccScene())
 end
 ed.pushScene = pushScene
+
+local function createSceneByIdentity(identity)
+	if identity == "main" then return ed.ui.main.create("main")
+	elseif identity == "stageselect" then return ed.ui.stageselect.create()
+	else return nil end
+end
 
 local function popScene()
 	LegendLog("popScene ")
@@ -364,18 +372,12 @@ local function popScene()
 		end
 	end
 	cleanupBeforeTransition()
-	-- Check if we would return to main: avoid Director popScene crash
-	-- by replacing with a fresh main scene instead
-	local returning_to = scene_stack[#scene_stack]
-	if returning_to and returning_to.identity == "main" then
-		LegendLog("popScene -> safeReplaceToMain")
-		local new_main = ed.ui.main.create("main")
-		table.remove(scene_stack, #scene_stack)
-		table.insert(scene_stack, new_main)
-		CCDirector:sharedDirector():replaceScene(new_main:ccScene())
-	else
-		CCDirector:sharedDirector():popScene()
-	end
+	-- Pop all remaining stack and always create fresh main scene
+	scene_stack = {}
+	local fresh = ed.ui.main.create("main")
+	table.insert(scene_stack, fresh)
+	LegendLog("[popScene] -> fresh main")
+	CCDirector:sharedDirector():replaceScene(fresh:ccScene())
 end
 ed.popScene = popScene
 
@@ -390,7 +392,10 @@ local function popScene2()
 			scene:OnPopScene()
 		end
 	end
-	CCDirector:sharedDirector():popScene()
+	scene_stack = {}
+	local fresh = ed.ui.main.create("main")
+	table.insert(scene_stack, fresh)
+	CCDirector:sharedDirector():replaceScene(fresh:ccScene())
 end
 ed.popScene2 = popScene2
 
@@ -408,6 +413,7 @@ local function replaceScene(scene)
 	table.insert(scene_stack, scene)
 	scene.pushed = false
 	cleanupBeforeTransition()
+	collectgarbage("stop")
 	CCDirector:sharedDirector():replaceScene(scene:ccScene())
 end
 ed.replaceScene = replaceScene

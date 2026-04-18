@@ -366,10 +366,10 @@ local function onEnterHandler(self)
 				LegendLog("[main|onEnter] after_doTeachTavernEnch")
 				if self:checkFirstInMain() then
 					local chatPanel = ed.getChatPanel()
-					chatPanel:setVisible(false)
+					if chatPanel and not tolua.isnull(chatPanel:getRootLayer()) then chatPanel:setVisible(false) end
 				else
 					local chatPanel = ed.getChatPanel()
-					chatPanel.mainLayer:setVisible(false)
+					if chatPanel and chatPanel.mainLayer and not tolua.isnull(chatPanel.mainLayer) then chatPanel.mainLayer:setVisible(false) end
 				end
 				LegendLog("[main|onEnter] before_registerMainCount")
 				self:registerUpdateHandler("main_count", self:doMainCount())
@@ -1027,9 +1027,12 @@ local function createRedLight(self)
 end
 
 local function initChatPanel(self)
-	local chatpanel = ed.getChatPanel()
-	chatpanel:getRootLayer():setParent(nil)
-	self.scene:addChild(chatpanel:getRootLayer(), 200, 0)
+	local ok, chatpanel = pcall(ed.getChatPanel)
+	if not ok or not chatpanel then return end
+	local root = chatpanel:getRootLayer()
+	if not root or tolua.isnull(root) then return end
+	root:setParent(nil)
+	self.scene:addChild(root, 200, 0)
 end
 
 local function create(addition)

@@ -57,6 +57,7 @@ local clearOnEnterHandler = function(self)
 end
 class.clearOnEnterHandler = clearOnEnterHandler
 local onEnter = function(self)
+  collectgarbage("restart")
   xpcall(function()
     for k, v in pairs(self.onEnterHandlerList or {}) do
       v()

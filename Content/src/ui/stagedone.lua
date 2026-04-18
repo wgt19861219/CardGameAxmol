@@ -121,11 +121,11 @@ local function doClickNext(self)
     --
   ed.endTeach("clickNextStage")
   ed.playMusic(ed.music.map)
-  ed.popScene()
   local stage = self.param.stage_id
   if ed.stageType(stage) == "act" then
-    local scene = ed.ui.exercise.create(self.param.actType)
-    ed.replaceScene(scene)
+    ed.replaceScene(ed.ui.exercise.create(self.param.actType))
+  else
+    ed.replaceScene(ed.ui.stageselect.create())
   end
   ListenTimer(Timer:Once(0.5), function()
     FireEvent("WinBackToSelect", self.param.stage_id)

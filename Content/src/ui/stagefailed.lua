@@ -34,10 +34,10 @@ class.hasPropToEquip = hasPropToEquip
 local function doClickMenu(self)
   lsr:report("clickMenu")
   ed.playMusic(ed.music.map)
-  ed.popScene()
   if ed.stageType(self.param.stage_id) == "act" then
-    local scene = ed.ui.exercise.create(self.param.actType)
-    ed.replaceScene(scene)
+    ed.replaceScene(ed.ui.exercise.create(self.param.actType))
+  else
+    ed.replaceScene(ed.ui.stageselect.create())
   end
 end
 class.doClickMenu = doClickMenu

@@ -337,16 +337,16 @@ end
 class.clearRegisterHandler = clearRegisterHandler
 local updateFca = function(self, dt)
   for k, v in pairs(self.fcaList or {}) do
-    if v.once and not tolua.isnull(v.node) and v.node.isTerminated and v.node:isTerminated() then
-      v.node:removeFromParentAndCleanup(true)
-    end
-    if not tolua.isnull(v.node) and not v.isPause then
-      xpcall(function()
-        local ok2, err2 = pcall(function() v.node:update(dt) end)
-        if not ok2 then pcall(function() v.node:update(dt, false) end) end
-      end, EDDebug)
-    else
+    if tolua.isnull(v.node) then
       self.fcaList[k] = nil
+    elseif v.once and v.node.isTerminated and v.node:isTerminated() then
+      v.node:removeFromParentAndCleanup(true)
+      self.fcaList[k] = nil
+    elseif not v.isPause then
+      local okUpdate, _ = pcall(function() v.node:update(dt) end)
+      if not okUpdate then
+        pcall(function() v.node:update(dt, false) end)
+      end
     end
     if v.pauseDelayTime then
       v.pauseDelayTime = v.pauseDelayTime - dt
@@ -378,7 +378,7 @@ class.addFcaCache = addFcaCache
 local addFca = function(self, fca, duration)
   self.fcaList[#self.fcaList + 1] = {node = fca}
   if duration then
-    self:addFcaCache(fca.node, duration)
+    self:addFcaCache(fca, duration)
   end
 end
 class.addFca = addFca

@@ -12,7 +12,7 @@ local function showCardui(self)
   local s = CCSequence:createWithTwoActions(fi, CCCallFunc:create(function()
     xpcall(function()
       local r = CCRotateBy:create(5, 360)
-      r = CCRepeatForever:create(r)
+      r = CCRepeat:create(r, 3)
       self.light:runAction(r)
     end, EDDebug)
   end))
@@ -26,8 +26,10 @@ local function showCardui(self)
       local fb = ed.createFcaNode("eff_UI_tavern_bubble")
       fb:setPosition(ccp(400, 240))
       self.mainLayer:addChild(fb)
-      self.baseScene:addFca(fb)
+      self.baseScene:addFcaOnce(fb)
       fb:setScale(1.5)
+      self.fcaNodes = self.fcaNodes or {}
+      self.fcaNodes[#self.fcaNodes + 1] = fb
     end, EDDebug)
   end)
   local s = CCSequence:createWithTwoActions(delay, f)
@@ -36,8 +38,10 @@ local function showCardui(self)
   local fn = ed.createFcaNode("eff_UI_tavern_card_" .. self.color)
   fn:setPosition(ccp(400, 240))
   self.mainLayer:addChild(fn, 10)
-  self.baseScene:addFca(fn)
+  self.baseScene:addFcaOnce(fn)
   fn:setScale(1.5)
+  self.fcaNodes = self.fcaNodes or {}
+  self.fcaNodes[#self.fcaNodes + 1] = fn
   self:registerTouchHandler()
   self:show()
 end
@@ -163,6 +167,12 @@ end
 class.show = show
 local function destroy(self)
   lsr:report("closeCardLayer")
+  if self.baseScene and self.baseScene.removeFca then
+    for _, node in ipairs(self.fcaNodes or {}) do
+      self.baseScene:removeFca(node)
+    end
+  end
+  self.fcaNodes = nil
   self.mainLayer:removeFromParentAndCleanup(true)
 end
 class.destroy = destroy

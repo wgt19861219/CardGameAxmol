@@ -340,7 +340,6 @@ local function createCommon(self)
   local container = self.listContainer
   local equipInfo = ed.getDataTable("equip")
   local shopData = ed.player:getShopGoods(self.shop)
-  print("[LL]\t[DIAG] createCommon: shop=" .. tostring(self.shop) .. " shopData=" .. tostring(shopData ~= nil) .. " count=" .. tostring(shopData and #shopData or "nil"))
   for k, v in pairs(shopData or {}) do
     local tag, slot
     local isShowHotTag = config.isShowHotTag(self.shop)
@@ -732,7 +731,6 @@ local function timeRefresh(self)
 end
 class.timeRefresh = timeRefresh
 local enterRefresh = function(self)
-  print("[LL]\t[DIAG] enterRefresh: shop=" .. tostring(self.shop))
   ed.registerNetReply("refresh_shop", self:refreshList(), {
     id = self.shop,
     type = 1
@@ -740,7 +738,6 @@ local enterRefresh = function(self)
   local msg = ed.upmsg.shop_refresh()
   msg._type = 1
   msg._shop_id = self.shop
-  print("[LL]\t[DIAG] enterRefresh: sending shop_refresh for shop_id=" .. tostring(self.shop))
   ed.send(msg, "shop_refresh")
 end
 class.enterRefresh = enterRefresh
@@ -1050,7 +1047,7 @@ local function onEnterShop(self)
         }, 200)
       end)
       if not ok_fs then
-        print("[LL]\t[DIAG] fastsell.pop failed: " .. tostring(err_fs))
+        LegendLog("[shop] fastsell.pop failed: " .. tostring(err_fs))
       end
     end
   end

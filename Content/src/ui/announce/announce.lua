@@ -159,6 +159,13 @@ local function destroy(self, skipAnim)
     if handler then
       handler()
     end
+    if self.actorFca then
+      local scene = ed.getCurrentScene()
+      if scene and scene.removeFca then
+        scene:removeFca(self.actorFca)
+      end
+      self.actorFca = nil
+    end
     self.mainLayer:removeFromParentAndCleanup(true)
   end
   if not skipAnim then
@@ -344,12 +351,13 @@ local function create(param)
   local readNode = ed.readnode.create(container, ui)
   readNode:addNode(ui_info)
   local rotate = CCRotateBy:create(5, 370)
-  ui.light:runAction(CCRepeatForever:create(rotate))
+  ui.light:runAction(CCRepeat:create(rotate, 3))
   local actor = ed.readhero.getActor(hid, "Move")
   if actor then
     actor:setPosition(ccp(400, 160))
     ed.getCurrentScene():addFca(actor)
     container:addChild(actor, 5)
+    self.actorFca = actor
   end
   pcall(function()
     local sound = ed.getDataTable("Unit")[hid]["Voice Move"]

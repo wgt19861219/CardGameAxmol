@@ -872,16 +872,26 @@ local function onEnterHandler(self)
     local getNewHero
     for k, v in pairs(self.param.lootList) do
       if v.type == "hero" then
-        ed.announce({
-          type = "getNewHero",
-          param = {
-            id = k,
-            handler = function()
-              self:playEnterAnim()
-            end
-          }
-        })
         getNewHero = true
+        local heroId = k
+        local sched = CCDirector:sharedDirector():getScheduler()
+        if sched then
+          local entryId
+          entryId = sched:scheduleScriptFunc(function()
+            if entryId then sched:unscheduleScriptFunc(entryId) end
+            xpcall(function()
+              ed.announce({
+                type = "getNewHero",
+                param = {
+                  id = heroId,
+                  handler = function()
+                    self:playEnterAnim()
+                  end
+                }
+              })
+            end, EDDebug)
+          end, 0, false)
+        end
         break
       end
     end

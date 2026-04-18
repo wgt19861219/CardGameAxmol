@@ -260,7 +260,12 @@ local function destroy(self)
   s = CCEaseBackIn:create(s)
   local f = CCCallFunc:create(function()
     xpcall(function()
-      -- 先禁用触摸再移除，避免 touch 残留
+      if self.baseScene and self.baseScene.removeFca then
+        for _, node in ipairs(self.fcaNodes or {}) do
+          self.baseScene:removeFca(node)
+        end
+      end
+      self.fcaNodes = nil
       self.mainLayer:setTouchEnabled(false)
       self.mainLayer:removeFromParentAndCleanup(true)
       if self.isDoTavern then
@@ -321,6 +326,8 @@ local function playBoxAnim(self)
 	local box = ed.createFcaNode(boxFcaRes)
 	self.boxContainer:addChild(box)
 	self.baseScene:addFca(box)
+	self.fcaNodes = self.fcaNodes or {}
+	self.fcaNodes[#self.fcaNodes + 1] = box
 	box:setPosition(bpos)
 	box:setScale(bscale)
 	box:setVisible(false)
@@ -467,6 +474,7 @@ local function createLootAnim(self, index, param)
     local burst = ed.createFcaNode("eff_UI_tavern_burst")
     burst:setPosition(ccp(35, 35))
     self.baseScene:addFca(burst, 1)
+    self.fcaNodes[#self.fcaNodes + 1] = burst
     icon:addChild(burst)
     local light = ed.createSprite(light_res[quality])
     light:setPosition(ccp(33, 35))

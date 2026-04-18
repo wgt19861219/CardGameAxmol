@@ -10,9 +10,8 @@ local Queue = require("util.queue")
 local class = {}
 ed.scene = class
 --add by xinghui
-class.speedState = {common =1, speed = 2}
-local curSpeedState = class.speedState.common
-class.curSpeedState = curSpeedState
+class.speedMultiplier = {[1] = 1, [2] = 2, [3] = 3, [4] = 4}
+class.curSpeedState = 1
 --
 local returnBtnTapHandler, nextBtnTapHandler, googlePlayTapHandler
 
@@ -280,8 +279,9 @@ class.createPauseLayer = createPauseLayer
 
 local function exit()
 	--add by xinghui
-	class.curSpeedState = class.speedState.common
-	--
+	class.curSpeedState = 1
+	class.speedBtn = nil
+	class.speedUnableBtn = nil
 	if not ed.engine.stage_ended then
 		ed.stopMusic()
 		ed.playMusic(ed.music.map)
@@ -638,8 +638,8 @@ local pairs = pairs
 local ipairs = ipairs
 local function update(self, dt)
 	--add by xinghui
-	if class.curSpeedState == class.speedState.speed then
-		dt = dt*2
+	if class.curSpeedState > 1 then
+		dt = math.min(dt, 0.1) * (class.speedMultiplier[class.curSpeedState] or 1)
 	end
 	--
 	local paused = false
@@ -879,17 +879,25 @@ local function autoCombatHandler()
 	end
 end
 --add by xinghui
-local function speedBtnHandler()
-	--todo:加速
-	if class.curSpeedState == class.speedState.common then
-		class.curSpeedState = class.speedState.speed				
-		local picSprame = ed.createSprite("UI/alpha/HVGA/CombatAcceleration_2.png")
-		class.speedBtn:setNormalImage(picSprame)		
+local speedLabels = {[1] = "1x", [2] = "2x", [3] = "3x", [4] = "4x"}
+local function updateSpeedBtnLabel()
+	if not class.speedBtn then return end
+	local oldLabel = class.speedBtn:getChildByTag(100)
+	if oldLabel then oldLabel:removeFromParentAndCleanup(true) end
+	if class.curSpeedState == 1 then
+		class.speedBtn:setNormalImage(ed.createSprite("UI/alpha/HVGA/CombatAcceleration_1.png"))
 	else
-		class.curSpeedState = class.speedState.common	
-		local picSprame = ed.createSprite("UI/alpha/HVGA/CombatAcceleration_1.png")
-		class.speedBtn:setNormalImage(picSprame)
-	end		
+		class.speedBtn:setNormalImage(ed.createSprite("UI/alpha/HVGA/CombatAcceleration_2.png"))
+		local label = CCLabelTTF:create(speedLabels[class.curSpeedState] or "2x", "Arial", 20)
+		label:setPosition(ccp(52, 30))
+		label:setColor(ccc3(255, 255, 0))
+		label:setTag(100)
+		class.speedBtn:addChild(label)
+	end
+end
+local function speedBtnHandler()
+	class.curSpeedState = class.curSpeedState >= 4 and 1 or class.curSpeedState + 1
+	updateSpeedBtnLabel()
 end
 local function speedUnableBtnHandler()
 	--todo:弹出提示框
@@ -1070,12 +1078,7 @@ local function resetUI(self, stage_info, battle_info)
 		--todo:显示加速按钮
 		local vipLevel = ed.player:getvip()
 		if vipLevel > 0 then
-			--todo:加速按钮可用
-            if class.curSpeedState == class.speedState.common then
-			    speedBtn = CCMenuItemImage:create("UI/alpha/HVGA/CombatAcceleration_1.png", "UI/alpha/HVGA/CombatAcceleration_1.png")
-            elseif class.curSpeedState ==  class.speedState.speed then
-			    speedBtn = CCMenuItemImage:create("UI/alpha/HVGA/CombatAcceleration_2.png", "UI/alpha/HVGA/CombatAcceleration_2.png")
-            end
+			speedBtn = CCMenuItemImage:create("UI/alpha/HVGA/CombatAcceleration_1.png", "UI/alpha/HVGA/CombatAcceleration_1.png")
 		else
 			--todo:加速按钮不可用
 			speedUnableBtn = CCMenuItemImage:create("UI/alpha/HVGA/CombatAcceleration_0.png", "UI/alpha/HVGA/CombatAcceleration_0.png")
@@ -1086,6 +1089,7 @@ local function resetUI(self, stage_info, battle_info)
 		speedBtn:setPosition(ccp(735, 120))
 		speedBtn:registerScriptTapHandler(speedBtnHandler)
 		speedBtn:setVisible(true)
+		updateSpeedBtnLabel()
 	end
 	if speedUnableBtn then
 		class.speedUnableBtn = speedUnableBtn

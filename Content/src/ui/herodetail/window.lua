@@ -154,7 +154,6 @@ class.getAttAddition = getAttAddition
 local craftCallBack = function(self)
   local function handler(instruction)
     xpcall(function()
-      LegendLog("[CRAFT-CB] instruction=" .. tostring(instruction))
       if instruction == "equip" then
         self:wearEquip()
         self:refreshEquipTag()
@@ -1114,7 +1113,6 @@ local function createEquipIcon(self, i)
   end
   local ceid = herodetail.getHeroEquipid(self.hid, i)
   local eid = herodetail.getHerocsvEquipid(self.hid, i)
-  LegendLog("[EQUIP-ICON] slot=" .. tostring(i) .. " ceid=" .. tostring(ceid) .. " eid=" .. tostring(eid))
   local frame, icon, level
   if ceid > 0 then
     frame, icon = ed.readequip.createHeroItem(self.hid, i, nil, self.hero)

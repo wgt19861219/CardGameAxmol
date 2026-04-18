@@ -588,16 +588,23 @@ M.handlers.wear_equip = function(data, obj, localdata)
     local tid = obj._hero_id or obj._tid
     local slot = obj._item_pos or obj._slot
 
-    -- 使用运行时 ed.player 数据计算 GS（localdata 可能不同步）
-    local gs = 0
+    local hero = ed.player and ed.player.heroes[tid]
+
+    if not hero then
+        data._wear_equip_reply = {
+            _result = "fail",
+            _gs = 0,
+        }
+        return
+    end
+
+    local curGs = hero._gs or 0
+    local delta = 0
     pcall(function()
-        local hero = ed.player and ed.player.heroes[tid]
-        local curGs = hero and hero._gs or 0
         local equipTable = ed.getDataTable("hero_equip")
         local equipDataTable = ed.getDataTable("equip")
-        local rank = hero and hero._rank or 1
+        local rank = hero._rank or 1
         local rankEquip = equipTable and equipTable[tid] and equipTable[tid][rank]
-        local delta = 0
         if rankEquip and slot then
             local newItemId = rankEquip[string.format("Equip%d ID", slot)]
             if newItemId and equipDataTable and equipDataTable[newItemId] then
@@ -605,8 +612,8 @@ M.handlers.wear_equip = function(data, obj, localdata)
                 delta = (tonumber(equipDataTable[newItemId]["GS"]) or 0) * equipLevel
             end
         end
-        gs = math.max(math.floor(curGs + delta), 0)
     end)
+    local gs = math.max(math.floor(curGs + delta), 0)
 
     data._wear_equip_reply = {
         _result = "success",
@@ -631,9 +638,22 @@ local function generateShopGoods()
         _amount = 1,
         _is_sale = false,
     }
-    -- Slot 2-6: 随机装备商品
-    local equipIds = {101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
-                      111, 112, 113, 114, 115, 116, 117, 118, 119, 120}
+    -- Slot 2-6: 从 equip 数据表随机取装备
+    local equipIds = {}
+    pcall(function()
+        local equipTable = ed.getDataTable("equip")
+        if equipTable then
+            for eid, row in pairs(equipTable) do
+                if type(eid) == "number" then
+                    equipIds[#equipIds + 1] = eid
+                end
+            end
+        end
+    end)
+    -- 数据表不可用时回退到默认ID
+    if #equipIds == 0 then
+        equipIds = {101, 102, 103, 104, 105, 106, 107, 108, 109, 110}
+    end
     local shuffled = {}
     for _, id in ipairs(equipIds) do shuffled[#shuffled + 1] = id end
     for i = #shuffled, 2, -1 do
@@ -641,10 +661,17 @@ local function generateShopGoods()
         shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
     end
     for i = 1, math.min(5, #shuffled) do
+        local price = 100
+        pcall(function()
+            local equipTable = ed.getDataTable("equip")
+            if equipTable and equipTable[shuffled[i]] then
+                price = tonumber(equipTable[shuffled[i]]["Price"]) or math.random(50, 500)
+            end
+        end)
         goods[i + 1] = {
             _id = shuffled[i],
             _type = "gold",
-            _price = math.random(50, 500),
+            _price = price,
             _amount = 1,
             _is_sale = false,
         }
@@ -655,7 +682,6 @@ end
 M.handlers.shop_refresh = function(data, obj, localdata)
     local shopId = (obj and obj._shop_id) or (obj and obj._id) or 1
     local goods = generateShopGoods()
-    LegendLog("[shop_refresh] shopId=" .. tostring(shopId) .. " goods_count=" .. tostring(#goods))
     -- 存储商品数据供 shop_consume 查找
     localdata.shop_data = localdata.shop_data or {}
     local slotMap = {}
@@ -687,11 +713,6 @@ M.handlers.shop_consume = function(data, obj, localdata)
         return
     end
 
-    if not localdata.player then
-        data._shop_consume_reply = { _result = "fail" }
-        return
-    end
-
     local payType = goodsItem._type
     local price = goodsItem._price or 0
     local amount = obj._amount or 1
@@ -712,27 +733,8 @@ M.handlers.shop_consume = function(data, obj, localdata)
         end
     end
 
-    -- VIP经验商品：增加充值额度
-    if goodsItem._id == "vip_exp" then
-        localdata.player.recharge_sum = (localdata.player.recharge_sum or 0) + totalCost
-    else
-        -- 普通装备：添加到背包
-        local eid = goodsItem._id
-        if eid then
-            localdata.player.equips = localdata.player.equips or {}
-            local found = false
-            for _, e in ipairs(localdata.player.equips) do
-                if e.id == eid then
-                    e.count = (e.count or 1) + amount
-                    found = true
-                    break
-                end
-            end
-            if not found then
-                table.insert(localdata.player.equips, { id = eid, count = amount })
-            end
-        end
-    end
+    -- 实际扣费和物品添加由客户端回调（shop.lua buyReply）处理
+    -- 服务端只做校验和标记售罄
 
     -- 商品售罄
     goodsItem._amount = 0
@@ -1614,41 +1616,6 @@ local function local_dispatch(msg)
             LegendLog("[local_dispatch] MISSING: user=" .. tostring(user ~= nil) .. " player=" .. tostring(ed.player ~= nil) .. " setup=" .. tostring(ed.player and ed.player.setup ~= nil))
         end
         -- 刷新主界面显示
-        -- 修复商店数据：确保有商品避免 market.lua upsetShopGoods 崩溃
-        pcall(function()
-            if ed.player and ed.player.refreshShopData then
-                local existing = ed.player:getShopData(1)
-                local goods = existing and existing._current_goods
-                if not goods or #goods == 0 then
-                    ed.player:refreshShopData({
-                        _id = 1,
-                        _last_auto_refresh_time = os.time(),
-                        _expire_time = 0,
-                        _last_manual_refresh_time = os.time(),
-                        _today_times = 0,
-                        _current_goods = {
-                            {_id = 101, _type = "gold", _price = 100, _amount = 1, _is_sale = false},
-                            {_id = 102, _type = "gold", _price = 200, _amount = 1, _is_sale = false},
-                            {_id = "vip_exp", _type = "diamond", _price = 200, _amount = 1, _is_sale = false},
-                        },
-                    })
-                    LegendLog("[local_dispatch] shop data force-initialized with placeholder goods")
-                end
-            end
-        end)
-        -- 覆盖 upsetShopGoods 防止空数组/单商品时 math.random 崩溃
-        if ed.Player and ed.Player.upsetShopGoods then
-            local _origUpset = ed.Player.upsetShopGoods
-            ed.Player.upsetShopGoods = function(self, id, goods)
-                if not goods or #goods == 0 then return {} end
-                local gl = {}
-                for i = 1, #goods do
-                    gl[i] = { good = goods[i], slot = i }
-                end
-                return gl
-            end
-            LegendLog("[local_dispatch] upsetShopGoods override applied")
-        end
         pcall(function()
             if FireEvent then
                 LegendLog("[local_dispatch] firing LoginSuc")
@@ -1666,25 +1633,19 @@ local function local_dispatch(msg)
     -- sync_skill_stren / buy_skill_stren_point 回复
     if data._sync_skill_stren_reply then
         local reply = data._sync_skill_stren_reply
-        local newChance = reply._skill_level_up and reply._skill_level_up._skill_levelup_chance
-        LegendLog("[LD] _sync_skill_stren_reply: newChance=" .. tostring(newChance))
         if reply._skill_level_up and ed.player then
             ed.player._skill_level_up = reply._skill_level_up
         end
         local handler, rdata = ed.getNetReply("sync_skill_stren_chance")
-        LegendLog("[LD] getNetReply: handler=" .. tostring(handler ~= nil) .. " rdata=" .. tostring(rdata and rdata.cost))
         if rdata and rdata.cost then pcall(function() ed.player:addrmb(-rdata.cost) end) end
         if handler then
             handler()
         else
             -- 购买技能点时 handler 为 nil，需要手动刷新技能面板的 times bar
-            LegendLog("[LD] no handler, trying manual UI refresh for skill panel")
             pcall(function()
                 local sw = ed.getPopWindow and ed.getPopWindow("herodetailskill")
-                LegendLog("[LD] getPopWindow result: " .. tostring(sw ~= nil) .. " hasCreateInfoBar=" .. tostring(sw and sw.createInformationBar ~= nil))
                 if sw and sw.createInformationBar then
                     sw:createInformationBar()
-                    LegendLog("[LD] createInformationBar called OK")
                 end
             end)
         end
@@ -1692,7 +1653,6 @@ local function local_dispatch(msg)
 
     -- skill_levelup 回复
     if data._skill_levelup_reply then
-        LegendLog("[LD] _skill_levelup_reply: result=" .. tostring(data._skill_levelup_reply._result) .. " gs=" .. tostring(data._skill_levelup_reply._gs))
         if ed.ui and ed.ui.herodetail and ed.ui.herodetail.dealSkillLevelup then
             ed.ui.herodetail.dealSkillLevelup(data._skill_levelup_reply)
         end
@@ -1733,10 +1693,8 @@ local function local_dispatch(msg)
         local reply = data._hero_evolve_reply
         local result = reply._result == "success"
         local hero = reply._hero
-        LegendLog("[LD] _hero_evolve_reply: result=" .. tostring(result) .. " tid=" .. tostring(hero and hero._tid) .. " stars=" .. tostring(hero and hero._stars))
         local ndata = ed.netdata and ed.netdata.evolve
         if ndata and result then
-            LegendLog("[LD] evolve ndata: hid=" .. tostring(ndata.hid) .. " exists=" .. tostring(ed.player.heroes[ndata.hid] ~= nil))
             pcall(function()
                 ed.player:addMoney(-(ndata.cost or 0))
                 ed.player:consumeEquip(ndata.id, ndata.amount)
@@ -1750,11 +1708,8 @@ local function local_dispatch(msg)
             ed.netdata.evolve = nil
         end
         if ed.netreply and ed.netreply.evolve then
-            LegendLog("[LD] calling evolve callback")
             ed.netreply.evolve(result)
             ed.netreply.evolve = nil
-        else
-            LegendLog("[LD] no evolve callback!")
         end
     end
 
@@ -2023,11 +1978,6 @@ function M.handle(msg_type, obj)
         LegendLog("[local_server] handle exit_stage: obj._result=" .. tostring(obj._result) .. " handler=" .. tostring(M.handlers[msg_type] ~= nil))
     end
 
-    -- 诊断：shop_refresh 的处理追踪
-    if msg_type == "shop_refresh" then
-        LegendLog("[local_server] handle shop_refresh: obj._shop_id=" .. tostring(obj and obj._shop_id) .. " handler=" .. tostring(M.handlers[msg_type] ~= nil))
-    end
-
     local handler = M.handlers[msg_type]
     if handler then
         local ok_h, err_h = pcall(handler, data, obj, M.data)
@@ -2045,9 +1995,6 @@ function M.handle(msg_type, obj)
 
     -- 使用 network.lua 的 dispatch 处理所有回复类型（40+ 消息类型）
     -- 注意：proc_net 在 localMode 下是空操作，必须直接调用 dispatch
-    if msg_type == "shop_refresh" then
-        LegendLog("[local_server] shop_refresh: _reply=" .. tostring(data._shop_refresh_reply ~= nil) .. " goods=" .. tostring(data._shop_refresh_reply and #data._shop_refresh_reply._current_goods or "nil") .. " dispatch=" .. tostring(ed.dispatch ~= nil))
-    end
     if ed.dispatch then
         local ok_d, err_d = xpcall(function() ed.dispatch(msg) end, function(err)
             LegendLog("[local_server|dispatch ERROR] " .. tostring(err))

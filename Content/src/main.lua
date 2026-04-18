@@ -652,35 +652,23 @@ for _, mod in ipairs(coreModules) do
                 return ls
             end
             print("[STUB-NET] getLocalServer: attempting to load local_server")
-            -- 诊断：打印 package.path
-            print("[STUB-NET] package.path = " .. tostring(package.path):sub(1, 300))
             local ok, err
             -- 方式1: require（先清除可能的缓存）
             package.loaded["local_server"] = nil
             ok, err = pcall(function()
                 ls = require("local_server")
             end)
-            if ok and ls then
-                print("[STUB-NET] local_server loaded via require")
-            else
-                print("[STUB-NET] require failed: " .. tostring(err):sub(1, 200))
-                -- 诊断：检查 package.loaders
-                local loaders = package.loaders or package.searchers
-                print("[STUB-NET] package.loaders count: " .. tostring(loaders and #loaders or "nil"))
+            if not ok or not ls then
                 -- 方式2: 手动通过 Axmol 加载器查找
+                local loaders = package.loaders or package.searchers
                 if loaders then
                     for i, loader in ipairs(loaders) do
                         local ok2, result = pcall(function() return loader("local_server") end)
-                        print("[STUB-NET] loader[" .. i .. "] ok=" .. tostring(ok2) .. " type=" .. type(result) .. " val=" .. tostring(result):sub(1, 100))
                         if ok2 and type(result) == "function" then
-                            print("[STUB-NET] loader[" .. i .. "] found local_server!")
                             local ok3, result3 = pcall(result)
                             if ok3 then
                                 ls = result3
-                                print("[STUB-NET] local_server loaded via loader[" .. i .. "]")
                                 break
-                            else
-                                print("[STUB-NET] loader[" .. i .. "] exec failed: " .. tostring(result3):sub(1, 200))
                             end
                         end
                     end
@@ -831,7 +819,6 @@ for _, mod in ipairs(coreModules) do
                         if ed.player and ed.player.refreshShopData then
                             local existing = ed.player:getShopData(1)
                             local goods = existing and existing._current_goods
-                            -- 如果商品为空或不存在，强制填充占位商品
                             if not goods or #goods == 0 then
                                 ed.player:refreshShopData({
                                     _id = 1,
@@ -840,11 +827,11 @@ for _, mod in ipairs(coreModules) do
                                     _last_manual_refresh_time = os.time(),
                                     _today_times = 0,
                                     _current_goods = {
-                                        {_id = 1, _type = "gold", _price = 100, _amount = 1, _is_sale = false},
-                                        {_id = 2, _type = "gold", _price = 200, _amount = 1, _is_sale = false},
+                                        {_id = "vip_exp", _type = "diamond", _price = 200, _amount = 1, _is_sale = false},
+                                        {_id = 101, _type = "gold", _price = 100, _amount = 1, _is_sale = false},
+                                        {_id = 102, _type = "gold", _price = 200, _amount = 1, _is_sale = false},
                                     },
                                 })
-                                print("[LL]\t[DIAG] shop data force-initialized with placeholder goods")
                             end
                         end
                     end)
@@ -859,21 +846,6 @@ for _, mod in ipairs(coreModules) do
                         local ok, err = pcall(ed.netreply.loginReply)
                         if not ok then print("[STUB-NET] loginReply error: " .. tostring(err)) end
                         ed.netreply.loginReply = nil
-                    end
-                    -- 修复 market.lua upsetShopGoods 空数组崩溃
-                    -- 直接覆盖 Player 类上的方法，避免依赖 writable path overlay
-                    if ed.Player then
-                        print("[DIAG-SHOP] overriding upsetShopGoods...")
-                        local origUpset = ed.Player.upsetShopGoods
-                        ed.Player.upsetShopGoods = function(self, id, goods)
-                            if not goods or #goods == 0 then return {} end
-                            local gl = {}
-                            for i = 1, #goods do
-                                gl[i] = { good = goods[i], slot = i }
-                            end
-                            return gl
-                        end
-                        print("[DIAG-SHOP] override done, orig=" .. tostring(origUpset ~= nil))
                     end
                 end
                 -- 使用 scheduler 延迟 1 帧执行（确保 logo scene 的 mainLayer 已创建）
@@ -1795,22 +1767,18 @@ for _, mod in ipairs(coreModules) do
                                 local reply = data._wear_equip_reply
                                 local result = reply._result == "success"
                                 local gs = reply._gs
-                                LegendLog("[WEAR-REPLY] result=" .. tostring(result) .. " gs=" .. tostring(gs))
                                 if ed.netdata.putonReply then
                                     local ok_equip, err_equip = pcall(function()
                                         local rdata = ed.netdata.putonReply
-                                        LegendLog("[WEAR-REPLY] hid=" .. tostring(rdata.hid) .. " slot=" .. tostring(rdata.sid) .. " eid=" .. tostring(rdata.eid))
                                         ed.player:consumeEquip(rdata.eid, 1)
                                         ed.player.heroes[rdata.hid]:equip(rdata.sid)
                                         local hero = ed.player.heroes[rdata.hid]
-                                        LegendLog("[WEAR-REPLY] after equip: _items[" .. rdata.sid .. "]._item_id=" .. tostring(hero._items[rdata.sid]._item_id))
                                         hero:resetgs(gs)
                                     end)
-                                    if not ok_equip then LegendLog("[WEAR-REPLY] ERROR: " .. tostring(err_equip)) end
+                                    if not ok_equip then LegendLog("[wear_equip] ERROR: " .. tostring(err_equip)) end
                                     ed.netdata.putonReply = nil
                                 end
                                 if ed.netreply.putonReply then
-                                    LegendLog("[WEAR-REPLY] calling putonReply callback")
                                     ed.netreply.putonReply(result)
                                     ed.netreply.putonReply = nil
                                     if ed.saveGame then ed.saveGame() end

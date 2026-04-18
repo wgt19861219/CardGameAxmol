@@ -333,19 +333,25 @@ local main = function()
 	local update_entry_id = CCDirector:sharedDirector():getScheduler():scheduleScriptFunc(ed.gameUpdate, 0, false)
 end
 
+local function cleanupBeforeTransition()
+	if ed.ui.announce and ed.ui.announce.base then
+		local cache = ed.ui.announce.base.windowCache or {}
+		for i = #cache, 1, -1 do
+			local v = cache[i]
+			if v and v.mainLayer and not tolua.isnull(v.mainLayer) then
+				pcall(function() v.mainLayer:removeFromParentAndCleanup(true) end)
+			end
+		end
+		ed.ui.announce.base.windowCache = {}
+	end
+end
+
 local function pushScene(scene)
 	table.insert(scene_stack, scene)
-	--modify by xinghui
-	--��c++�������ڸ��µļ�⣬��������Ͳ��ܵ���runWithScene
-	--[[if #scene_stack == 1 then
-	CCDirector:sharedDirector():runWithScene(scene:ccScene())
-else
 	CCDirector:sharedDirector():pushScene(scene:ccScene())
-		print("[hello] pushScene done, stack_size=" .. #scene_stack)
-end--]]
-CCDirector:sharedDirector():pushScene(scene:ccScene())
 end
 ed.pushScene = pushScene
+
 local function popScene()
 	LegendLog("popScene ")
 	if #scene_stack > 0 then
@@ -357,7 +363,19 @@ local function popScene()
 			scene:OnPopScene()
 		end
 	end
-	CCDirector:sharedDirector():popScene()
+	cleanupBeforeTransition()
+	-- Check if we would return to main: avoid Director popScene crash
+	-- by replacing with a fresh main scene instead
+	local returning_to = scene_stack[#scene_stack]
+	if returning_to and returning_to.identity == "main" then
+		LegendLog("popScene -> safeReplaceToMain")
+		local new_main = ed.ui.main.create("main")
+		table.remove(scene_stack, #scene_stack)
+		table.insert(scene_stack, new_main)
+		CCDirector:sharedDirector():replaceScene(new_main:ccScene())
+	else
+		CCDirector:sharedDirector():popScene()
+	end
 end
 ed.popScene = popScene
 
@@ -382,13 +400,14 @@ local function replaceScene(scene)
 			pushScene(scene)
 			return
 		end
-		local scene = table.remove(scene_stack, #scene_stack)
-		if scene.OnPopScene then
-			scene:OnPopScene()
+		local old = table.remove(scene_stack, #scene_stack)
+		if old.OnPopScene then
+			old:OnPopScene()
 		end
 	end
 	table.insert(scene_stack, scene)
 	scene.pushed = false
+	cleanupBeforeTransition()
 	CCDirector:sharedDirector():replaceScene(scene:ccScene())
 end
 ed.replaceScene = replaceScene

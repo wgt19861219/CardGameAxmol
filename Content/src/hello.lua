@@ -372,12 +372,26 @@ local function popScene()
 		end
 	end
 	cleanupBeforeTransition()
-	-- Pop all remaining stack and always create fresh main scene
-	scene_stack = {}
-	local fresh = ed.ui.main.create("main")
-	table.insert(scene_stack, fresh)
-	LegendLog("[popScene] -> fresh main")
-	CCDirector:sharedDirector():replaceScene(fresh:ccScene())
+	local prev = scene_stack[#scene_stack]
+	if prev then
+		local fresh = createSceneByIdentity(prev.identity)
+		if fresh then
+			table.remove(scene_stack, #scene_stack)
+			table.insert(scene_stack, fresh)
+			CCDirector:sharedDirector():replaceScene(fresh:ccScene())
+		else
+			-- Unknown identity: go to fresh main
+			for i = #scene_stack, 1, -1 do scene_stack[i] = nil end
+			local m = ed.ui.main.create("main")
+			table.insert(scene_stack, m)
+			CCDirector:sharedDirector():replaceScene(m:ccScene())
+		end
+	else
+		-- Empty stack: go to fresh main
+		local m = ed.ui.main.create("main")
+		table.insert(scene_stack, m)
+		CCDirector:sharedDirector():replaceScene(m:ccScene())
+	end
 end
 ed.popScene = popScene
 
@@ -392,7 +406,7 @@ local function popScene2()
 			scene:OnPopScene()
 		end
 	end
-	scene_stack = {}
+	for i = #scene_stack, 1, -1 do scene_stack[i] = nil end
 	local fresh = ed.ui.main.create("main")
 	table.insert(scene_stack, fresh)
 	CCDirector:sharedDirector():replaceScene(fresh:ccScene())

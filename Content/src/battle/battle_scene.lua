@@ -11,7 +11,8 @@ local class = {}
 ed.scene = class
 --add by xinghui
 class.speedMultiplier = {[1] = 1, [2] = 2, [3] = 3, [4] = 4}
-class.curSpeedState = 1
+class.curSpeedState = class.curSpeedState or 1
+
 --
 local returnBtnTapHandler, nextBtnTapHandler, googlePlayTapHandler
 
@@ -276,10 +277,10 @@ local function createPauseLayer(self)
 	pauseContainer:runAction(sequence)
 end
 class.createPauseLayer = createPauseLayer
-
 local function exit()
 	--add by xinghui
-	class.curSpeedState = 1
+	class.speedBtn = nil
+
 	class.speedBtn = nil
 	class.speedUnableBtn = nil
 	if not ed.engine.stage_ended then

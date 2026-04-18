@@ -151,7 +151,7 @@ local function doClickSweep(self, times)
 end
 class.doClickSweep = doClickSweep
 local function doRepeatOnce(self)
-  if not ed.playerlimit.checkAreaUnlock("Raid One Function") then
+  if not (ed.config and ed.config.localMode) and not ed.playerlimit.checkAreaUnlock("Raid One Function") then
     ed.showHandyDialog("vipLocked", {
       vip = ed.playerlimit.getAreaUnlockvip("Raid One Function"),
       name = T(LSTR("PRIVILEGE.FARM"))
@@ -162,7 +162,7 @@ local function doRepeatOnce(self)
 end
 class.doRepeatOnce = doRepeatOnce
 local function doRepeatSome(self)
-  if not ed.playerlimit.checkAreaUnlock("Raid Ten Function") then
+  if not (ed.config and ed.config.localMode) and not ed.playerlimit.checkAreaUnlock("Raid Ten Function") then
     ed.showHandyDialog("vipLocked", {
       vip = ed.playerlimit.getAreaUnlockvip("Raid Ten Function"),
       name = T(LSTR("STAGEDETAIL.RAID_MULTIPLE_TIMES"))
@@ -468,7 +468,7 @@ local function createRepeatBattle(self)
 end
 class.createRepeatBattle = createRepeatBattle
 local function refreshSweepContainer(self)
-  if ed.player:getvip() > 0 then
+  if ed.config and ed.config.localMode or ed.player:getvip() > 0 then
     if not tolua.isnull(self.repeatContainer) then
       self.repeatContainer:setVisible(true)
     end

@@ -37,22 +37,21 @@ end
 class.refreshAmount = refreshAmount
 local initAmount = function(self, addition)
   addition = addition or {}
-  if not addition.forceShow and self.param.level then
-    return
-  end
   local id = self.param.id
-  local amount = ed.player.equip_qunty[id] or 0
+  local amount = (ed.player and ed.player.equip_qunty and ed.player.equip_qunty[id]) or 0
+
   local amountColor = ccc3(0, 71, 188)
   if amount == 0 then
     amountColor = ccc3(255, 0, 0)
   end
   local ui = self.ui
+
   local ui_info = {
     {
       t = "Label",
       base = {
         name = "amount_title",
-        text = T(LSTR("EQUIPINFO.HAVE"), tostring(amount)),
+        text = T(LSTR("EQUIPINFO.HAVE")) .. " " .. amount .. " " .. T(LSTR("EQUIPINFO.ITEM")),
         size = 20
       },
       layout = {
@@ -67,11 +66,11 @@ local initAmount = function(self, addition)
       t = "Label",
       base = {
         name = "amount_label",
-        text = amount,
+        text = tostring(amount),
         size = 18
       },
       layout = {
-        position = ccp(180, 309)
+        position = ccp(140, 309)
       },
       config = {color = amountColor, visible = false}
     },
@@ -94,8 +93,10 @@ local initAmount = function(self, addition)
   }
   local readNode = ed.readnode.create(ui.frame, ui)
   readNode:addNode(ui_info)
+
 end
 class.initAmount = initAmount
+
 local initAtt = function(self, addition)
   addition = addition or {}
   local param = self.param

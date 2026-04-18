@@ -1433,9 +1433,8 @@ end
 class.getPlayerTotalDamage = getPlayerTotalDamage
 
 local function exitStage(self, result, exitFlag)
-	--add by xinghui
-	ed.scene.curSpeedState = 1
-	--
+		--
+
 	self.running = false
 	self.enabled = false
 	self.stage_ended = true

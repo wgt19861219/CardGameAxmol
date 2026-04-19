@@ -327,6 +327,12 @@ local refreshHeroList = function(self, list)
     v:hide()
   end
   self.listLine:setVisible(false)
+  if self.draglist and self.draglist.trackedItems then
+    -- trackedItems[1] = listContainer (added by prepareLoad)
+    self.draglist.trackedItems = { self.draglist.trackedItems[1] }
+    self.draglist._lastClipPosX = nil
+    self.draglist._lastClipPosY = nil
+  end
   for i = 1, #list do
     local pt = (list[i - 1] or {})._tid
     local tid = list[i]._tid
@@ -356,6 +362,9 @@ local refreshHeroList = function(self, list)
         self.summonTutorialID = tid
       end
       self.heroIcon[tid]:show()
+      if self.draglist and self.draglist.trackedItems then
+        table.insert(self.draglist.trackedItems, self.heroIcon[tid].bg)
+      end
     end
   end
   if self.draglist ~= nil then

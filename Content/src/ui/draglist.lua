@@ -27,6 +27,7 @@ end
 class.getListPos = getListPos
 local setListPos = function(self, pos)
 	self.listLayer:setPosition(pos)
+	self:updateItemsVisible()
 	if self.noshade then
 		return
 	end
@@ -83,6 +84,11 @@ local addItem = function(self, node, pos)
 	if not tolua.isnull(self.listLayer) then
 		self.listLayer:addChild(node)
 	end
+	if self.trackedItems then
+		table.insert(self.trackedItems, node)
+		self._lastClipPosX = nil
+		self._lastClipPosY = nil
+	end
 end
 class.addItem = addItem
 local setUpdateListItemVisibleEnable = function(self, isEnable)
@@ -112,12 +118,52 @@ local setItemDirectParent = function(self, parentNode)
 end
 class.setItemDirectParent = setItemDirectParent
 local updateItemsVisible = function(self, isForceUpdateAll)
-	local bSuc = false
-	return bSuc
+	if not self.trackedItems or #self.trackedItems == 0 then return end
+	if not self.cliprect then return end
+	local px, py = self.listLayer:getPosition()
+	if not isForceUpdateAll and self._lastClipPosX == px and self._lastClipPosY == py then return end
+	self._lastClipPosX = px
+	self._lastClipPosY = py
+	local cr = self.cliprect
+	local cx, cy, cw, ch = cr.origin.x, cr.origin.y, cr.size.width, cr.size.height
+	local items = self.trackedItems
+	local i = 1
+	while i <= #items do
+		local node = items[i]
+		if tolua.isnull(node) then
+			table.remove(items, i)
+		else
+			local nx, ny = node:getPosition()
+			local ppx, ppy = 0, 0
+			local parent = node:getParent()
+			while parent and not tolua.isnull(parent) and parent ~= self.listLayer do
+				local dpx, dpy = parent:getPosition()
+				ppx, ppy = ppx + dpx, ppy + dpy
+				parent = parent:getParent()
+			end
+			local absX = px + ppx + nx
+			local absY = py + ppy + ny
+			local sz = node:getContentSize()
+			local sw = sz.width
+			local sh = sz.height
+			if sw > 0 and sh > 0 then
+				local halfW = sw * 0.5
+				local halfH = sh * 0.5
+				local visible = (absX + halfW > cx) and (absX - halfW < cx + cw) and (absY + halfH > cy) and (absY - halfH < cy + ch)
+				node:setVisible(visible)
+			else
+				node:setVisible(true)
+			end
+			i = i + 1
+		end
+	end
 end
 class.updateItemsVisible = updateItemsVisible
 local clearList = function(self)
 	self.listLayer:removeAllChildrenWithCleanup(true)
+	if self.trackedItems then
+		self.trackedItems = {}
+	end
 end
 class.clearList = clearList
 local function create(param)
@@ -144,6 +190,7 @@ local reset = function(self)
 	end
 	self.listLayer:stopAllActions()
 	self.listLayer:setPosition(ccp(self.oriPosX, self.oriPosY))
+	self:updateItemsVisible()
 end
 class.reset = reset
 local update = function(self)
@@ -349,6 +396,9 @@ local initLayer = function(self, info)
 	self.layer = layer
 	self.mainLayer = self.layer
 	self.clipNode = nil
+	self.trackedItems = {}
+	self._lastClipPosX = nil
+	self._lastClipPosY = nil
 	self.clipLayer = layer
 	self:initClipRect(cliprect)
 	local listLayer = CCLayer:create()
@@ -686,6 +736,24 @@ local listEaseBackOut = function(self, x, y)
 	end
 	if (endx ~= lx or endy ~= ly) and not tolua.isnull(self.listLayer) then
 		self.listLayer:runAction(ease)
+		if self._clipUpdateId then
+			self.listScheduler:unscheduleScriptEntry(self._clipUpdateId)
+		end
+		local clipSchedId
+		local function clipUpdate(dt)
+			if tolua.isnull(self.listLayer) then
+				self.listScheduler:unscheduleScriptEntry(clipSchedId)
+				self._clipUpdateId = nil
+				return
+			end
+			self:updateItemsVisible()
+			if self.listLayer:numberOfRunningActions() == 0 then
+				self.listScheduler:unscheduleScriptEntry(clipSchedId)
+				self._clipUpdateId = nil
+			end
+		end
+		clipSchedId = self.listScheduler:scheduleScriptFunc(clipUpdate, 0, false)
+		self._clipUpdateId = clipSchedId
 	end
 end
 class.listEaseBackOut = listEaseBackOut
@@ -862,6 +930,7 @@ local function longPress(self, x, y)
 						dy = dy * coefficient
 					end
 					self.listLayer:setPosition(px, py + dy)
+					self:updateItemsVisible()
 				end
 				coefficient = k_coefficient
 				px, py = self.listLayer:getPosition()
@@ -876,6 +945,7 @@ local function longPress(self, x, y)
 						dx = dx * coefficient
 					end
 					self.listLayer:setPosition(px + dx, py)
+					self:updateItemsVisible()
 				end
 			end
 				elseif event == "ended" then

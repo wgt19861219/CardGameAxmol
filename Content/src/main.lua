@@ -1243,7 +1243,6 @@ for _, mod in ipairs(coreModules) do
                 handleGmCmd(obj)
             else
                 -- 其他消息：尝试 local_server，失败则直接构造 down_msg 并 dispatch
-                print("[STUB-NET] else branch for: " .. tostring(msgType))
                 local handled = false
                 local ls = rawget(_G, "local_server")
                 if ls and ls.handle then
@@ -1606,7 +1605,38 @@ for _, mod in ipairs(coreModules) do
                         elseif msgType == "hero_equip_upgrade" then
                             data._hero_equip_upgrade_reply = { _result = "success" }
                         elseif msgType == "consume_item" then
-                            data._consume_item_reply = {}
+                            local hid = msg._hero_id
+                            local itemBits = msg._item_id
+                            local hero = hid and ed.player and ed.player.heroes[hid]
+                            if hero then
+                                local expGain = 60
+                                local amount = 1
+                                if itemBits then
+                                    local amt, id = ed.splitbits(itemBits, 11, 10)
+                                    amount = amt or 1
+                                    if id then
+                                        local eq = ed.getDataTable("equip")
+                                        if eq and eq[id] then
+                                            expGain = eq[id]["Exp"] or 60
+                                        end
+                                    end
+                                end
+                                hero:addExp(expGain * amount)
+                                ed.saveGame()
+                                data._consume_item_reply = {
+                                    _hero = {
+                                        _tid = hero._tid,
+                                        _level = hero._level,
+                                        _exp = hero._exp,
+                                        _rank = hero._rank or 1,
+                                        _stars = hero._stars or 1,
+                                        _gs = hero._gs or 0,
+                                        _state = hero._state or "idle",
+                                    }
+                                }
+                            else
+                                data._consume_item_reply = {}
+                            end
                         elseif msgType == "tutorial" then
                             data._tutorial_reply = { _result = "success" }
                         elseif msgType == "set_name" then
@@ -1886,6 +1916,7 @@ for _, mod in ipairs(coreModules) do
                                     end)
                                 end
                                 if handler then handler() end
+                                if ed.saveGame then pcall(function() ed.saveGame() end) end
                             end
                             -- sync_vitality / buy_vitality 回复
                             if data._sync_vitality_reply then
@@ -2214,6 +2245,34 @@ local function ensureStubsAfterTools()
                 ids[1] = math.random(1, 15)
                 local cb2 = ed.netreply and ed.netreply.askMagicsoul
                 if cb2 then pcall(cb2, ids); ed.netreply.askMagicsoul = nil end
+            elseif msgType == "consume_item" then
+                local hid = msg._hero_id
+                local itemBits = msg._item_id
+                local hero = hid and ed.player and ed.player.heroes[hid]
+                if hero then
+                    local expGain = 60
+                    local amount = 1
+                    if itemBits then
+                        local amt, id = ed.splitbits(itemBits, 11, 10)
+                        amount = amt or 1
+                        if id then
+                            local eq = ed.getDataTable("equip")
+                            if eq and eq[id] then
+                                expGain = eq[id]["Exp"] or 60
+                            end
+                        end
+                    end
+                    hero:addExp(expGain * amount)
+                    ed.saveGame()
+                    pcall(function()
+                        local rdata = ed.netdata and ed.netdata.eat_exp
+                        if rdata then
+                            ed.player:consumeEquip(rdata.id, rdata.amount)
+                        end
+                    end)
+                    local cb3 = ed.netreply and ed.netreply.eat_exp
+                    if cb3 then pcall(cb3); ed.netreply.eat_exp = nil end
+                end
             end
         end
     end

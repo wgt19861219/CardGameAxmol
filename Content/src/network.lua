@@ -876,6 +876,7 @@ local function dispatch(msg)
 		if handler then
 			handler()
 		end
+		if ed.saveGame then pcall(function() ed.saveGame() end) end
 	end
 	if msg._equip_synthesis_reply then
 		local reply = msg._equip_synthesis_reply

@@ -1260,10 +1260,112 @@ local function createWindow(self)
           offset = ccp(0, 2)
         }
       }
+    },
+    {
+      t = "Scale9Sprite",
+      base = {
+        name = "export_save",
+        res = "UI/alpha/HVGA/sell_number_button.png",
+        capInsets = CCRectMake(15, 22, 15, 25)
+      },
+      layout = {
+        position = ccp(615, 252)
+      },
+      config = {
+        scaleSize = CCSizeMake(130, 55)
+      }
+    },
+    {
+      t = "Scale9Sprite",
+      base = {
+        name = "export_save_press",
+        res = "UI/alpha/HVGA/sell_number_button_down.png",
+        capInsets = CCRectMake(15, 22, 15, 25),
+        parent = "export_save"
+      },
+      layout = {
+        anchor = ccp(0, 0),
+        position = ccp(0, 0)
+      },
+      config = {
+        scaleSize = CCSizeMake(130, 55),
+        visible = false
+      }
+    },
+    {
+      t = "Label",
+      base = {
+        name = "export_save_label",
+        text = "导出存档",
+        fontinfo = "ui_normal_button",
+        size = 20,
+        parent = "export_save"
+      },
+      layout = {
+        position = ccp(65, 27)
+      },
+      config = {
+        color = ccc3(235, 223, 207),
+        shadow = {
+          color = ccc3(0, 0, 0),
+          offset = ccp(0, 2)
+        }
+      }
+    },
+    {
+      t = "Scale9Sprite",
+      base = {
+        name = "import_save",
+        res = "UI/alpha/HVGA/sell_number_button.png",
+        capInsets = CCRectMake(15, 22, 15, 25)
+      },
+      layout = {
+        position = ccp(615, 192)
+      },
+      config = {
+        scaleSize = CCSizeMake(130, 55)
+      }
+    },
+    {
+      t = "Scale9Sprite",
+      base = {
+        name = "import_save_press",
+        res = "UI/alpha/HVGA/sell_number_button_down.png",
+        capInsets = CCRectMake(15, 22, 15, 25),
+        parent = "import_save"
+      },
+      layout = {
+        anchor = ccp(0, 0),
+        position = ccp(0, 0)
+      },
+      config = {
+        scaleSize = CCSizeMake(130, 55),
+        visible = false
+      }
+    },
+    {
+      t = "Label",
+      base = {
+        name = "import_save_label",
+        text = "导入存档",
+        fontinfo = "ui_normal_button",
+        size = 20,
+        parent = "import_save"
+      },
+      layout = {
+        position = ccp(65, 27)
+      },
+      config = {
+        color = ccc3(235, 223, 207),
+        shadow = {
+          color = ccc3(0, 0, 0),
+          offset = ccp(0, 2)
+        }
+      }
     }
   }
   readnode:addNode(ui_info)
-  
+
   self:createHeadIcon()
   self:createName()
   self:createPlayerInformation()
@@ -1622,6 +1724,149 @@ local function doQuitSocietyTouch(self)
   return handler
 end
 class.doQuitSocietyTouch = doQuitSocietyTouch
+local function doClickExportSave(self)
+  local ok, err = pcall(function()
+    local fu = CCFileUtils:sharedFileUtils()
+    local writablePath = fu:getWritablePath()
+    local srcPath = writablePath .. "cardgame_save.json"
+    local f = io.open(srcPath, "r")
+    if not f then
+      ed.showAlertDialog({text = "未找到存档文件"})
+      return
+    end
+    local content = f:read("*a")
+    f:close()
+    local ud = CCUserDefault:sharedUserDefault()
+    ud:setStringForKey("cardgame_save_export", content)
+    local exportPaths = {
+      writablePath .. "cardgame_save_export.json",
+      "/sdcard/Download/cardgame_save_export.json",
+      "/storage/emulated/0/Download/cardgame_save_export.json"
+    }
+    local savedTo = nil
+    for _, path in ipairs(exportPaths) do
+      local out = io.open(path, "w")
+      if out then
+        out:write(content)
+        out:close()
+        savedTo = path
+        break
+      end
+    end
+    ed.showAlertDialog({text = "存档导出成功！\n换机时用系统自带的数据迁移\n工具即可将存档带到新设备"})
+  end)
+  if not ok then
+    ed.showAlertDialog({text = "导出失败: " .. tostring(err)})
+  end
+end
+class.doClickExportSave = doClickExportSave
+local function doExportSaveTouch(self)
+  local isPress
+  local ui = self.ui
+  local button = ui.export_save
+  local press = ui.export_save_press
+  local function handler(event, x, y)
+    if event == "began" then
+      if ed.containsPoint(button, x, y) then
+        isPress = true
+        press:setVisible(true)
+      end
+    elseif event == "ended" then
+      if isPress then
+        press:setVisible(false)
+        if ed.containsPoint(button, x, y) then
+          self:doClickExportSave()
+        end
+      end
+      isPress = nil
+    end
+  end
+  return handler
+end
+class.doExportSaveTouch = doExportSaveTouch
+local function doClickImportSave(self)
+  local ok, err = pcall(function()
+    local fu = CCFileUtils:sharedFileUtils()
+    local writablePath = fu:getWritablePath()
+    local content = nil
+    local ud = CCUserDefault:sharedUserDefault()
+    local saved = ud:getStringForKey("cardgame_save_export")
+    if saved and #saved > 10 then
+      content = saved
+    end
+    if not content then
+      local importPaths = {
+        writablePath .. "cardgame_save_export.json",
+        "/sdcard/Download/cardgame_save_export.json",
+        "/storage/emulated/0/Download/cardgame_save_export.json"
+      }
+      for _, path in ipairs(importPaths) do
+        local f = io.open(path, "r")
+        if f then
+          content = f:read("*a")
+          f:close()
+          break
+        end
+      end
+    end
+    if not content then
+      ed.showAlertDialog({text = "未找到导出的存档\n请先在旧设备上点击导出，\n再用系统数据迁移工具\n将应用数据迁到本机"})
+      return
+    end
+    local decodeOk, data = pcall(json.decode, content)
+    if not decodeOk or not data or type(data) ~= "table" then
+      ed.showAlertDialog({text = "存档文件格式无效"})
+      return
+    end
+    local dstPath = writablePath .. "cardgame_save.json"
+    local out = io.open(dstPath, "w")
+    if not out then
+      ed.showAlertDialog({text = "无法写入存档"})
+      return
+    end
+    out:write(content)
+    out:close()
+    if ed.player and ed.player.setup then
+      ed.player.heroes = {}
+      ed.player:setup(data)
+      if ed.recalcHeroGs and ed.player.heroes then
+        for tid, hero in pairs(ed.player.heroes) do
+          ed.recalcHeroGs(hero)
+        end
+      end
+      ed.saveGame()
+    end
+    ed.showAlertDialog({text = "存档导入成功！"})
+  end)
+  if not ok then
+    ed.showAlertDialog({text = "导入失败: " .. tostring(err)})
+  end
+end
+class.doClickImportSave = doClickImportSave
+local function doImportSaveTouch(self)
+  local isPress
+  local ui = self.ui
+  local button = ui.import_save
+  local press = ui.import_save_press
+  local function handler(event, x, y)
+    if event == "began" then
+      if ed.containsPoint(button, x, y) then
+        isPress = true
+        press:setVisible(true)
+      end
+    elseif event == "ended" then
+      if isPress then
+        press:setVisible(false)
+        if ed.containsPoint(button, x, y) then
+          self:doClickImportSave()
+        end
+      end
+      isPress = nil
+    end
+  end
+  return handler
+end
+class.doImportSaveTouch = doImportSaveTouch
 local function doCloseTouch(self)
   local isPressClose, isPressOut
   local ui = self.ui
@@ -1820,6 +2065,8 @@ local doMainLayerTouch = function(self)
   local closeTouch = self:doCloseTouch()
   local changeHeadTouch = self:doChangeHeadTouch()
   local changeNameTouch = self:doChangeNameTouch()
+  local exportSaveTouch = self:doExportSaveTouch()
+  local importSaveTouch = self:doImportSaveTouch()
   local quitSocietyTouch = self:doQuitSocietyTouch()
   local setupTouch = self:doSetupButtonTouch()
   local selectServerTouch = self:doSelectServerTouch()
@@ -1845,6 +2092,8 @@ local supportTouch = self:doSupportTouch()
       closeTouch(event, x, y)
       changeHeadTouch(event, x, y)
       changeNameTouch(event, x, y)
+      exportSaveTouch(event, x, y)
+      importSaveTouch(event, x, y)
       quitSocietyTouch(event, x, y)
       setupTouch(event, x, y)
       selectServerTouch(event,x,y)

@@ -21,16 +21,22 @@ end
 class.doFadeOut = doFadeOut
 local refreshAmount = function(self)
   local ui = self.ui
+  local amount = ed.player.equip_qunty[self.param.id] or 0
   local label = ui.amount_label
-  local amount = ed.player.equip_qunty[self.param.id]
-  ed.setLabelString(label, amount)
-  if amount == 0 then
-    ed.setLabelColor(label, ccc3(255, 0, 0))
-  else
-    ed.setLabelColor(label, ccc3(0, 71, 188))
+  if label and not tolua.isnull(label) then
+    ed.setLabelString(label, amount)
+    if amount == 0 then
+      ed.setLabelColor(label, ccc3(255, 0, 0))
+    else
+      ed.setLabelColor(label, ccc3(0, 71, 188))
+    end
+  end
+  local title = ui.amount_title
+  if title and not tolua.isnull(title) then
+    ed.setLabelString(title, T(LSTR("EQUIPINFO.HAVE")) .. " " .. amount .. " " .. T(LSTR("EQUIPINFO.ITEM")))
   end
   if not tolua.isnull(ui.fragment_amount) then
-    ed.setString(ui.fragment_amount, string.format("%d/%d", amount, self.uinfo.need))
+    ed.setString(ui.fragment_amount, string.format("%d/%d", amount, self.uinfo and self.uinfo.need or 0))
   end
   return amount
 end

@@ -604,18 +604,37 @@ M.handlers.hero_evolve = function(data, obj, localdata)
 end
 
 -- ========== consume_item ==========
--- obj: { _tid = item_id, ... }
+-- obj: { _hero_id = hero_tid, _item_id = packed_item_info }
 M.handlers.consume_item = function(data, obj, localdata)
-    -- 吃经验丹，找到消耗的物品对应英雄
-    local hero = localdata.heroes[1]
-    if hero then
-        hero.exp = (hero.exp or 0) + 100
-        LocalData.save(localdata)
-
-        data._consume_item_reply = {
-            _hero = buildHero(hero),
-        }
+    local hid = obj._hero_id
+    local itemBits = obj._item_id
+    if not hid then return end
+    local amount, id = ed.splitbits(itemBits, 11, 10)
+    amount = amount or 1
+    local equipTable = ed.getDataTable("equip")
+    local expPerItem = 60
+    if equipTable and id then
+        local cfg = equipTable[id]
+        if cfg then expPerItem = cfg["Exp"] or 60 end
     end
+    local expGain = expPerItem * amount
+    local hero = ed.player and ed.player.heroes and ed.player.heroes[hid]
+    if hero then
+        hero:addExp(expGain)
+    end
+    data._consume_item_reply = {
+        _hero = hero and {
+            _tid = hero._tid,
+            _rank = hero._rank or 1,
+            _level = hero._level or 1,
+            _stars = hero._stars or 1,
+            _exp = hero._exp or 0,
+            _gs = hero._gs or 0,
+            _state = hero._state or "idle",
+            _skill_levels = hero._skill_levels or {1,1,1,1},
+            _items = buildHeroEquips(),
+        } or nil,
+    }
 end
 
 -- ========== equip_synthesis ==========
@@ -917,6 +936,9 @@ M.handlers.sweep_stage = function(data, obj, localdata)
     local times = obj._times or 1
     local expReward, moneyReward = getStageRewards(stage_id)
     local sweepLoot = {}
+    M.sweep_loot_record = M.sweep_loot_record or {}
+    local key = tostring(stage_id)
+    M.sweep_loot_record[key] = M.sweep_loot_record[key] or {}
 
     for t = 1, times do
         local loot = {
@@ -924,15 +946,28 @@ M.handlers.sweep_stage = function(data, obj, localdata)
             _money = moneyReward,
             _items = {},
         }
-        -- 生成掉落物品
         local StageTable = ed.getDataTable("Stage")
         if StageTable and StageTable[stage_id] then
             local stageCfg = StageTable[stage_id]
             for i = 1, 7 do
                 local rewardId = stageCfg["UI reward" .. i]
-                local rewardPro = stageCfg["UI reward" .. i .. " Pro"] or 0
-                if rewardId and rewardId ~= 0 and math_random(1, 100) <= (rewardPro or 0) then
-                    table_insert(loot._items, ed.makebits(11, 1, 10, rewardId))
+                if rewardId and rewardId ~= 0 then
+                    local basePro = stageCfg["UI reward" .. i .. " Pro"] or 34
+                    local rKey = tostring(rewardId)
+                    local missCount = M.sweep_loot_record[key][rKey] or 0
+                    local lootPro
+                    if missCount == 0 then
+                        lootPro = basePro
+                    else
+                        lootPro = basePro * missCount
+                    end
+                    lootPro = math.min(lootPro, 100)
+                    if math_random(1, 100) <= lootPro then
+                        table_insert(loot._items, ed.makebits(11, 1, 10, rewardId))
+                        M.sweep_loot_record[key][rKey] = 0
+                    else
+                        M.sweep_loot_record[key][rKey] = missCount + 1
+                    end
                 end
             end
         end
@@ -1928,6 +1963,7 @@ local function local_dispatch(msg)
             ed.netreply.sweep(reply)
             ed.netreply.sweep = nil
         end
+        ed.sweep_dirty = true
     end
 
     -- consume_item 回复（消耗品/吃经验）
@@ -1941,6 +1977,7 @@ local function local_dispatch(msg)
             end)
         end
         if handler then handler() end
+        if ed.saveGame then pcall(function() ed.saveGame() end) end
     end
 
     -- sync_vitality / buy_vitality 回复

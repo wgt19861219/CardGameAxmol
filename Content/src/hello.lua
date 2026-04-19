@@ -348,17 +348,10 @@ end
 
 local function pushScene(scene)
 	table.insert(scene_stack, scene)
-	-- Never use C++ pushScene: causes UAF crash in Director::setNextScene
 	collectgarbage("stop")
-	CCDirector:sharedDirector():replaceScene(scene:ccScene())
+	CCDirector:sharedDirector():pushScene(scene:ccScene())
 end
 ed.pushScene = pushScene
-
-local function createSceneByIdentity(identity)
-	if identity == "main" then return ed.ui.main.create("main")
-	elseif identity == "stageselect" then return ed.ui.stageselect.create()
-	else return nil end
-end
 
 local function popScene()
 	LegendLog("popScene ")
@@ -372,26 +365,7 @@ local function popScene()
 		end
 	end
 	cleanupBeforeTransition()
-	local prev = scene_stack[#scene_stack]
-	if prev then
-		local fresh = createSceneByIdentity(prev.identity)
-		if fresh then
-			table.remove(scene_stack, #scene_stack)
-			table.insert(scene_stack, fresh)
-			CCDirector:sharedDirector():replaceScene(fresh:ccScene())
-		else
-			-- Unknown identity: go to fresh main
-			for i = #scene_stack, 1, -1 do scene_stack[i] = nil end
-			local m = ed.ui.main.create("main")
-			table.insert(scene_stack, m)
-			CCDirector:sharedDirector():replaceScene(m:ccScene())
-		end
-	else
-		-- Empty stack: go to fresh main
-		local m = ed.ui.main.create("main")
-		table.insert(scene_stack, m)
-		CCDirector:sharedDirector():replaceScene(m:ccScene())
-	end
+	CCDirector:sharedDirector():popScene()
 end
 ed.popScene = popScene
 

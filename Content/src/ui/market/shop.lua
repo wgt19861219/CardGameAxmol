@@ -1047,7 +1047,6 @@ local function onEnterShop(self)
         }, 200)
       end)
       if not ok_fs then
-        LegendLog("[shop] fastsell.pop failed: " .. tostring(err_fs))
       end
     end
   end

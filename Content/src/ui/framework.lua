@@ -441,7 +441,7 @@ local function popBoardWithoutAnim(self)
 	local ui = self.sc_ui
 	for i = 1, #buttons do
 		buttons[i]:setPosition(ccp(res.shortcut_pos_x, res.shortcutBoardButtonPosY[i]))
-		buttons[i]:setOpacity(1)
+		buttons[i]:setOpacity(255)
 		local sb = ui.shortcut_board
 		local size = sb:getContentSize()
 		local bw = size.width
@@ -507,6 +507,14 @@ local function stopPopBoard(self)
 	if not tolua.isnull(board) then
 		board:setContentSize(CCSizeMake(res.shortcut_board_width, res.shortcut_board_height_max))
 	end
+	local buttons = self:scGetButtons()
+	for i = 1, #buttons do
+		if not tolua.isnull(buttons[i]) then
+			buttons[i]:stopAllActions()
+			buttons[i]:setPosition(ccp(res.shortcut_pos_x, res.shortcutBoardButtonPosY[i]))
+			buttons[i]:setOpacity(255)
+		end
+	end
 	self.isPopsb = false
 end
 class.stopPopBoard = stopPopBoard
@@ -521,6 +529,14 @@ local function stopPushBoard(self)
 	local board = self.sc_ui.shortcut_board
 	if not tolua.isnull(board) then
 		board:setContentSize(CCSizeMake(res.shortcut_board_width, res.shortcut_board_height_min))
+	end
+	local buttons = self:scGetButtons()
+	for i = 1, #buttons do
+		if not tolua.isnull(buttons[i]) then
+			buttons[i]:stopAllActions()
+			buttons[i]:setPosition(ccp(res.shortcut_pos_x, res.shortcut_pos_y))
+			buttons[i]:setOpacity(0)
+		end
 	end
 	self.isPushsb = false
 end

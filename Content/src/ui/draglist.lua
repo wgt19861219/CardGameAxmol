@@ -286,13 +286,9 @@ local refreshClipRect = function(self, s)
 end
 class.refreshClipRect = refreshClipRect
 local initClipRect = function(self, rect)
-	local layer = self.clipLayer
 	self.cliprect = rect
 	self.width = rect.size.width
 	self.height = rect.size.height
-	-- 尝试 Layer:setClipRect（Axmol 原生裁剪）
-	local ok = pcall(function() layer:setClipRect(rect) end)
-	-- 如果 setClipRect 不可用或不生效，在 initLayer 中会用 ClippingNode 补充
 end
 class.initClipRect = initClipRect
 local function initShade(self, shadeRes, rect, noshade)
@@ -352,28 +348,13 @@ local initLayer = function(self, info)
 	local layer = CCLayer:create()
 	self.layer = layer
 	self.mainLayer = self.layer
-	-- 用 ClippingNode + DrawNode 矩形 stencil 实现列表裁剪
-	-- Axmol 的 Layer:setClipRect 可能不生效，需要 ClippingNode 替代
-	local clipNode = CCClippingNode:create()
-	clipNode:setInverted(false)
-	clipNode:setAlphaThreshold(0.5)
-	self.clipNode = clipNode
-	-- 创建矩形 stencil（用 CCLayerColor，兼容 Axmol API）
-	local cx, cy = cliprect.origin.x, cliprect.origin.y
-	local cw, ch = cliprect.size.width, cliprect.size.height
-	local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
-	stencil:setContentSize(CCSizeMake(cw, ch))
-	stencil:setPosition(ccp(cx, cy))
-	clipNode:setStencil(stencil)
-	layer:addChild(clipNode, 10)
-	local clipLayer = CCLayer:create()
-	self.clipLayer = clipLayer
+	self.clipNode = nil
+	self.clipLayer = layer
 	self:initClipRect(cliprect)
-	clipNode:addChild(clipLayer)
 	local listLayer = CCLayer:create()
 	self.listLayer = listLayer
 	self.listScheduler = self.listLayer:getScheduler()
-	clipLayer:addChild(listLayer)
+	layer:addChild(listLayer)
 	self:initShade(shadeRes, rect, noshade)
 	if info.message == true or info.message == nil then
 		layer:setTouchEnabled(true)
@@ -827,7 +808,7 @@ local function longPress(self, x, y)
 				local speed = self:getSpeed()
 				self.getSpeedid = self.listScheduler:scheduleScriptFunc(speed, 0, false)
 			end
-		elseif event == "moved" then
+				elseif event == "moved" then
 			if not self.isPressInRect then
 				return
 			end
@@ -897,7 +878,7 @@ local function longPress(self, x, y)
 					self.listLayer:setPosition(px + dx, py)
 				end
 			end
-		elseif event == "ended" then
+				elseif event == "ended" then
 			self.isPressing = nil
 			self:cancelLongPress()
 			self:refreshShade()
@@ -926,7 +907,7 @@ local function longPress(self, x, y)
 			self.pressParam = nil
 			self.isPressInRect = nil
 			self.isLongPress = nil
-		end
+				end
 	end
 	class.doListLayerTouch = doListLayerTouch
 	local getListLayerTouchHandler = function(self)

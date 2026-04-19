@@ -11,7 +11,8 @@ local class = {}
 ed.scene = class
 --add by xinghui
 class.speedMultiplier = {[1] = 1, [2] = 2, [3] = 3, [4] = 4}
-class.curSpeedState = class.curSpeedState or 1
+class.curSpeedState = CCUserDefault:sharedUserDefault():getIntegerForKey("battle_speed_state")
+if class.curSpeedState < 1 or class.curSpeedState > 4 then class.curSpeedState = 1 end
 
 --
 local returnBtnTapHandler, nextBtnTapHandler, googlePlayTapHandler
@@ -898,6 +899,8 @@ local function updateSpeedBtnLabel()
 end
 local function speedBtnHandler()
 	class.curSpeedState = class.curSpeedState >= 4 and 1 or class.curSpeedState + 1
+	CCUserDefault:sharedUserDefault():setIntegerForKey("battle_speed_state", class.curSpeedState)
+	CCUserDefault:sharedUserDefault():flush()
 	updateSpeedBtnLabel()
 end
 local function speedUnableBtnHandler()

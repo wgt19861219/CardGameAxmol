@@ -34,11 +34,7 @@ class.hasPropToEquip = hasPropToEquip
 local function doClickMenu(self)
   lsr:report("clickMenu")
   ed.playMusic(ed.music.map)
-  if ed.stageType(self.param.stage_id) == "act" then
-    ed.replaceScene(ed.ui.exercise.create(self.param.actType))
-  else
-    ed.replaceScene(ed.ui.stageselect.create())
-  end
+  ed.popScene()
 end
 class.doClickMenu = doClickMenu
 local function doClickBack(self)

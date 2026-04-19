@@ -185,18 +185,32 @@ local createList = function(self)
   }, self.draglist.listLayer)
   for i = 1, len do
     local info = list[i]
-    local hero = self:createHero(i, info)
-    hero:setAnchorPoint(ccp(0.5, 0.5))
-    hero:setPosition(ccp(158 + 245 * ((i - 1) % 2) + 120, 330 - prompt:getContentSize().height - 100 * math.floor((i - 1) / 2) - 48))
-    self.draglist:addItem(hero)
+    local ok, hero = pcall(function()
+      return self:createHero(i, info)
+    end)
+    if ok and hero then
+      hero:setAnchorPoint(ccp(0.5, 0.5))
+      hero:setPosition(ccp(158 + 245 * ((i - 1) % 2) + 120, 330 - prompt:getContentSize().height - 100 * math.floor((i - 1) / 2) - 48))
+      self.draglist:addItem(hero)
+    else
+      print("[eatexplist] createHero FAILED for i=" .. i .. " tid=" .. tostring(info._tid) .. " err=" .. tostring(hero))
+    end
   end
   self.draglist:initListHeight(math.ceil(len / 2) * 100 - 5 + 70)
+
 end
 class.createList = createList
+
 local createHero = function(self, i, info)
   local bg = ed.createSprite("UI/alpha/HVGA/package_hero_bg.png")
   local unit = ed.getDataTable("Unit")[info._tid]
+  if not unit then
+    return bg
+  end
   local head = ed.readhero.createIconByID(info._tid, {state = "idle"})
+  if not head then
+    return bg
+  end
   local headIcon = ed.createNode({
     t = "CCNode",
     base = {

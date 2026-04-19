@@ -501,6 +501,7 @@ local playPutonEffect = function(self)
 end
 class.playPutonEffect = playPutonEffect
 local refreshReplyData = function(self)
+  self.equipLayer:refreshAmount()
   if self.up.id == self.id then
     if self.context == "heroDetail" then
       self.infoButtonRemark:setVisible(true)
@@ -1312,6 +1313,13 @@ local function create(config)
   self.hero = ed.player.heroes[self.hid]
   self.baseScene = ed.getCurrentScene()
   self:createPanel(self.id, self.level)
+  self._sweepCheck = function(dt)
+    if ed.sweep_dirty then
+      ed.sweep_dirty = nil
+      pcall(function() self.equipLayer:refreshAmount() self:createCraftTree(self.id, true) end)
+    end
+  end
+  self.baseScene:registerUpdateHandler("sweepRefresh", self._sweepCheck)
   return self
 end
 class.create = create

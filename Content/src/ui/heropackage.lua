@@ -258,6 +258,14 @@ local onEnterHandler = function(self)
       if event == "enter" then
         self.isPushing = nil
         self.firstInto = nil
+        if self.listContainer and not tolua.isnull(self.listContainer) then
+          self.listContainer:removeFromParentAndCleanup(true)
+          self.listContainer = nil
+        end
+        self.heroIcon = {}
+        self:getAllList()
+        local allList = self.heroList and self.heroList.all
+        self:registerUpdateHandler("asyncLoadHeroes", self:asyncLoadHeroes())
         local listX, listY = 0, 0
         if self.draglist:checknull() then
           listX, listY = self.draglist:getListPos()

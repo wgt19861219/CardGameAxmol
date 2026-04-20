@@ -889,7 +889,9 @@ local function syncDate(self)
   function ed.netreply.syncTime()
     xpcall(function()
       if not tolua.isnull(self.mainLayer) then
-        ed.setString(self.ui.title, T(LSTR("DAILYLOGIN._D_MONTHLY_ATTENDANCE_AWARDS"), T(LSTR("DAILYLOGIN.DAILYLOGIN_MONTH_"..os.date("%m", os.time({year=2014, month=getDate().m, day=1, hour=1,min=0,sec=0})))))  )
+        pcall(function()
+          ed.setString(self.ui.title, T(LSTR("DAILYLOGIN._D_MONTHLY_ATTENDANCE_AWARDS"), T(LSTR("DAILYLOGIN.DAILYLOGIN_MONTH_"..os.date("%m", os.time({year=2014, month=getDate().m, day=1, hour=1,min=0,sec=0})))))  )
+        end)
         self:createList()
       end
     end, EDDebug)
@@ -907,7 +909,7 @@ local eeHandler = function(self)
     xpcall(function()
       if event == "enter" then
       end
-    end, EDDeug)
+    end, EDDebug)
   end
   return handler
 end

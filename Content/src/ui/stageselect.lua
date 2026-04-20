@@ -265,7 +265,7 @@ local function updateGuildInstanceButton(self)
 	if self.mode == "guild" then
 		--self.modeui.guild:setVisible(true)
 		--self.modeui.guild_label:setVisible(true)
-		--�����ŶӸ���
+		--�����ŶӸ���
 		self.modeui.guild:setVisible(false)
 		self.modeui.guild_label:setVisible(false)
 		refreshModeButtonPosition(self)
@@ -281,7 +281,7 @@ local function updateGuildInstanceButton(self)
 		if info and info.guildInstance == true then
 			--self.modeui.guild_label:setVisible(true)
 			--self.modeui.guild:setVisible(true)
-			--�����ŶӸ���
+			--�����ŶӸ���
 			self.modeui.guild_label:setVisible(false)
 			self.modeui.guild:setVisible(false)
 
@@ -449,11 +449,12 @@ local function doChangeChapter(self, chapter)
 			self:setChapter(math.max(self:getChapter() - 1, CHAPTER_MIN))
 		end
 	end
-	if self:getChapter() ~= preChapter then
-		self:createMap(self:getChapter(), self.mode)
-		self:createTitle(self:getChapter())
-		self:setChapterButtonState()
-	end
+		if self:getChapter() ~= preChapter then
+			self:createMap(self:getChapter(), self.mode)
+			self:createTitle(self:getChapter())
+			self:refreshStarRewardButton(self:getChapter())
+			self:setChapterButtonState()
+		end
 	updateGuildInstanceButton(self)
 end
 class.doChangeChapter = doChangeChapter
@@ -621,8 +622,9 @@ local getMainTouchHandler = function(self)
 	local guildButtonTouch = self:doGuildButtonTouch()
 	local recordTouch = self:doRecordTouch()
 	local function handler(event, x, y)
-		xpcall(function()
-			modeButtonTouch(event, x, y)
+			xpcall(function()
+				if self:doStarRewardTouch(event, x, y) then return end
+				modeButtonTouch(event, x, y)
 			chapterDrag(event, x, y)
 			changeChapterButtonTouch(event, x, y)
 			self:doStageTouch()(event, x, y)
@@ -702,6 +704,190 @@ local function createDot(self)
 	end
 end
 class.createDot = createDot
+
+-----------------------------------------------------------------------
+-- 章节星数奖励按钮 + 弹窗
+-----------------------------------------------------------------------
+local function createStarRewardButton(self, chapter)
+	if self.starRewardBtnContainer then
+		self.starRewardBtnContainer:removeFromParentAndCleanup(true)
+	end
+	local btnContainer = CCSprite:create()
+	self.starRewardBtnContainer = btnContainer
+	self.mainLayer:addChild(btnContainer, 25)
+
+	local bg = ed.createScale9Sprite("UI/alpha/HVGA/elitetoggle-ns.png")
+	bg:setPosition(ccp(820, 55))
+	bg:setContentSize(CCSizeMake(120, 45))
+	btnContainer:addChild(bg)
+
+	local label = ed.createLabelWithFontInfo("Star", "ui_normal_button")
+	label:setPosition(ccp(820, 55))
+	btnContainer:addChild(label)
+
+	self.starRewardBtn = bg
+	self.starRewardChapter = chapter
+
+	local totalStars = ed.player:getChapterStars(chapter)
+	local starLabel = ed.createLabelTTF(tostring(totalStars), 14)
+	starLabel:setPosition(ccp(820, 32))
+	starLabel:setColor(ccc3(255, 215, 0))
+	btnContainer:addChild(starLabel)
+	self.starRewardCountLabel = starLabel
+
+	self.starRewardPanel = nil
+	self.starRewardTierBtns = nil
+end
+class.createStarRewardButton = createStarRewardButton
+
+local function closeStarRewardPanel(self)
+	if self.starRewardPanel then
+		self.starRewardPanel:removeFromParentAndCleanup(true)
+		self.starRewardPanel = nil
+		self.starRewardTierBtns = nil
+	end
+end
+class.closeStarRewardPanel = closeStarRewardPanel
+
+local function refreshStarRewardButton(self, chapter)
+	if not self.starRewardBtnContainer then return end
+	if chapter then self.starRewardChapter = chapter end
+	local ch = self.starRewardChapter
+	if not ch then return end
+	local totalStars = ed.player:getChapterStars(ch)
+	if self.starRewardCountLabel then
+		self.starRewardCountLabel:setString(tostring(totalStars))
+	end
+end
+class.refreshStarRewardButton = refreshStarRewardButton
+
+local function showStarRewardPanel(self)
+	if self.starRewardPanel then
+		self:closeStarRewardPanel()
+		return
+	end
+	local chapter = self.starRewardChapter
+	if not chapter then return end
+
+	local status, totalStars = ed.player:getChapterStarStatus(chapter)
+	local panel = CCSprite:create()
+	self.starRewardPanel = panel
+	self.mainLayer:addChild(panel, 100)
+
+	local bg = ed.createScale9Sprite("UI/alpha/HVGA/package_herolist_bg.png")
+	bg:setContentSize(CCSizeMake(350, 280))
+	bg:setPosition(ccp(480, 280))
+	panel:addChild(bg)
+
+	local titleBg = ed.createSprite("UI/alpha/HVGA/task_window_title_bg.png")
+	titleBg:setPosition(ccp(175, 260))
+	bg:addChild(titleBg)
+	local title = ed.createLabelWithFontInfo("Ch" .. tostring(chapter) .. " Star", "op_act_title")
+	title:setPosition(ccp(175, 15))
+	titleBg:addChild(title)
+
+	local closeBtn = ed.createSprite("UI/alpha/HVGA/herodetail-detail-close.png")
+	closeBtn:setPosition(ccp(480 + 170, 280 + 135))
+	panel:addChild(closeBtn)
+	self.starRewardCloseBtn = closeBtn
+
+	local starInfo = ed.createLabelTTF("Stars: " .. tostring(totalStars), 18)
+	starInfo:setPosition(ccp(175, 225))
+	starInfo:setColor(ccc3(255, 215, 0))
+	bg:addChild(starInfo)
+
+	self.starRewardTierBtns = {}
+	for i, t in ipairs(status) do
+		local y = 180 - (i - 1) * 65
+
+		local tierBg
+		if t.claimed then
+			tierBg = ed.createScale9Sprite("UI/alpha/HVGA/activity/activity_list_bg_1.png")
+		elseif t.unlocked then
+			tierBg = ed.createScale9Sprite("UI/alpha/HVGA/activity/activity_list_bg_2.png")
+		else
+			tierBg = ed.createScale9Sprite("UI/alpha/HVGA/activity/activity_list_bg_1.png")
+		end
+		tierBg:setContentSize(CCSizeMake(320, 55))
+		tierBg:setPosition(ccp(175, y))
+		bg:addChild(tierBg)
+
+		local tierText = tostring(t.stars) .. ": "
+		for _, rw in ipairs(t.rewards) do
+			if rw.type == "money" then tierText = tierText .. "Gold x" .. tostring(rw.amount) .. " "
+			elseif rw.type == "rmb" then tierText = tierText .. "Dia x" .. tostring(rw.amount) .. " "
+			elseif rw.type == "item" then
+				pcall(function()
+					local eq = ed.getDataTable("equip")
+					if eq and eq[rw.id] then tierText = tierText .. eq[rw.id].Name .. "x" .. tostring(rw.amount) .. " " end
+				end)
+			end
+		end
+		local tierLabel = ed.createLabelTTF(tierText, 15)
+		tierLabel:setPosition(ccp(175, y + 8))
+		tierLabel:setColor(t.unlocked and ccc3(255, 255, 200) or ccc3(180, 180, 180))
+		bg:addChild(tierLabel)
+
+		if t.claimed then
+			local claimedLabel = ed.createLabelTTF("Claimed", 16)
+			claimedLabel:setPosition(ccp(175, y - 15))
+			claimedLabel:setColor(ccc3(100, 200, 100))
+			bg:addChild(claimedLabel)
+		elseif t.unlocked then
+			local claimBtn = ed.createScale9Sprite("UI/alpha/HVGA/tavern_button_normal_1.png")
+			claimBtn:setContentSize(CCSizeMake(80, 30))
+			claimBtn:setPosition(ccp(175, y - 15))
+			bg:addChild(claimBtn)
+			local claimLabel = ed.createLabelWithFontInfo("Claim", "normal_button")
+			claimLabel:setPosition(ccp(175, y - 15))
+			bg:addChild(claimLabel)
+			self.starRewardTierBtns[i] = {btn = claimBtn, tier = t.tier, chapter = chapter}
+		else
+			local lockedLabel = ed.createLabelTTF(tostring(totalStars) .. "/" .. tostring(t.stars), 14)
+			lockedLabel:setPosition(ccp(175, y - 15))
+			lockedLabel:setColor(ccc3(150, 150, 150))
+			bg:addChild(lockedLabel)
+		end
+	end
+end
+class.showStarRewardPanel = showStarRewardPanel
+
+local function doStarRewardTouch(self, event, x, y)
+	if not self.starRewardBtnContainer then return false end
+	if self.mode ~= "normal" then return false end
+
+	if self.starRewardPanel then
+		if self.starRewardCloseBtn and ed.containsPoint(self.starRewardCloseBtn, x, y) then
+			self:closeStarRewardPanel()
+			return true
+		end
+		if self.starRewardTierBtns then
+			for i, info in pairs(self.starRewardTierBtns) do
+				if info.btn and ed.containsPoint(info.btn, x, y) then
+					local ok = ed.player:claimChapterStarReward(info.chapter, info.tier)
+					if ok then
+						ed.showToast("Claimed!")
+						if ed.saveGame then pcall(function() ed.saveGame() end) end
+					else
+						ed.showToast("Failed")
+					end
+					self:closeStarRewardPanel()
+					self:refreshStarRewardButton()
+					return true
+				end
+			end
+		end
+		return true
+	end
+
+	if event == "ended" and self.starRewardBtn and ed.containsPoint(self.starRewardBtn, x, y) then
+		self:showStarRewardPanel()
+		return true
+	end
+	return false
+end
+class.doStarRewardTouch = doStarRewardTouch
+
 local function createChapterButton(self)
 	local left = ed.createSprite("UI/alpha/HVGA/prevchap.png")
 	local right = ed.createSprite("UI/alpha/HVGA/nextchap.png")
@@ -1610,6 +1796,10 @@ local function create(chapter, mode, stage)
 	self:createModeButton()
 	self:createChapterButton()
 	self:createDot()
+	-- 章节星数奖励按钮（仅普通模式显示）
+	if mode == "normal" then
+		self:createStarRewardButton(chapter)
+	end
 	updateModeButtonState(self)
 	self:btRegisterHandler({
 		handler = self:getMainTouchHandler(),

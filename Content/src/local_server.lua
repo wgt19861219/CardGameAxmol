@@ -2158,8 +2158,10 @@ end
 -----------------------------------------------------------------------
 local function getActivityPeriod()
     local now = os.time()
-    local dayStart = os.time(os.date("!*t", now))
-    local wday = os.date("!*t", now).wday
+    local t = os.date("*t", now)
+    t.hour = 0; t.min = 0; t.sec = 0
+    local dayStart = os.time(t)
+    local wday = t.wday
     local daysToMonday = (wday == 1) and 6 or (wday - 2)
     local weekStart = dayStart - daysToMonday * 86400
     local weekEnd = weekStart + 7 * 86400
@@ -2217,13 +2219,19 @@ local function buildTavernBonusActivity(actType, title, desc, spent, startT, end
         _rules = "活动期间可享受优惠抽卡",
         _start_time = startT,
         _end_time = endT,
-        _rewards = {}
+        _amount = spent or 0,
+        _rewards = {
+            {
+                _type = "money", _id = 0, _amount = 10000,
+                _dailyjob = { _id = "act_" .. actType, _task_target = 1, _last_rewards_time = 0 }
+            }
+        }
     }
 end
 
 local function generateActivities(localdata)
     local activities = {}
-    local _, startT, endT = getActivityPeriod()
+    local startT, endT = getActivityPeriod()
 
     table.insert(activities, buildDiamondConsumeActivity(localdata))
 

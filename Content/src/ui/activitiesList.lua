@@ -16,11 +16,7 @@ function Activities.ListClick(itemData, x, y)
     return
   end
   local info = itemData.extraData.data
-  if "single_br_tavern" == info._type or "combo_br_tavern" == info._type or "single_gd_tavern" == info._type or "combo_gd_tavern" == info._type or "magic_soul_tavern" == info._type then
-    ed.ui.tenPumping.create(info)
-  elseif "rmb_recharge" == info._type or "diamond_consume" == info._type then
-    ed.ui.rebateActivities.create(info)
-  end
+  ed.ui.rebateActivities.create(info)
 end
 local splitInfo = function(info)
   print("info " .. #info)
@@ -39,46 +35,71 @@ local splitInfo = function(info)
 end
 local setDescPosition = function(k)
   local listData = activitiesPanel.findListView:getListData(k)
-  local size = listData.controllers.name1:getContentSize()
+  if not listData or not listData.controllers then return end
+  local name1 = listData.controllers.name1
+  local info1 = listData.controllers.info1
+  if not name1 or not info1 then return end
+  local size = name1:getContentSize()
   if size.width > 420 then
     size.width = 420
-    listData.controllers.name1:setDimensions(CCSizeMake(size.width, size.height))
+    name1:setDimensions(size.width, size.height)
   end
-  listData.controllers.info1:setPosition(ccp(size.width + 20, -15))
-  local size1 = listData.controllers.info1:getContentSize()
+  info1:setPosition(ccp(size.width + 20, -15))
+  local size1 = info1:getContentSize()
   if size.width + size1.width > 460 then
     size1.width = 460 - size.width
-    listData.controllers.info1:setDimensions(CCSizeMake(size1.width, size1.height))
+    info1:setDimensions(size1.width, size1.height)
   end
 end
 local function init(info)
+  LegendLog("[activitiesList] init called, info type=" .. type(info))
+  if type(info) ~= "table" then
+    LegendLog("[activitiesList] init ABORT: info is not table")
+    return
+  end
   local rightActivities, endActivities = splitInfo(info)
-  activitiesPanel.findListView:setAutoClipItemsEnabled(false)
-  activitiesPanel.findListView:changeItemConfig(2)
-  activitiesPanel.findListView:addItem({
-    T(LSTR("ACTIVITIESLIST.IN_PROGRESS"))
-  }, {})
-  activitiesPanel.findListView:changeItemConfig(1)
-  for k = 1, #(rightActivities or {}) do
-    local v = rightActivities[k]
-    local title = string.format("%s:", v._title)
-    local desc = v._desc
-    activitiesPanel.findListView:addItem({title, desc}, {data = v})
-    setDescPosition(k + 1)
+  LegendLog("[activitiesList] splitInfo done, right=" .. #rightActivities .. " end=" .. #endActivities)
+  if not activitiesPanel then
+    LegendLog("[activitiesList] init ABORT: activitiesPanel is nil")
+    return
   end
-  activitiesPanel.findListView:changeItemConfig(2)
-  if #endActivities > 0 then
+  if not activitiesPanel.findListView then
+    LegendLog("[activitiesList] init ABORT: findListView is nil")
+    return
+  end
+  local ok, err = pcall(function()
+    activitiesPanel.findListView:setAutoClipItemsEnabled(false)
+    activitiesPanel.findListView:changeItemConfig(2)
     activitiesPanel.findListView:addItem({
-      T(LSTR("ACTIVITIESLIST.ENDED"))
+      T(LSTR("ACTIVITIESLIST.IN_PROGRESS"))
     }, {})
-  end
-  activitiesPanel.findListView:changeItemConfig(1)
-  for k = 1, #(endActivities or {}) do
-    local v = endActivities[k]
-    local title = string.format("%s:", v._title)
-    local desc = v._desc
-    activitiesPanel.findListView:addItem({title, desc}, {data = v})
-    setDescPosition(k + 2 + #rightActivities)
+    activitiesPanel.findListView:changeItemConfig(1)
+    for k = 1, #(rightActivities or {}) do
+      local v = rightActivities[k]
+      local title = string.format("%s:", v._title)
+      local desc = v._desc
+      activitiesPanel.findListView:addItem({title, desc}, {data = v})
+      setDescPosition(k + 1)
+    end
+    activitiesPanel.findListView:changeItemConfig(2)
+    if #endActivities > 0 then
+      activitiesPanel.findListView:addItem({
+        T(LSTR("ACTIVITIESLIST.ENDED"))
+      }, {})
+    end
+    activitiesPanel.findListView:changeItemConfig(1)
+    for k = 1, #(endActivities or {}) do
+      local v = endActivities[k]
+      local title = string.format("%s:", v._title)
+      local desc = v._desc
+      activitiesPanel.findListView:addItem({title, desc}, {data = v})
+      setDescPosition(k + 2 + #rightActivities)
+    end
+  end)
+  if not ok then
+    LegendLog("[activitiesList] init ERROR: " .. tostring(err))
+  else
+    LegendLog("[activitiesList] init DONE successfully")
   end
 end
 local function refreshList(info)
@@ -86,29 +107,40 @@ local function refreshList(info)
   init(info)
 end
 local function create(info)
+  LegendLog("[activitiesList] create called, info count=" .. tostring(type(info) == "table" and #info or "nil"))
   activitiesInfo = info
   if activitiesPanel then
     refreshList(info)
     return
   end
   if nil == activitiesPanel then
-    activitiesPanel = panelMeta:new2(Activities, EDTables.activitiesConfig.UIRes)
+    local ok, err = pcall(function()
+      activitiesPanel = panelMeta:new2(Activities, EDTables.activitiesConfig.UIRes)
+    end)
+    if not ok then
+      LegendLog("[activitiesList] panelMeta ERROR: " .. tostring(err))
+      return
+    end
   end
-  local currentScene = CCDirector:sharedDirector():getRunningScene()
-  if currentScene then
-    currentScene:addChild(activitiesPanel:getRootLayer(), 500)
-    init(info)
+  if activitiesPanel then
+    local currentScene = CCDirector:sharedDirector():getRunningScene()
+    if currentScene then
+      currentScene:addChild(activitiesPanel:getRootLayer(), 500)
+      init(info)
+    end
+  else
+    LegendLog("[activitiesList] activitiesPanel is nil after panelMeta:new2")
   end
 end
 ListenEvent("getActivities", create)
 local setAllowTarget = function(info)
   for k = 1, #info._rewards or {} do
     local v = info._rewards[k]
-    if info._type == "single_br_tavern" or info._type == "combo_br_tavern" or info._type == "single_gd_tavern" or info._type == "combo_gd_tavern" or info._type == "magic_soul_tavern" then
-      if v._dailyjob._task_target > v._dailyjob._last_rewards_time then
+    if string.find(info._type, "tavern") then
+      if v._dailyjob._last_rewards_time == 0 then
         return true
       end
-    elseif (info._type == "rmb_recharge" or info._type == "iamond_consume") and v._dailyjob._last_rewards_time == 0 and v._amount < v._dailyjob._task_target then
+    elseif (info._type == "rmb_recharge" or info._type == "diamond_consume") and v._dailyjob._last_rewards_time == 0 and v._amount < v._dailyjob._task_target then
       return true
     end
   end

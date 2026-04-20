@@ -97,6 +97,10 @@ CCRectMake = function(x, y, w, h)
         r.size = {width = w, height = h}
         -- containsPoint 兼容：cocos2d-x 2.x Rect 方法
         -- 参数可以是 ccp(x,y) 也可以直接传 x,y 数字
+        r.getMinX = function(self) return r.x end
+        r.getMaxX = function(self) return r.x + r.width end
+        r.getMinY = function(self) return r.y end
+        r.getMaxY = function(self) return r.y + r.height end
         r.containsPoint = function(self, point_or_x, maybe_y)
             local px, py
             if type(point_or_x) == "table" then

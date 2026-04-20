@@ -130,6 +130,8 @@ local function createPrizeIndex(info)
     getConditions = createTitleLabel(LSTR("PRIVILEGE.ACCUMULATED_RECHARGING"), info._amount, LSTR("REBATEACTIVITIES.USD"), "op_act_grey", "op_act_dark_blue")
   elseif "diamond_consume" == activitieData._type then
     getConditions = createTitleLabel(LSTR("REBATEACTIVITIES.THE_CUMULATIVE_CONSUMPTION_"), info._amount, LSTR("REBATEACTIVITIES.DIAMOND"), "op_act_grey", "op_act_dark_blue")
+  elseif string.find(activitieData._type, "tavern") then
+    getConditions = createTitleLabel(LSTR("REBATEACTIVITIES.THE_CUMULATIVE_CONSUMPTION_"), info._amount or 0, LSTR("REBATEACTIVITIES.DIAMOND"), "op_act_grey", "op_act_dark_blue")
   else
     return
   end

@@ -153,18 +153,18 @@ local function setConfig(self, node, info)
 		node:setScaleY((config.scalexy.y or 1) * osy)
 	end
 	if config.dimension then
-		if type(config.dimension) == "table" then
-			node:setDimensions(config.dimension.width or 0, config.dimension.height or 0)
-		else
-			node:setDimensions(config.dimension)
-		end
+		if type(config.dimension) == "table" then
+			node:setDimensions(config.dimension.width or 0, config.dimension.height or 0)
+		else
+			node:setDimensions(config.dimension)
+		end
 	end
 	if config.dimensions then
-		if type(config.dimensions) == "table" then
-			node:setDimensions(config.dimensions.width or 0, config.dimensions.height or 0)
-		else
-			node:setDimensions(config.dimensions)
-		end
+		if type(config.dimensions) == "table" then
+			node:setDimensions(config.dimensions.width or 0, config.dimensions.height or 0)
+		else
+			node:setDimensions(config.dimensions)
+		end
 	end
 	if config.color then
 		node:setColor(config.color)
@@ -227,7 +227,7 @@ local function setLayout(self, node, info)
 		return
 	end
 	if layout.anchor then
-		node:setAnchorPoint(layout.anchor)
+		local a = layout.anchor; node:setAnchorPoint(a.x or a[1] or 0, a.y or a[2] or 0)
 	end
 	if layout.position then
 		if type(layout.position) == "table" then
@@ -436,7 +436,7 @@ local function addButton(self, info)
 	end
 	self:setConfig(item, info)
 	if info.layout.anchor then
-		item:setAnchorPoint(info.layout.anchor)
+		local ia = info.layout.anchor; item:setAnchorPoint(ia.x or ia[1] or 0, ia.y or ia[2] or 0)
 	end
 	local node = CCMenu:createWithItem(item)
 	self:setBase(node, info)
@@ -476,7 +476,7 @@ function class:addClippingNode(info)
 		stencil:setScaleY(base.scalexy.y)
 	end
 	if stencil and info.layout and info.layout.anchor then
-		stencil:setAnchorPoint(info.layout.anchor)
+		local sa = info.layout.anchor; stencil:setAnchorPoint(sa.x or sa[1] or 0, sa.y or sa[2] or 0)
 	end
 	self:set(clippNode, info)
 end

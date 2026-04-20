@@ -1576,11 +1576,244 @@ end
 -----------------------------------------------------------------------
 -- TBC (远征/十字军)
 -----------------------------------------------------------------------
+local CRUSADE_MAX_STAGE = 15
+
+-- 可用英雄ID池（从 hero_equip 表提取）
+local CRUSADE_HERO_POOL = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,
+    21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40}
+
+local AI_NAMES = {
+    "暗影猎手","龙骑士","风暴法师","圣光骑士","血魔领主",
+    "冰霜女王","烈焰术士","大地守卫","幽灵刺客","雷霆战神",
+    "月光游侠","黑暗领主","星辰法师","铁甲战士","毒蛇猎手",
+}
+
+local function initCrusade(localdata)
+    local cd = localdata.crusade
+    if cd and cd.enemies and #cd.enemies > 0 then
+        return cd
+    end
+    -- 生成15关的敌人数据
+    local enemies = {}
+    local playerLevel = localdata.player and localdata.player.level or 1
+    local usedHeroes = {}
+    for stage = 1, CRUSADE_MAX_STAGE do
+        local stageEnemies = {}
+        -- 难度递增：关卡越高，英雄等级/星级/阶位越高
+        local baseLevel = math.min(playerLevel + stage * 2, 90)
+        local baseStars = math.min(1 + math.floor(stage / 3), 5)
+        local baseRank = math.min(1 + math.floor(stage / 4), 8)
+        for i = 1, 5 do
+            local hid
+            repeat
+                hid = CRUSADE_HERO_POOL[math_random(1, #CRUSADE_HERO_POOL)]
+            until not usedHeroes[hid] or #usedHeroes > 30
+            usedHeroes[hid] = true
+            table.insert(stageEnemies, {
+                _tid = hid,
+                _level = baseLevel + math_random(-2, 2),
+                _stars = baseStars,
+                _rank = baseRank,
+            })
+        end
+        local nameIdx = math_random(1, #AI_NAMES)
+        enemies[stage] = {
+            heroes = stageEnemies,
+            name = AI_NAMES[nameIdx],
+            level = baseLevel,
+            avatar = CRUSADE_HERO_POOL[math_random(1, #CRUSADE_HERO_POOL)],
+            vip = math.min(math.floor(stage / 5), 3),
+        }
+    end
+
+    local stages = {}
+    for i = 1, CRUSADE_MAX_STAGE do
+        stages[i] = { _status = 0, _rewards = {} }
+    end
+
+    local cd = {
+        cur_stage = 1,
+        reset_times = 0,
+        last_reset_date = tonumber(os.date("%Y%m%d")),
+        stages = stages,
+        enemies = enemies,
+        hero_crusade_data = {},
+    }
+    localdata.crusade = cd
+    LocalData.save(localdata)
+    return cd
+end
+
+local function getCrusadeStages(cd)
+    local stages = {}
+    for i = 1, CRUSADE_MAX_STAGE do
+        local s = cd.stages[i]
+        stages[i] = {
+            _status = s and s._status or 0,
+            _rewards = s and s._rewards or {},
+        }
+    end
+    return stages
+end
+
+local function getHeroCrusadeList(localdata)
+    local result = {}
+    for i, h in ipairs(localdata.heroes or {}) do
+        local cd = localdata.crusade and localdata.crusade.hero_crusade_data
+        local hcd = cd and cd[h.tid]
+        local entry = {
+            _tid = h.tid,
+            _level = h.level,
+            _stars = h.stars,
+            _rank = h.rank,
+        }
+        if hcd then
+            entry._hp_perc = hcd._hp_perc or 10000
+            entry._mp_perc = hcd._mp_perc or 0
+        else
+            entry._hp_perc = 10000
+            entry._mp_perc = 0
+        end
+        table.insert(result, entry)
+    end
+    return result
+end
+
+local function buildCrusadeInfo(localdata)
+    local cd = initCrusade(localdata)
+    return {
+        _cur_stage = cd.cur_stage,
+        _reset_times = cd.reset_times,
+        _stages = getCrusadeStages(cd),
+        _heroes = getHeroCrusadeList(localdata),
+        _hire_hero = nil,
+    }
+end
+
+local function getCrusadeReward(stageId, resetTimes)
+    local rewardTable = ed.getDataTable("CrusadeRewards")
+    if not rewardTable then
+        return { { _type = "gold", _param1 = stageId * 500, _param2 = 0 },
+                 { _type = "crusadepoint", _param1 = stageId * 50, _param2 = 0 } }
+    end
+    local waveRewards = rewardTable[resetTimes] or rewardTable[1]
+    if not waveRewards then
+        return { { _type = "gold", _param1 = stageId * 500, _param2 = 0 } }
+    end
+    local stageReward = waveRewards[stageId]
+    if not stageReward then
+        return { { _type = "gold", _param1 = stageId * 500, _param2 = 0 } }
+    end
+    local vipFlag = 0
+    local reward = stageReward[vipFlag]
+    if not reward then reward = stageReward[0] end
+    if not reward then
+        return { { _type = "gold", _param1 = stageId * 500, _param2 = 0 } }
+    end
+
+    local rewards = {}
+    for i = 1, 5 do
+        local rtype = reward["Type " .. i]
+        local amount = reward["Amount " .. i] or 0
+        local id = reward["ID " .. i] or 0
+        if rtype and amount > 0 then
+            local t = string.lower(rtype)
+            if t == "crusadepoint" then
+                table.insert(rewards, { _type = "crusadepoint", _param1 = amount * 10, _param2 = 0 })
+            elseif t == "chestbox" then
+                table.insert(rewards, { _type = "gold", _param1 = amount * 1000, _param2 = 0 })
+            elseif t == "item" then
+                table.insert(rewards, { _type = "item", _param1 = id, _param2 = amount })
+            end
+        end
+    end
+    if #rewards == 0 then
+        rewards = { { _type = "gold", _param1 = stageId * 500, _param2 = 0 },
+                    { _type = "crusadepoint", _param1 = stageId * 50, _param2 = 0 } }
+    end
+    return rewards
+end
+
 M.handlers.tbc = function(data, obj, localdata)
-    -- 返回空对手信息
-    data._query_oppo = data._query_oppo or {}
-    data._query_oppo._stage_id = obj._query_oppo and obj._query_oppo._stage_id or 1
-    data._query_oppo._formation = {}
+    local reply = {}
+
+    if obj._open_panel then
+        local info = buildCrusadeInfo(localdata)
+        reply._open_panel = { _info = info }
+
+    elseif obj._query_oppo then
+        local cd = initCrusade(localdata)
+        local stageId = obj._query_oppo._stage_id or 1
+        local enemy = cd.enemies[stageId]
+        if not enemy then
+            reply._query_oppo = { _summary = { _name = "???", _level = 1, _avatar = 1, _vip = 0, _guild_name = "" }, _oppos = {}, _is_robot = 1 }
+        else
+            local oppos = {}
+            for _, h in ipairs(enemy.heroes) do
+                table.insert(oppos, {
+                    _base = { _tid = h._tid, _level = h._level, _stars = h._stars, _rank = h._rank },
+                    _dyna = { _hp_perc = 10000, _mp_perc = 0 },
+                })
+            end
+            reply._query_oppo = {
+                _summary = { _name = enemy.name, _level = enemy.level, _avatar = enemy.avatar, _vip = enemy.vip, _guild_name = "" },
+                _oppos = oppos,
+                _is_robot = 1,
+            }
+        end
+
+    elseif obj._start_bat then
+        local rseed = math_random(1, 2147483647)
+        reply._start_bat = { _result = "success", _rseed = rseed }
+
+    elseif obj._end_bat then
+        local cd = initCrusade(localdata)
+        local result = obj._end_bat._result or "defeat"
+        -- 保存战斗后英雄状态
+        if obj._end_bat._self_heroes then
+            cd.hero_crusade_data = cd.hero_crusade_data or {}
+            for _, h in ipairs(obj._end_bat._self_heroes) do
+                if h._tid then
+                    cd.hero_crusade_data[h._tid] = {
+                        _hp_perc = h._hp_perc or 0,
+                        _mp_perc = h._mp_perc or 0,
+                    }
+                end
+            end
+        end
+        LocalData.save(localdata)
+        reply._end_bat = { _result = result }
+
+    elseif obj._reset then
+        local cd = localdata.crusade
+        local resetTimes = cd and cd.reset_times or 0
+        -- 清空远征数据，重新生成
+        localdata.crusade = nil
+        local cd = initCrusade(localdata)
+        cd.reset_times = resetTimes + 1
+        LocalData.save(localdata)
+        reply._reset = {
+            _result = "success",
+            _info = buildCrusadeInfo(localdata),
+        }
+
+    elseif obj._draw_reward then
+        local cd = initCrusade(localdata)
+        local stageId = obj._draw_reward._stage_id or 1
+        local rewards = getCrusadeReward(stageId, cd.reset_times or 0)
+        if cd.stages[stageId] then
+            cd.stages[stageId]._status = 2 -- rewarded
+        end
+        LocalData.save(localdata)
+        reply._draw_reward = {
+            _result = "success",
+            _stage_id = stageId,
+            _rewards = rewards,
+            _heroes = {},
+        }
+    end
+
+    data._tbc_reply = reply
 end
 
 -----------------------------------------------------------------------
@@ -2385,6 +2618,13 @@ local function local_dispatch(msg)
             ed.netreply.jobRewards(result, ed.netdata and ed.netdata.jobRewards)
             ed.netreply.jobRewards = nil
             ed.netdata.jobRewards = nil
+        end
+    end
+
+    -- tbc (远征) 回复 — 通过 CrusadeRsp 事件传递给 crusade.lua
+    if data._tbc_reply then
+        if FireEvent then
+            FireEvent("CrusadeRsp", data._tbc_reply)
         end
     end
 

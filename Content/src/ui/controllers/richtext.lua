@@ -3,6 +3,18 @@ richText.__index = richText
 richText.rootNode = nil
 richText.pos = nil
 richText.middle = false
+local function local_tr(rect)
+  if type(rect) == "table" then
+    return rect.size and rect.size.width or rect.width or 0
+  end
+  return rect and rect.width or 0
+end
+local function local_tr_h(rect)
+  if type(rect) == "table" then
+    return rect.size and rect.size.height or rect.height or 0
+  end
+  return rect and rect.height or 0
+end
 richText.anchor = ccp(0, 0.5)
 richText.lastValidHeight = 0
 richText.width = 0
@@ -43,16 +55,16 @@ function richText:createNewObject(param, extraData)
       newObject:setDimensions(CCSizeMake(param3, 0))
     end
     newObject:setHorizontalAlignment(kCCTextAlignmentLeft)
-    width = newObject:getTextureRect().size.width
-    height = newObject:getTextureRect().size.height
+    width = local_tr(newObject:getTextureRect())
+    height = local_tr_h(newObject:getTextureRect())
   elseif type == "sprite" then
     newObject = ed.createSprite(param1)
     if param2 then
       newObject:setScale(param2)
       scale = param2
     end
-    width = newObject:getTextureRect().size.width * scale
-    height = newObject:getTextureRect().size.height * scale
+    width = local_tr(newObject:getTextureRect()) * scale
+    height = local_tr_h(newObject:getTextureRect()) * scale
   elseif type == "artnum" then
     newObject = CCNode:create()
     width, height = ed.createNumbers(newObject, param2, -2, nil, param1)
@@ -66,8 +78,8 @@ function richText:createNewObject(param, extraData)
       newObject:setScale(param2)
       scale = param2
     end
-    width = newObject:getTextureRect().size.width * scale
-    height = newObject:getTextureRect().size.height * scale
+    width = local_tr(newObject:getTextureRect()) * scale
+    height = local_tr_h(newObject:getTextureRect()) * scale
   elseif type == "link" then
     local link = ed.createSuperLink(param1, param2, param3)
     self.link = link

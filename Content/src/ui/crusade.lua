@@ -668,7 +668,7 @@ end
 local function OnCrusadeRsp(msg)
   if msg._open_panel then
     if panel == nil then
-      ed.pushScene(ed.ui.crusade.create())
+      pcall(function() ed.pushScene(ed.ui.crusade.create()) end)
     end
     initPanel(msg._open_panel._info)
   elseif msg._query_oppo then

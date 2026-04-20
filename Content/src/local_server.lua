@@ -1595,14 +1595,102 @@ end
 -----------------------------------------------------------------------
 -- 邮件相关
 -----------------------------------------------------------------------
+local function generateSystemMails()
+    local mails = {}
+    local now = os.time()
+
+    -- 首通奖励邮件：从 localdata 读取已完成的关卡
+    -- 这里简单生成几封欢迎邮件
+    table.insert(mails, {
+        _id = 1,
+        _status = "unread",
+        _mail_time = now - 3600,
+        _expire_time = now + 30 * 86400,
+        _content = {
+            _plain_mail = {
+                _from = "系统",
+                _title = "欢迎来到卡牌大乱斗",
+                _content = "感谢您的支持，请收下这份新手礼包！",
+            }
+        },
+        _money = 5000,
+        _diamonds = 200,
+        _items = {},
+        _points = {},
+    })
+
+    table.insert(mails, {
+        _id = 2,
+        _status = "unread",
+        _mail_time = now - 1800,
+        _expire_time = now + 30 * 86400,
+        _content = {
+            _plain_mail = {
+                _from = "系统",
+                _title = "道具礼包",
+                _content = "附件内含精选道具，请查收。",
+            }
+        },
+        _money = 10000,
+        _diamonds = 0,
+        _items = { ed.makebits(11, 10, 10, 371) },
+        _points = {},
+    })
+
+    return mails
+end
+
 M.handlers.get_maillist = function(data, obj, localdata)
-    data._mail_list = {}
+    -- 首次：生成系统邮件并存入 localdata
+    if not localdata.mails_initialized then
+        localdata.mails = generateSystemMails()
+        localdata.mails_initialized = true
+        LocalData.save(localdata)
+    end
+
+    -- 过期清理
+    local now = os.time()
+    local valid = {}
+    for _, m in ipairs(localdata.mails) do
+        if (m._expire_time or 0) > now then
+            table.insert(valid, m)
+        end
+    end
+
+    data._mail_list = {
+        _sys_mail_list = valid,
+    }
 end
 
 M.handlers.read_mail = function(data, obj, localdata)
-    data._id = obj._id or 0
-    data._mail_content = ""
-    data._reward_list = {}
+    local mailId = obj and obj._id or 0
+
+    -- 从 localdata.mails 中移除已领取的邮件
+    if localdata.mails then
+        for i = #localdata.mails, 1, -1 do
+            if localdata.mails[i]._id == mailId then
+                table.remove(localdata.mails, i)
+                break
+            end
+        end
+        LocalData.save(localdata)
+    end
+
+    -- 返回成功 + 剩余邮件列表，确保客户端数据同步
+    local now = os.time()
+    local remaining = {}
+    for _, m in ipairs(localdata.mails or {}) do
+        if (m._expire_time or 0) > now then
+            table.insert(remaining, m)
+        end
+    end
+
+    data._read_mail_reply = {
+        _result = "success",
+    }
+    data._mail_list = {
+        _sys_mail_list = remaining,
+    }
 end
 
 -----------------------------------------------------------------------
@@ -2298,6 +2386,35 @@ local function local_dispatch(msg)
             ed.netreply.jobRewards = nil
             ed.netdata.jobRewards = nil
         end
+    end
+
+    -- 邮件列表回复（仅 get_maillist 时触发）
+    if data._mail_list and not data._read_mail_reply then
+        pcall(function() ed.player:refreshMailData(data._mail_list._sys_mail_list) end)
+        if ed.netreply and ed.netreply.getMail then
+            ed.netreply.getMail()
+            ed.netreply.getMail = nil
+        end
+    end
+
+    -- read_mail 回复
+    if data._read_mail_reply then
+        local result = data._read_mail_reply._result == "success"
+        if result then
+            local rdata = ed.netdata and ed.netdata.readMail
+            if rdata then
+                pcall(function() ed.player:readMail(rdata.id) end)
+            end
+            -- 用服务端返回的剩余邮件列表刷新客户端数据
+            if data._mail_list then
+                pcall(function() ed.player:refreshMailData(data._mail_list._sys_mail_list) end)
+            end
+        end
+        if ed.netreply and ed.netreply.readMail then
+            ed.netreply.readMail()
+            ed.netreply.readMail = nil
+        end
+        ed.netdata.readMail = nil
     end
 
 end

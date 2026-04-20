@@ -1701,7 +1701,7 @@ for _, mod in ipairs(coreModules) do
                         elseif msgType == "get_svr_time" then
                             data._svr_time = os.time()
                         elseif msgType == "get_maillist" then
-                            data._mail_list = {}
+                            -- handled by local_server.lua
                         elseif msgType == "change_server" then
                             data._change_server_reply = { _result = "success" }
                         elseif msgType == "cdkey_gift" then

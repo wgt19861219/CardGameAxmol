@@ -952,6 +952,72 @@ local function setStageStars(self, stage, stars)
   record[intpos] = num
 end
 class.setStageStars = setStageStars
+
+-- ========== 章节星数奖励 ==========
+class._chapter_star_claimed = class._chapter_star_claimed or {}
+
+function class:getChapterStars(chapterId)
+  local st = ed.getDataTable("Stage")
+  if not st then return 0 end
+  local total = 0
+  for sid, row in pairs(st) do
+    if type(sid) == "number" and row["Chapter ID"] == chapterId and ed.stageType(sid) == "normal" then
+      total = total + (self:getStageStar(sid) or 0)
+    end
+  end
+  return total
+end
+
+function class:getChapterStarRewardTiers(chapterId)
+  -- 每章3个档位：30/60/90星
+  return {
+    {tier = 1, stars = 30, rewards = {{type = "money", amount = 30000}, {type = "item", id = 14001, amount = 2}}},
+    {tier = 2, stars = 60, rewards = {{type = "money", amount = 80000}, {type = "item", id = 14002, amount = 2}}},
+    {tier = 3, stars = 90, rewards = {{type = "rmb", amount = 100}, {type = "item", id = 14003, amount = 1}}},
+  }
+end
+
+function class:getChapterStarStatus(chapterId)
+  local totalStars = self:getChapterStars(chapterId)
+  local tiers = self:getChapterStarRewardTiers(chapterId)
+  local result = {}
+  for _, t in ipairs(tiers) do
+    local key = chapterId .. "_" .. t.tier
+    local claimed = self._chapter_star_claimed[key] or false
+    table.insert(result, {
+      tier = t.tier,
+      stars = t.stars,
+      unlocked = totalStars >= t.stars,
+      claimed = claimed,
+      rewards = t.rewards,
+    })
+  end
+  return result, totalStars
+end
+
+function class:claimChapterStarReward(chapterId, tier)
+  local tiers = self:getChapterStarRewardTiers(chapterId)
+  local t = tiers[tier]
+  if not t then return false end
+  local totalStars = self:getChapterStars(chapterId)
+  if totalStars < t.stars then return false end
+  local key = chapterId .. "_" .. tier
+  if self._chapter_star_claimed[key] then return false end
+  -- 发放奖励
+  for _, rw in ipairs(t.rewards) do
+    if rw.type == "money" then
+      self:addMoney(rw.amount, true)
+    elseif rw.type == "rmb" then
+      self:addrmb(rw.amount)
+    elseif rw.type == "item" then
+      self:addEquip(rw.id, rw.amount)
+    end
+  end
+  self._chapter_star_claimed[key] = true
+  if ed.saveGame then pcall(function() ed.saveGame() end) end
+  return true, t.rewards
+end
+
 local function getStageLimitAt(self, idx)
   local row = self._userstage._elite_daily_record[idx]
   return {

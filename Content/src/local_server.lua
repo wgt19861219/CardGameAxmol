@@ -411,6 +411,10 @@ M.handlers.login = function(data, obj, localdata)
         _user = buildUser(localdata),
         _time_zone = SERVER_TIMEZONE,
     }
+
+    -- 附带活动通知，让客户端显示活动按钮
+    local activities = generateActivities(localdata)
+    data._activity_notify = activities
 end
 
 -- ========== get_svr_time ==========
@@ -817,6 +821,12 @@ M.handlers.shop_consume = function(data, obj, localdata)
     -- 商品售罄
     goodsItem._amount = 0
     LocalData.save(localdata)
+
+    -- 追踪钻石消费
+    if payType == "diamond" and totalCost > 0 then
+        trackDiamondSpent(localdata, totalCost)
+    end
+
     data._shop_consume_reply = { _result = "success" }
 end
 
@@ -1131,6 +1141,19 @@ M.handlers.tavern_draw = function(data, obj, localdata)
         _new_heroes = newHeroes,
         _smash_idx = {},
     }
+
+    -- 追踪钻石消费
+    local td = ed.getDataTable("TavernDrawConfig")
+    if td then
+        local costInfo = td[boxType]
+        if costInfo and drawType == 0 then
+            local diamondCost = costInfo["Draw 1 Cost Diamond"] or 0
+            if diamondCost > 0 then trackDiamondSpent(localdata, diamondCost) end
+        elseif costInfo and drawType == 1 then
+            local diamondCost = costInfo["Draw 10 Cost Diamond"] or 0
+            if diamondCost > 0 then trackDiamondSpent(localdata, diamondCost) end
+        end
+    end
 end
 
 -- ========== sync_vitality ==========
@@ -1236,6 +1259,9 @@ M.handlers.midas = function(data, obj, localdata)
         data._midas_reply = { _acquire = {} }
         return
     end
+
+    -- 追踪钻石消费
+    if totalCost > 0 then trackDiamondSpent(localdata, totalCost) end
 
     data._midas_reply = {
         _acquire = acquireList,
@@ -2024,7 +2050,7 @@ M.handlers.trigger_job = function(data, obj, localdata)
     data._trigger_job_reply = { _result = "success" }
 end
 
--- job_rewards: 领取日常任务奖励
+-- job_rewards: 领取日常任务/活动奖励
 M.handlers.job_rewards = function(data, obj, localdata)
     local jobId = obj and obj._job
     if not jobId then
@@ -2032,13 +2058,67 @@ M.handlers.job_rewards = function(data, obj, localdata)
         return
     end
 
+    -- 活动奖励（job ID 以 "act_" 开头）
+    if type(jobId) == "string" and string.sub(jobId, 1, 4) == "act_" then
+        local activities = generateActivities(localdata)
+        local targetReward = nil
+        local targetAct = nil
+        for _, act in ipairs(activities) do
+            for _, rw in ipairs(act._rewards or {}) do
+                if rw._dailyjob and rw._dailyjob._id == jobId then
+                    targetReward = rw
+                    targetAct = act
+                    break
+                end
+            end
+            if targetReward then break end
+        end
+        if not targetReward then
+            data._job_rewards_reply = { _result = "fail" }
+            return
+        end
+        -- 检查是否已领取
+        if localdata.activity_claimed and localdata.activity_claimed[jobId] then
+            data._job_rewards_reply = { _result = "fail" }
+            return
+        end
+        -- 检查消费是否达标
+        local spent = localdata.activity_spent and localdata.activity_spent.amount or 0
+        if spent < targetReward._dailyjob._task_target then
+            data._job_rewards_reply = { _result = "fail" }
+            return
+        end
+        -- 标记已领取
+        if not localdata.activity_claimed then localdata.activity_claimed = {} end
+        localdata.activity_claimed[jobId] = true
+        LocalData.save(localdata)
+        -- 发放奖励
+        local rewardItems = {}
+        for _, rw in ipairs(targetAct._rewards) do
+            if rw._dailyjob._id == jobId then
+                local item = { _type = rw._type, _id = rw._id, _amount = rw._amount }
+                table.insert(rewardItems, item)
+                if rw._type == "money" and ed.player and ed.player.addMoney then
+                    ed.player:addMoney(rw._amount, true)
+                elseif rw._type == "rmb" and ed.player and ed.player.addrmb then
+                    ed.player:addrmb(rw._amount)
+                elseif rw._type == "item" and ed.player and ed.player.addEquip then
+                    ed.player:addEquip(rw._id, rw._amount)
+                end
+                break
+            end
+        end
+        data._job_rewards_reply = { _result = "success", _activity_reward = rewardItems }
+        return
+    end
+
+    -- 日常任务奖励
     local row = ed.getDataTable("Todolist")[jobId]
     if not row then
         data._job_rewards_reply = { _result = "fail" }
         return
     end
 
-    -- 检查任务是否完成
     local target = row["Task Target"]
     local count = ed.player and ed.player.getDailyjobCount and ed.player:getDailyjobCount(jobId) or 0
     if count < target then
@@ -2046,7 +2126,6 @@ M.handlers.job_rewards = function(data, obj, localdata)
         return
     end
 
-    -- 发放奖励
     for i = 1, 2 do
         local rType = row[string.format("Task Reward %d Type", i)]
         local rId = row[string.format("Task Reward %d ID", i)]
@@ -2067,7 +2146,6 @@ M.handlers.job_rewards = function(data, obj, localdata)
         end
     end
 
-    -- 更新任务状态：重置计数和时间
     if ed.player and ed.player.resetDailyjobTime then
         ed.player:resetDailyjobTime(jobId)
     end
@@ -2075,9 +2153,100 @@ M.handlers.job_rewards = function(data, obj, localdata)
     data._job_rewards_reply = { _result = "success" }
 end
 
--- activity_info: 活动信息
+-----------------------------------------------------------------------
+-- 活动系统辅助函数
+-----------------------------------------------------------------------
+local function getActivityPeriod()
+    local now = os.time()
+    local dayStart = os.time(os.date("!*t", now))
+    local wday = os.date("!*t", now).wday
+    local daysToMonday = (wday == 1) and 6 or (wday - 2)
+    local weekStart = dayStart - daysToMonday * 86400
+    local weekEnd = weekStart + 7 * 86400
+    return weekStart, weekEnd
+end
+
+local function getSpentDiamond(localdata)
+    local periodStart, periodEnd = getActivityPeriod()
+    if not localdata.activity_spent then
+        localdata.activity_spent = { period = periodStart, amount = 0 }
+    end
+    if localdata.activity_spent.period ~= periodStart then
+        localdata.activity_spent.period = periodStart
+        localdata.activity_spent.amount = 0
+    end
+    return localdata.activity_spent.amount, periodStart, periodEnd
+end
+
+local function buildDiamondConsumeActivity(localdata)
+    local spent, startT, endT = getSpentDiamond(localdata)
+    return {
+        _type = "diamond_consume",
+        _title = "钻石消费返利",
+        _desc = "活动期间累计消费钻石即可领取丰厚奖励，消费越多奖励越丰厚！",
+        _rules = "1.活动期间累计消费指定数量钻石即可领取对应奖励\n2.每个档位奖励只能领取一次\n3.每周一重置消费进度",
+        _start_time = startT,
+        _end_time = endT,
+        _amount = spent,
+        _rewards = {
+            {
+                _type = "money", _id = 0, _amount = 50000,
+                _dailyjob = { _id = "act_dia_200", _task_target = 200, _last_rewards_time = localdata.activity_claimed and localdata.activity_claimed["act_dia_200"] and 1 or 0 }
+            },
+            {
+                _type = "item", _id = 14001, _amount = 3,
+                _dailyjob = { _id = "act_dia_500", _task_target = 500, _last_rewards_time = localdata.activity_claimed and localdata.activity_claimed["act_dia_500"] and 1 or 0 }
+            },
+            {
+                _type = "item", _id = 14002, _amount = 2,
+                _dailyjob = { _id = "act_dia_1000", _task_target = 1000, _last_rewards_time = localdata.activity_claimed and localdata.activity_claimed["act_dia_1000"] and 1 or 0 }
+            },
+            {
+                _type = "rmb", _id = 0, _amount = 200,
+                _dailyjob = { _id = "act_dia_2000", _task_target = 2000, _last_rewards_time = localdata.activity_claimed and localdata.activity_claimed["act_dia_2000"] and 1 or 0 }
+            },
+        }
+    }
+end
+
+local function buildTavernBonusActivity(actType, title, desc, spent, startT, endT)
+    return {
+        _type = actType,
+        _title = title,
+        _desc = desc,
+        _rules = "活动期间可享受优惠抽卡",
+        _start_time = startT,
+        _end_time = endT,
+        _rewards = {}
+    }
+end
+
+local function generateActivities(localdata)
+    local activities = {}
+    local _, startT, endT = getActivityPeriod()
+
+    table.insert(activities, buildDiamondConsumeActivity(localdata))
+
+    table.insert(activities, buildTavernBonusActivity(
+        "single_br_tavern", "青铜单抽优惠", "活动期间青铜单抽享受优惠价格", 0, startT, endT))
+    table.insert(activities, buildTavernBonusActivity(
+        "combo_br_tavern", "青铜十连优惠", "活动期间青铜十连享受优惠价格", 0, startT, endT))
+
+    return activities
+end
+
+-- 跟踪钻石消费（供其他handler调用）
+local function trackDiamondSpent(localdata, amount)
+    if not amount or amount <= 0 then return end
+    local spent, _, _ = getSpentDiamond(localdata)
+    localdata.activity_spent.amount = spent + amount
+    LocalData.save(localdata)
+end
+
+-- activity_info: 登录时活动信息
 M.handlers.activity_info = function(data, obj, localdata)
-    data._activity_info_reply = { _activities = {} }
+    local activities = generateActivities(localdata)
+    data._activity_info_reply = { _activities = activities }
 end
 
 -- activity_lotto_info: 活动抽奖信息
@@ -2122,7 +2291,8 @@ end
 
 -- ask_activity_info: 查询活动信息
 M.handlers.ask_activity_info = function(data, obj, localdata)
-    data._ask_activity_info_reply = { _activities = {} }
+    local activities = generateActivities(localdata)
+    data._ask_activity_info_reply = { _activity_info = activities }
 end
 
 -- suspend_report: 暂停报告
@@ -2373,6 +2543,29 @@ local function local_dispatch(msg)
         pcall(function() ed.ui.midas.dealUse(data._midas_reply) end)
     end
 
+    -- activity_notify: 活动通知（登录时附带）
+    if data._activity_notify then
+        pcall(function()
+            if FireEvent then FireEvent("activityNotify", data._activity_notify) end
+        end)
+    end
+
+    -- ask_activity_info 回复
+    if data._ask_activity_info_reply then
+        local reply = data._ask_activity_info_reply
+        pcall(function()
+            if FireEvent then FireEvent("getActivities", reply._activity_info or {}) end
+        end)
+    end
+
+    -- activity_info 回复（状态栏活动按钮）
+    if data._activity_info_reply then
+        local handler = ed.getNetReply("GotoActivity")
+        if handler then
+            pcall(handler, data._activity_info_reply)
+        end
+    end
+
     -- get_svr_time 回复
     if data._svr_time then
         pcall(function() ed.player:initNativeTimeDiff(data._svr_time) end)
@@ -2611,13 +2804,17 @@ local function local_dispatch(msg)
         end
     end
 
-    -- job_rewards 回复
+    -- job_rewards 回复（含活动奖励 tenPumping 分发）
     if data._job_rewards_reply then
         local result = data._job_rewards_reply._result == "success"
         if ed.netreply and ed.netreply.jobRewards then
             ed.netreply.jobRewards(result, ed.netdata and ed.netdata.jobRewards)
             ed.netreply.jobRewards = nil
             ed.netdata.jobRewards = nil
+        end
+        if ed.netreply and ed.netreply.tenPumping == "1" then
+            if FireEvent then FireEvent("getPrize", data._job_rewards_reply) end
+            ed.netreply.tenPumping = nil
         end
     end
 

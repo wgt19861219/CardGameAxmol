@@ -15,7 +15,10 @@ end
 class.getMultiCost = getMultiCost
 local getCost = function(self)
   local gt = ed.getDataTable("GradientPrice")
-  return (gt[ed.player:getMidasTimes() + 1] or {}).Midas
+  local times = ed.player:getMidasTimes() + 1
+  local cost = (gt[times] or {}).Midas
+  LegendLog("[midas] getCost: times=" .. times .. " cost=" .. tostring(cost))
+  return cost
 end
 class.getCost = getCost
 local getAcquire = function(self)
@@ -188,6 +191,7 @@ class.doUseReply = doUseReply
 local doUse = function(self, times)
   times = times or 1
   local cost = self:getCost() * times
+  LegendLog("[midas] doUse: cost=" .. tostring(cost) .. " rmb=" .. tostring(ed.player._rmb))
   if cost > ed.player._rmb then
     ed.showHandyDialog("toRecharge")
     return

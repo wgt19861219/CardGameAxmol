@@ -278,7 +278,22 @@ local function buildUser(localdata)
         _task = {},
         _task_finished = {},
         _last_login = p.last_login or 0,
-        _dailyjob = {},
+        _dailyjob = (function()
+            local jobs = {}
+            local tdt = ed.getDataTable("Todolist")
+            if tdt then
+                for id, row in pairs(tdt) do
+                    if type(id) == "number" then
+                        table.insert(jobs, {
+                            _id = id,
+                            _task_target = 0,
+                            _last_rewards_time = 0,
+                        })
+                    end
+                end
+            end
+            return jobs
+        end)(),
         _tavern_record = buildTavernRecords(localdata.tavern),
         _usermidas = {
             _last_change = localdata.midas and localdata.midas.last_change or 0,
@@ -916,9 +931,54 @@ end
 
 -- ========== require_rewards ==========
 M.handlers.require_rewards = function(data, obj, localdata)
-    data._require_rewards_reply = {
-        _result = "success",
-    }
+    local chain = obj and obj._line
+    local id = obj and obj._id
+    if not chain or not id then
+        data._require_rewards_reply = { _result = "fail" }
+        return
+    end
+
+    local taskTable = ed.getDataTable("Task")
+    if not taskTable or not taskTable[chain] or not taskTable[chain][id] then
+        data._require_rewards_reply = { _result = "fail" }
+        return
+    end
+
+    local row = taskTable[chain][id]
+
+    -- 发放奖励
+    local rType = row["Task Reward Type"]
+    local rId = row["Task Reward ID"]
+    local rAmount = row["Task Reward Amount"]
+    if rType and rAmount and rAmount > 0 then
+        if rType == "Coin" then
+            if ed.player and ed.player.addMoney then ed.player:addMoney(rAmount, true) end
+        elseif rType == "Diamond" then
+            if ed.player and ed.player.addrmb then ed.player:addrmb(rAmount) end
+        elseif rType == "Vitality" then
+            if ed.player and ed.player.addVitality then ed.player:addVitality(rAmount) end
+        elseif rType == "PlayerEXP" then
+            if ed.player and ed.player.addExp then ed.player:addExp(rAmount) end
+        elseif rType == "Item" then
+            if ed.player and ed.player.addEquip then ed.player:addEquip(rId, rAmount) end
+        end
+    end
+
+    -- 消耗类任务处理
+    if row["Task Need Consume"] then
+        local cType = row["Task Consume Type"]
+        local cId = row["Task Consume ID"]
+        local cAmount = row["Task Consume Amount"]
+        if cType == "Coin" and ed.player and ed.player.addMoney then
+            ed.player:addMoney(-cAmount, true)
+        elseif cType == "Diamond" and ed.player and ed.player.addrmb then
+            ed.player:addrmb(-cAmount)
+        elseif cType == "Item" and ed.player and ed.player.addEquip then
+            ed.player:addEquip(cId, -cAmount)
+        end
+    end
+
+    data._require_rewards_reply = { _result = "success" }
 end
 
 -- ========== reset_elite ==========
@@ -1638,13 +1698,59 @@ M.handlers.get_vip_gift = function(data, obj, localdata)
     data._get_vip_gift_reply = { _result = "success" }
 end
 
--- trigger_job: 触发任务
+-- trigger_job: 触发任务（已由login初始化_dailyjob，此handler保持兼容）
 M.handlers.trigger_job = function(data, obj, localdata)
     data._trigger_job_reply = { _result = "success" }
 end
 
--- job_rewards: 任务奖励
+-- job_rewards: 领取日常任务奖励
 M.handlers.job_rewards = function(data, obj, localdata)
+    local jobId = obj and obj._job
+    if not jobId then
+        data._job_rewards_reply = { _result = "fail" }
+        return
+    end
+
+    local row = ed.getDataTable("Todolist")[jobId]
+    if not row then
+        data._job_rewards_reply = { _result = "fail" }
+        return
+    end
+
+    -- 检查任务是否完成
+    local target = row["Task Target"]
+    local count = ed.player and ed.player.getDailyjobCount and ed.player:getDailyjobCount(jobId) or 0
+    if count < target then
+        data._job_rewards_reply = { _result = "fail" }
+        return
+    end
+
+    -- 发放奖励
+    for i = 1, 2 do
+        local rType = row[string.format("Task Reward %d Type", i)]
+        local rId = row[string.format("Task Reward %d ID", i)]
+        local rAmount = row[string.format("Task Reward %d Amount", i)]
+            or (i == 1 and row["Task Reward Amount"])
+        if rType and rAmount and rAmount > 0 then
+            if rType == "Coin" then
+                if ed.player and ed.player.addMoney then ed.player:addMoney(rAmount, true) end
+            elseif rType == "Diamond" then
+                if ed.player and ed.player.addrmb then ed.player:addrmb(rAmount) end
+            elseif rType == "Vitality" then
+                if ed.player and ed.player.addVitality then ed.player:addVitality(rAmount) end
+            elseif rType == "PlayerEXP" then
+                if ed.player and ed.player.addExp then ed.player:addExp(rAmount) end
+            elseif rType == "Item" then
+                if ed.player and ed.player.addEquip then ed.player:addEquip(rId, rAmount) end
+            end
+        end
+    end
+
+    -- 更新任务状态：重置计数和时间
+    if ed.player and ed.player.resetDailyjobTime then
+        ed.player:resetDailyjobTime(jobId)
+    end
+
     data._job_rewards_reply = { _result = "success" }
 end
 
@@ -2178,8 +2284,19 @@ local function local_dispatch(msg)
     if data._require_rewards_reply then
         local result = data._require_rewards_reply._result == "success"
         if ed.netreply and ed.netreply.requireRewards then
-            ed.netreply.requireRewards(result)
+            ed.netreply.requireRewards(result, ed.netdata and ed.netdata.requireRewards)
             ed.netreply.requireRewards = nil
+            ed.netdata.requireRewards = nil
+        end
+    end
+
+    -- job_rewards 回复
+    if data._job_rewards_reply then
+        local result = data._job_rewards_reply._result == "success"
+        if ed.netreply and ed.netreply.jobRewards then
+            ed.netreply.jobRewards(result, ed.netdata and ed.netdata.jobRewards)
+            ed.netreply.jobRewards = nil
+            ed.netdata.jobRewards = nil
         end
     end
 

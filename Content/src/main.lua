@@ -863,8 +863,6 @@ for _, mod in ipairs(coreModules) do
                 end
             elseif msgType == "ask_activity_info" then
                 -- 活动信息请求，忽略
-            elseif msgType == "job_rewards" then
-                -- 任务奖励，忽略
             elseif msgType == "tavern_draw" then
                 LegendLog("[STUB-NET] tavern_draw: handling directly")
                 local drawType = obj._draw_type or 0
@@ -1646,11 +1644,11 @@ for _, mod in ipairs(coreModules) do
                         elseif msgType == "trigger_task" then
                             data._trigger_task_reply = { _result = { "success" } }
                         elseif msgType == "trigger_job" then
-                            data._trigger_job_reply = { _result = "success" }
+                            -- handled by local_server.lua
                         elseif msgType == "job_rewards" then
-                            data._job_rewards_reply = { _result = "success" }
+                            -- handled by local_server.lua
                         elseif msgType == "require_rewards" then
-                            data._require_rewards_reply = { _result = "success" }
+                            -- handled by local_server.lua
                         elseif msgType == "reset_elite" then
                             data._reset_elite_reply = { _result = "success" }
                         elseif msgType == "sweep_stage" then

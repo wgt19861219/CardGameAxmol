@@ -13,7 +13,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 500,
+      ["Task Reward Amount"] = 5000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 1,
@@ -35,7 +35,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 1000,
+      ["Task Reward Amount"] = 10000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 2,
@@ -59,7 +59,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 2,
+      ["Task Reward Amount"] = 20,
       ["Task Reward ID"] = 101,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -81,7 +81,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 104,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -103,7 +103,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 116,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -125,7 +125,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 115,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -147,7 +147,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 114,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 3,
@@ -171,7 +171,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "HeroRank",
-      ["Task Reward Amount"] = 5,
+      ["Task Reward Amount"] = 50,
       ["Task Reward ID"] = 169,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -193,7 +193,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "HeroRank",
-      ["Task Reward Amount"] = 5,
+      ["Task Reward Amount"] = 50,
       ["Task Reward ID"] = 169,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -217,7 +217,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 169,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 6,
@@ -239,7 +239,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 3,
+      ["Task Reward Amount"] = 30,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 7,
@@ -260,7 +260,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 4,
+      ["Task Reward Amount"] = 40,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 8,
@@ -281,7 +281,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 5,
+      ["Task Reward Amount"] = 50,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 9,
@@ -302,7 +302,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 6,
+      ["Task Reward Amount"] = 60,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 10,
@@ -323,7 +323,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 7,
+      ["Task Reward Amount"] = 70,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 11,
@@ -344,7 +344,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 8,
+      ["Task Reward Amount"] = 80,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 12,
@@ -365,7 +365,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 9,
+      ["Task Reward Amount"] = 90,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 13,
@@ -386,7 +386,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 14,
@@ -407,7 +407,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 218,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 15,
@@ -428,7 +428,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 3,
+      ["Task Reward Amount"] = 30,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 16,
@@ -449,7 +449,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 4,
+      ["Task Reward Amount"] = 40,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 17,
@@ -470,7 +470,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 5,
+      ["Task Reward Amount"] = 50,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 18,
@@ -491,7 +491,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 6,
+      ["Task Reward Amount"] = 60,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 19,
@@ -512,7 +512,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 7,
+      ["Task Reward Amount"] = 70,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 20,
@@ -533,7 +533,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 8,
+      ["Task Reward Amount"] = 80,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 21,
@@ -554,7 +554,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 9,
+      ["Task Reward Amount"] = 90,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 22,
@@ -575,7 +575,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 23,
@@ -596,7 +596,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 24,
@@ -617,7 +617,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 290,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 25,
@@ -640,7 +640,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 5000,
+      ["Task Reward Amount"] = 50000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 5,
@@ -662,7 +662,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 7500,
+      ["Task Reward Amount"] = 75000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 1,
@@ -683,7 +683,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 10000,
+      ["Task Reward Amount"] = 100000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 2,
@@ -704,7 +704,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 12500,
+      ["Task Reward Amount"] = 125000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 5,
@@ -725,7 +725,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 15000,
+      ["Task Reward Amount"] = 150000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 1,
@@ -746,7 +746,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 17500,
+      ["Task Reward Amount"] = 175000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 2,
@@ -767,7 +767,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 20000,
+      ["Task Reward Amount"] = 200000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 5,
@@ -788,7 +788,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 22500,
+      ["Task Reward Amount"] = 225000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 1,
@@ -809,7 +809,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 25000,
+      ["Task Reward Amount"] = 250000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 2,
@@ -830,7 +830,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 27500,
+      ["Task Reward Amount"] = 275000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 5,
@@ -851,7 +851,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 30000,
+      ["Task Reward Amount"] = 300000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 1,
@@ -872,7 +872,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 32500,
+      ["Task Reward Amount"] = 325000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 2,
@@ -893,7 +893,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 35000,
+      ["Task Reward Amount"] = 350000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 5,
@@ -914,7 +914,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 37500,
+      ["Task Reward Amount"] = 375000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 1,
@@ -935,7 +935,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 40000,
+      ["Task Reward Amount"] = 400000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 2,
@@ -956,7 +956,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "MultiHeroRank",
-      ["Task Reward Amount"] = 42500,
+      ["Task Reward Amount"] = 425000,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Coin",
       ["Task Target"] = 5,
@@ -979,7 +979,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1001,7 +1001,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1023,7 +1023,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1045,7 +1045,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1067,7 +1067,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1089,7 +1089,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1111,7 +1111,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1133,7 +1133,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1155,7 +1155,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1177,7 +1177,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1199,7 +1199,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1221,7 +1221,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1243,7 +1243,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1265,7 +1265,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1287,7 +1287,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1309,7 +1309,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1331,7 +1331,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1353,7 +1353,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1375,7 +1375,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1397,7 +1397,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "FarmStage",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 125,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 2,
@@ -1421,7 +1421,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1443,7 +1443,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1464,7 +1464,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1485,7 +1485,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1506,7 +1506,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1527,7 +1527,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1548,7 +1548,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1569,7 +1569,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1590,7 +1590,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1611,7 +1611,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1632,7 +1632,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1653,7 +1653,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1674,7 +1674,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1695,7 +1695,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1716,7 +1716,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1737,7 +1737,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1758,7 +1758,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1779,7 +1779,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1800,7 +1800,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1821,7 +1821,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1842,7 +1842,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1863,7 +1863,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1884,7 +1884,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1905,7 +1905,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1926,7 +1926,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1947,7 +1947,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 15,
+      ["Task Reward Amount"] = 150,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1968,7 +1968,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -1989,7 +1989,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2010,7 +2010,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2031,7 +2031,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2052,7 +2052,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2073,7 +2073,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2094,7 +2094,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2115,7 +2115,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2136,7 +2136,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2157,7 +2157,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2178,7 +2178,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2199,7 +2199,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2220,7 +2220,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2241,7 +2241,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2262,7 +2262,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2283,7 +2283,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2304,7 +2304,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2325,7 +2325,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2346,7 +2346,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2367,7 +2367,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2388,7 +2388,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2409,7 +2409,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2430,7 +2430,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2451,7 +2451,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2472,7 +2472,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2493,7 +2493,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2514,7 +2514,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2535,7 +2535,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2556,7 +2556,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2577,7 +2577,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2598,7 +2598,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2619,7 +2619,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2640,7 +2640,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2661,7 +2661,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2682,7 +2682,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2703,7 +2703,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2724,7 +2724,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2745,7 +2745,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2766,7 +2766,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2787,7 +2787,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2808,7 +2808,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2829,7 +2829,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2850,7 +2850,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2871,7 +2871,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2892,7 +2892,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2913,7 +2913,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2934,7 +2934,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2955,7 +2955,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2976,7 +2976,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -2997,7 +2997,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3018,7 +3018,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3039,7 +3039,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3060,7 +3060,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3081,7 +3081,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3102,7 +3102,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3123,7 +3123,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3144,7 +3144,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3165,7 +3165,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3186,7 +3186,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3207,7 +3207,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3228,7 +3228,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3249,7 +3249,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3270,7 +3270,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3291,7 +3291,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3312,7 +3312,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3333,7 +3333,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3354,7 +3354,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3375,7 +3375,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3396,7 +3396,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3417,7 +3417,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3440,7 +3440,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 5,
+      ["Task Reward Amount"] = 50,
       ["Task Reward ID"] = 127,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -3461,7 +3461,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 2,
+      ["Task Reward Amount"] = 20,
       ["Task Reward ID"] = 157,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -3484,7 +3484,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 5,
+      ["Task Reward Amount"] = 50,
       ["Task Reward ID"] = 127,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -3505,7 +3505,7 @@ return {
         [2] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 3,
+      ["Task Reward Amount"] = 30,
       ["Task Reward ID"] = 157,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -3528,7 +3528,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3551,7 +3551,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3574,7 +3574,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 4,
+      ["Task Reward Amount"] = 40,
       ["Task Reward ID"] = 157,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 1,
@@ -3597,7 +3597,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3620,7 +3620,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3643,7 +3643,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3666,7 +3666,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3689,7 +3689,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3712,7 +3712,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3735,7 +3735,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3758,7 +3758,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3781,7 +3781,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3804,7 +3804,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 25,
+      ["Task Reward Amount"] = 250,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3827,7 +3827,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 35,
+      ["Task Reward Amount"] = 350,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3850,7 +3850,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 45,
+      ["Task Reward Amount"] = 450,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3873,7 +3873,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3896,7 +3896,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3919,7 +3919,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 50,
+      ["Task Reward Amount"] = 500,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3942,7 +3942,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 10,
+      ["Task Reward Amount"] = 100,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3965,7 +3965,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -3988,7 +3988,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4011,7 +4011,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 60,
+      ["Task Reward Amount"] = 600,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4034,7 +4034,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 20,
+      ["Task Reward Amount"] = 200,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4057,7 +4057,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 30,
+      ["Task Reward Amount"] = 300,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4080,7 +4080,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4103,7 +4103,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 70,
+      ["Task Reward Amount"] = 700,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4126,7 +4126,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4149,7 +4149,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 50,
+      ["Task Reward Amount"] = 500,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4172,7 +4172,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 70,
+      ["Task Reward Amount"] = 700,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4195,7 +4195,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4218,7 +4218,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 50,
+      ["Task Reward Amount"] = 500,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4241,7 +4241,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 70,
+      ["Task Reward Amount"] = 700,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4264,7 +4264,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4287,7 +4287,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 50,
+      ["Task Reward Amount"] = 500,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4310,7 +4310,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 70,
+      ["Task Reward Amount"] = 700,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4333,7 +4333,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4356,7 +4356,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 50,
+      ["Task Reward Amount"] = 500,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4379,7 +4379,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 70,
+      ["Task Reward Amount"] = 700,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4402,7 +4402,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4425,7 +4425,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 50,
+      ["Task Reward Amount"] = 500,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4448,7 +4448,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 70,
+      ["Task Reward Amount"] = 700,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4471,7 +4471,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 40,
+      ["Task Reward Amount"] = 400,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4494,7 +4494,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 50,
+      ["Task Reward Amount"] = 500,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4517,7 +4517,7 @@ return {
         [4] = 0
       },
       ["Task Progress Type"] = "CompleteStage",
-      ["Task Reward Amount"] = 80,
+      ["Task Reward Amount"] = 800,
       ["Task Reward ID"] = 0,
       ["Task Reward Type"] = "Diamond",
       ["Task Target"] = 1,
@@ -4539,7 +4539,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 131,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 5,
@@ -4560,7 +4560,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 131,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 10,
@@ -4580,7 +4580,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 138,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 15,
@@ -4600,7 +4600,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 135,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 20,
@@ -4620,7 +4620,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 133,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 25,
@@ -4640,7 +4640,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 128,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 30,
@@ -4660,7 +4660,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 132,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 35,
@@ -4680,7 +4680,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 134,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 40,
@@ -4700,7 +4700,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 136,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 45,
@@ -4720,7 +4720,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 137,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 50,
@@ -4740,7 +4740,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 139,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 55,
@@ -4760,7 +4760,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 145,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 60,
@@ -4780,7 +4780,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 146,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 65,
@@ -4800,7 +4800,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 129,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 70,
@@ -4820,7 +4820,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 130,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 75,
@@ -4840,7 +4840,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 140,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 80,
@@ -4860,7 +4860,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 141,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 85,
@@ -4880,7 +4880,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 142,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 90,
@@ -4900,7 +4900,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 143,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 95,
@@ -4920,7 +4920,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 144,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 100,
@@ -4940,7 +4940,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 148,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 105,
@@ -4960,7 +4960,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 143,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 110,
@@ -4980,7 +4980,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 144,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 115,
@@ -5000,7 +5000,7 @@ return {
         [1] = 0
       },
       ["Task Progress Type"] = "PlayerLevel",
-      ["Task Reward Amount"] = 1,
+      ["Task Reward Amount"] = 10,
       ["Task Reward ID"] = 148,
       ["Task Reward Type"] = "Item",
       ["Task Target"] = 120,

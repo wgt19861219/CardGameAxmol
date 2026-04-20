@@ -358,14 +358,11 @@ class.GotoActivity = GotoActivity
 
 local showActivity = function(self)
     LegendLog("popScene ShowActivity")
-    local msg = ed.upmsg.activity_info()
-    msg._version = 1--[[ed.ui.serverlogin.getServerVersion()--]]
-    msg._player_name = ed.player:getName()
-    ed.send(msg, "activity_info")
-    --local ccb_container = ed.loadccbi(ed.activitys.ActivityPage ,"ccbi/ActivePage.ccbi")
-    --self.mainLayer:addChild(ccb_container,200)
-    ed.netreply.GotoActivity = GotoActivity(self)
-
+    -- 走 activitiesList panel 路径（不依赖CCB）
+    pcall(function() require("ui/activitiesList") end)
+    if ed.ui.activitiesButton then
+        ed.ui.activitiesButton.createlist()
+    end
 end
 class.showActivity = showActivity
 --

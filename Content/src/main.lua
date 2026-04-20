@@ -861,8 +861,6 @@ for _, mod in ipairs(coreModules) do
                     print("[STUB-NET] no scheduler, executing synchronously")
                     doLoginReply()
                 end
-            elseif msgType == "ask_activity_info" then
-                -- 活动信息请求，忽略
             elseif msgType == "tavern_draw" then
                 LegendLog("[STUB-NET] tavern_draw: handling directly")
                 local drawType = obj._draw_type or 0
@@ -2197,7 +2195,6 @@ local function ensureStubsAfterTools()
                     print("[STUB-NET] no scheduler, executing synchronously (ensureStubs)")
                     doLoginReply()
                 end
-            elseif msgType == "ask_activity_info" then
             elseif msgType == "tavern_draw" then
                 LegendLog("[ENSURE-SEND] tavern_draw: handling directly")
                 local drawType = obj._draw_type or 0

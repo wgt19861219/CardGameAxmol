@@ -1136,23 +1136,45 @@ end
 -- obj: { _times = N }
 M.handlers.midas = function(data, obj, localdata)
     local times = obj._times or 1
+
+    local gt = ed.getDataTable("GradientPrice")
+    local plt = ed.getDataTable("PlayerLevel")
+    local mt = ed.getDataTable("Midas")
+
+    local playerRmb = (ed.player and ed.player._rmb) or 0
     local acquireList = {}
-    local costPerUse = 50
-    local baseGold = 5000
+    local totalCost = 0
+    local midasTimes = 0
+    if ed.player and ed.player.getMidasTimes then
+        midasTimes = ed.player:getMidasTimes() or 0
+    end
+    local playerLevel = 1
+    if ed.player and ed.player.getLevel then
+        playerLevel = ed.player:getLevel() or 1
+    end
 
     for i = 1, times do
-        local moneyGain = baseGold * (i + (localdata.midas.today_times or 0))
+        local costIdx = midasTimes + i
+        local costEntry = gt and gt[costIdx] or {}
+        totalCost = totalCost + (costEntry.Midas or 0)
+
+        local yieldEntry = mt and mt[costIdx] or {}
+        local yieldRate = yieldEntry["Yield 1"] or 1
+        local levelEntry = plt and plt[playerLevel] or {}
+        local baseMoney = levelEntry["Midas Money"] or 5000
+        local moneyGain = math.floor(baseMoney * yieldRate)
+
         table_insert(acquireList, {
             _type = 1,
             _money = moneyGain,
         })
     end
 
-    if localdata.player.diamond >= costPerUse * times then
-        localdata.player.diamond = localdata.player.diamond - costPerUse * times
-        localdata.midas.today_times = (localdata.midas.today_times or 0) + times
-        localdata.midas.last_change = getTimestamp()
-        LocalData.save(localdata)
+    LegendLog("[midas] times=" .. times .. " cost=" .. totalCost .. " rmb=" .. playerRmb .. " acquire=" .. #acquireList)
+
+    if playerRmb < totalCost then
+        data._midas_reply = { _acquire = {} }
+        return
     end
 
     data._midas_reply = {
@@ -1839,6 +1861,11 @@ local function local_dispatch(msg)
         end
         pcall(function() ed.srand(data._enter_stage_reply._rseed) end)
         if ed.player then ed.player.loots = data._enter_stage_reply._loots or {} end
+    end
+
+    -- midas 回复
+    if data._midas_reply then
+        pcall(function() ed.ui.midas.dealUse(data._midas_reply) end)
     end
 
     -- exit_stage 回复

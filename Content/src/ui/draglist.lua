@@ -118,42 +118,13 @@ local setItemDirectParent = function(self, parentNode)
 end
 class.setItemDirectParent = setItemDirectParent
 local updateItemsVisible = function(self, isForceUpdateAll)
-	if not self.trackedItems or #self.trackedItems == 0 then return end
-	if not self.cliprect then return end
-	local px, py = self.listLayer:getPosition()
-	if not isForceUpdateAll and self._lastClipPosX == px and self._lastClipPosY == py then return end
-	self._lastClipPosX = px
-	self._lastClipPosY = py
-	local cr = self.cliprect
-	local cx, cy, cw, ch = cr.origin.x, cr.origin.y, cr.size.width, cr.size.height
-	local items = self.trackedItems
+	-- 裁剪已禁用，清理已销毁的节点
+	if not self.trackedItems then return end
 	local i = 1
-	while i <= #items do
-		local node = items[i]
-		if tolua.isnull(node) then
-			table.remove(items, i)
+	while i <= #self.trackedItems do
+		if tolua.isnull(self.trackedItems[i]) then
+			table.remove(self.trackedItems, i)
 		else
-			local nx, ny = node:getPosition()
-			local ppx, ppy = 0, 0
-			local parent = node:getParent()
-			while parent and not tolua.isnull(parent) and parent ~= self.listLayer do
-				local dpx, dpy = parent:getPosition()
-				ppx, ppy = ppx + dpx, ppy + dpy
-				parent = parent:getParent()
-			end
-			local absX = px + ppx + nx
-			local absY = py + ppy + ny
-			local sz = node:getContentSize()
-			local sw = sz.width
-			local sh = sz.height
-			if sw > 0 and sh > 0 then
-				local halfW = sw * 0.5
-				local halfH = sh * 0.5
-				local visible = (absX + halfW > cx) and (absX - halfW < cx + cw) and (absY + halfH > cy) and (absY - halfH < cy + ch)
-				node:setVisible(visible)
-			else
-				node:setVisible(true)
-			end
 			i = i + 1
 		end
 	end
@@ -736,24 +707,6 @@ local listEaseBackOut = function(self, x, y)
 	end
 	if (endx ~= lx or endy ~= ly) and not tolua.isnull(self.listLayer) then
 		self.listLayer:runAction(ease)
-		if self._clipUpdateId then
-			self.listScheduler:unscheduleScriptEntry(self._clipUpdateId)
-		end
-		local clipSchedId
-		local function clipUpdate(dt)
-			if tolua.isnull(self.listLayer) then
-				self.listScheduler:unscheduleScriptEntry(clipSchedId)
-				self._clipUpdateId = nil
-				return
-			end
-			self:updateItemsVisible()
-			if self.listLayer:numberOfRunningActions() == 0 then
-				self.listScheduler:unscheduleScriptEntry(clipSchedId)
-				self._clipUpdateId = nil
-			end
-		end
-		clipSchedId = self.listScheduler:scheduleScriptFunc(clipUpdate, 0, false)
-		self._clipUpdateId = clipSchedId
 	end
 end
 class.listEaseBackOut = listEaseBackOut

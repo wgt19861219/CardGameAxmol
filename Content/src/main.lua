@@ -1691,7 +1691,7 @@ for _, mod in ipairs(coreModules) do
                             end
                             data._sync_vitality_reply = { _vitality = vit }
                         elseif msgType == "ask_daily_login" then
-                            data._ask_daily_login_reply = { _result = "success", _items = {}, _hero = {}, _diamond = 0 }
+                            -- handled by local_server.lua
                         elseif msgType == "sdk_login" then
                             data._sdk_login_reply = { _result = "success", _uin = "1" }
                         elseif msgType == "system_setting" then

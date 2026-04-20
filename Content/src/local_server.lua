@@ -1359,11 +1359,89 @@ end
 
 -- ========== ask_daily_login ==========
 M.handlers.ask_daily_login = function(data, obj, localdata)
+    local status = (obj and obj._status) or 2  -- 1=all, 2=common, 3=vip
+
+    -- 防重复领取
+    local rewardStatus = ed.player and ed.player.getLoginRewardStatus and ed.player:getLoginRewardStatus()
+    if rewardStatus == "received" then
+        data._ask_daily_login_reply = {
+            _result = "fail", _items = {}, _hero = {}, _diamond = 0,
+        }
+        return
+    end
+
+    -- 获取签到天数对应的奖励
+    local frq = 1
+    if ed.player and ed.player.getLoginFrequency then
+        frq = ed.player:getLoginFrequency() or 1
+    end
+
+    -- 数据表可能只有旧年份，取当前月份对应的数据
+    local dlTable = ed.getDataTable("DailyLoginReward")
+    local date = ed.serverTime2China and ed.serverTime2China() or os.time()
+    local ymd = ed.getYMDHMS and ed.getYMDHMS(date) or os.date("*t", date)
+    local m = tonumber(ymd.month)
+    local d = frq  -- 按连续签到天数取奖励
+
+    -- 尝试当前年，再尝试 2018
+    local row
+    for _, tryYear in ipairs({tonumber(ymd.year), 2018}) do
+        if dlTable[tryYear] and dlTable[tryYear][m] and dlTable[tryYear][m][d] then
+            row = dlTable[tryYear][m][d]
+            break
+        end
+    end
+
+    if not row then
+        data._ask_daily_login_reply = {
+            _result = "fail",
+            _items = {},
+            _hero = {},
+            _diamond = 0,
+        }
+        return
+    end
+
+    local rewardType = row["Reward Type"]
+    local rewardId = row["Reward ID"]
+    local rewardAmount = row["Reward Amount"]
+    local vipRequired = row["Double Reward VIP Level"] or 0
+    local playerVip = (ed.player and ed.player.getvip and ed.player:getvip()) or 0
+
+    local items = {}
+    local heroes = {}
+    local diamond = 0
+
+    -- 计算倍率
+    local multiplier = 1
+    if status == 1 and vipRequired > 0 and playerVip >= vipRequired then
+        multiplier = 2  -- VIP双倍
+    end
+
+    if rewardType == "Item" then
+        table_insert(items, ed.makebits(11, rewardAmount * multiplier, 10, rewardId))
+    elseif rewardType == "Hero" then
+        table_insert(heroes, {_tid = rewardId})
+    elseif rewardType == "Diamond" then
+        diamond = rewardAmount * multiplier
+        if ed.player and ed.player.addrmb then
+            ed.player:addrmb(diamond)
+        end
+    elseif rewardType == "Gold" then
+        if ed.player and ed.player.addMoney then
+            ed.player:addMoney(rewardAmount * multiplier, true)
+        end
+    elseif rewardType == "PlayerEXP" then
+        if ed.player and ed.player.addExp then
+            ed.player:addExp(rewardAmount * multiplier)
+        end
+    end
+
     data._ask_daily_login_reply = {
         _result = "success",
-        _items = {},
-        _hero = {},
-        _diamond = 0,
+        _items = items,
+        _hero = heroes,
+        _diamond = diamond,
     }
 end
 
@@ -1866,6 +1944,37 @@ local function local_dispatch(msg)
     -- midas 回复
     if data._midas_reply then
         pcall(function() ed.ui.midas.dealUse(data._midas_reply) end)
+    end
+
+    -- get_svr_time 回复
+    if data._svr_time then
+        pcall(function() ed.player:initNativeTimeDiff(data._svr_time) end)
+        local handler = ed.netreply and ed.netreply.syncTime
+        if handler then
+            pcall(function() handler() end)
+            ed.netreply.syncTime = nil
+        end
+    end
+
+    -- ask_daily_login 回复
+    if data._ask_daily_login_reply then
+        local reply = data._ask_daily_login_reply
+        local result = reply._result == "success" or reply._result == 0
+        local reward = {
+            items = reply._items or {},
+            heroes = reply._hero or {},
+            diamond = reply._diamond or 0,
+        }
+        local ndata = ed.netdata and ed.netdata.dailylogin
+        if result and ndata then
+            pcall(function() ed.player:recievedDailyLoginReward(ndata.type) end)
+        end
+        local handler = ed.netreply and ed.netreply.dailylogin
+        if handler then
+            pcall(function() handler(result, reward) end)
+            ed.netreply.dailylogin = nil
+        end
+        ed.netdata.dailylogin = nil
     end
 
     -- exit_stage 回复

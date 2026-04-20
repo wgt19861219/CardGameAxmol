@@ -2295,6 +2295,40 @@ M.handlers.ask_activity_info = function(data, obj, localdata)
     data._ask_activity_info_reply = { _activity_info = activities }
 end
 
+-- chapter_star_reward: 章节星数奖励（查询或领取）
+-- obj: { _chapter_id = N, _tier = N(可选，有则领取，无则查询) }
+M.handlers.chapter_star_reward = function(data, obj, localdata)
+    local chapterId = obj and obj._chapter_id
+    if not chapterId then
+        data._chapter_star_reward_reply = { _result = "fail" }
+        return
+    end
+    local tier = obj._tier
+    if tier then
+        -- 领取奖励
+        local ok, rewards = ed.player:claimChapterStarReward(chapterId, tier)
+        if ok then
+            data._chapter_star_reward_reply = {
+                _result = "success",
+                _chapter_id = chapterId,
+                _tier = tier,
+                _rewards = rewards,
+            }
+        else
+            data._chapter_star_reward_reply = { _result = "fail" }
+        end
+    else
+        -- 查询状态
+        local status, totalStars = ed.player:getChapterStarStatus(chapterId)
+        data._chapter_star_reward_reply = {
+            _result = "success",
+            _chapter_id = chapterId,
+            _total_stars = totalStars,
+            _tiers = status,
+        }
+    end
+end
+
 -- suspend_report: 暂停报告
 M.handlers.suspend_report = function(data, obj, localdata)
     -- 无需回复
@@ -2563,6 +2597,16 @@ local function local_dispatch(msg)
         local handler = ed.getNetReply("GotoActivity")
         if handler then
             pcall(handler, data._activity_info_reply)
+        end
+    end
+
+    -- chapter_star_reward 回复
+    if data._chapter_star_reward_reply then
+        local reply = data._chapter_star_reward_reply
+        local handler = ed.netreply and ed.netreply.chapterStarReward
+        if handler then
+            pcall(handler, reply)
+            ed.netreply.chapterStarReward = nil
         end
     end
 

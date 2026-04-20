@@ -1484,6 +1484,10 @@ local function getMainButtonHandler(self, key)
 			self.mainLayer:addChild(mailbox.mainLayer, 160, 0)
 		end,
 		volcano = function()
+			if not package.loaded["ui/crusade"] then
+				pcall(require, "ui/crusade")
+				pcall(require, "gametable/crusadeconfig")
+			end
 			local ds = cpl("Crusade")
 			if ds then
 				ed.showToast(ds)

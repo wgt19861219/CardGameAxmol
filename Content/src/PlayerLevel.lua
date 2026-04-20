@@ -18,6 +18,9 @@ return {
     ["Arena Hero Exp"] = 100,
     ["Exp"] = 25,
     ["Vitality Reward"] = 20,
+    ["Unlock"] = {
+      [1] = "Crusade"
+    },
     ["Unlock"] = {},
     ["Sum"] = "50",
     ["Max Hero Level"] = 11,
@@ -381,7 +384,6 @@ return {
     ["Vitality Reward"] = 50,
     ["Unlock"] = {
       [1] = "sshop",
-      [2] = "Crusade"
     },
     ["Sum"] = "4005",
     ["Max Hero Level"] = 30,

@@ -72,7 +72,7 @@ local formatMailData = function(self, data)
 		local mid = fm._mail_cfg_id
 		local param = fm._params
 		name, from = ed.mailutil.getMailText(mid, param)
-		--Îª·ÀÖ¹·¢ËÍÁË²»´æÔÚµÄÓÊ¼þ½øÐÐ¼æÈÝ
+		--Îªï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½
 		if name==nil then
 			mid=0
 			name, from = ed.mailutil.getMailText(mid, param)
@@ -125,7 +125,10 @@ local function doPressIn(self)
 			local cc = m.contentContainer
 			if ed.containsPoint(board, x, y) then
 				board:setScale(0.95)
-				cc:setClipRect(CCRectMake(0, 0, board_width * 0.95, 90.25))
+				local stencil = cc:getStencil()
+				if stencil then
+					stencil:setContentSize(CCSizeMake(board_width * 0.95, 90.25))
+				end
 				return i
 			end
 		end
@@ -138,7 +141,10 @@ local function cancelPressIn(self)
 		local m = self.mails[id]
 		local board = m.board
 		local cc = m.contentContainer
-		cc:setClipRect(CCRectMake(0, 0, board_width, 95))
+		local stencil = cc:getStencil()
+		if stencil then
+			stencil:setContentSize(CCSizeMake(board_width, 95))
+		end
 		board:setScale(1)
 	end
 	return handler
@@ -150,7 +156,10 @@ local function doClickIn(self)
 		local board = m.board
 		board:setScale(1)
 		local cc = m.contentContainer
-		cc:setClipRect(CCRectMake(0, 0, board_width, 95))
+		local stencil = cc:getStencil()
+		if stencil then
+			stencil:setContentSize(CCSizeMake(board_width, 95))
+		end
 		if ed.containsPoint(board, x, y) then
 			self:doReadMail(id)
 		end
@@ -163,7 +172,10 @@ local function cancelClickIn(self)
 		local m = self.mails[id]
 		local board = m.board
 		local cc = m.contentContainer
-		cc:setClipRect(CCRectMake(0, 0, board_width, 95))
+		local stencil = cc:getStencil()
+		if stencil then
+			stencil:setContentSize(CCSizeMake(board_width, 95))
+		end
 		board:setScale(1)
 	end
 	return handler
@@ -455,8 +467,11 @@ local function createMail(self, index)
 	}
 	}
 	readnode:addNode(ui_info)
-	local contentContainer = CCLayer:create()
-	contentContainer:setClipRect(CCRectMake(0, 0, board_width, 95))
+	local contentContainer = ax.ClippingNode:create()
+	contentContainer:setAlphaThreshold(1.0)
+	local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+	stencil:setContentSize(CCSizeMake(board_width, 95))
+	contentContainer:setStencil(stencil)
 	board:addChild(contentContainer, 5)
 	ui.contentContainer = contentContainer
 	readnode = ed.readnode.create(contentContainer, ui)

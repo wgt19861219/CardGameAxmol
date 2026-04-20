@@ -788,12 +788,16 @@ local initMap = function(self, index, addition)
   local mapContainer, mapui = self:createMap(index, addition)
   local ui = self.ui
   local container = ui.frame_container
-  local clipLayer = CCLayer:create()
-  clipLayer:setClipRect(ed.DGRectMake(65, 40, 915, 480))
-  container:addChild(clipLayer, 2)
+  local clipNode = ax.ClippingNode:create()
+  clipNode:setAlphaThreshold(1.0)
+  local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+  stencil:setContentSize(CCSizeMake(915, 480))
+  stencil:setPosition(ccp(65, 40))
+  clipNode:setStencil(stencil)
+  container:addChild(clipNode, 2)
   local animLayer = CCLayer:create()
   ui.animLayer = animLayer
-  clipLayer:addChild(animLayer)
+  clipNode:addChild(animLayer)
   animLayer:addChild(mapContainer)
   self.ui.mapContainer = mapContainer
   self:refresh()
@@ -1103,8 +1107,12 @@ local function refreshPageTag(self, moveMode)
   if not tolua.isnull(container) then
     container:removeFromParentAndCleanup(true)
   end
-  local lContainer = CCLayer:create()
-  lContainer:setClipRect(ed.DGRectMake(-127, -30, 254, 60))
+  local lContainer = ax.ClippingNode:create()
+  lContainer:setAlphaThreshold(1.0)
+  local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+  stencil:setContentSize(CCSizeMake(254, 60))
+  stencil:setPosition(ccp(-127, -30))
+  lContainer:setStencil(stencil)
   ui.page_tag_container:addChild(lContainer, 5)
   ui.pageTagContainer = lContainer
   local container = CCSprite:create()

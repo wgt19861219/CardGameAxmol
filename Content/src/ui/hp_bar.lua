@@ -170,26 +170,26 @@ function BigHpBar:update(dt)
       fore_length = percent
     end
     self.fore_length = fore_length
-    self:setBarPercent(self.foregroundClipLayer, foreground, fore_length)
+    self:setBarPercent(nil, foreground, fore_length)
   elseif fore_length > percent + epsilon then
     fore_length = percent
     self.fore_length = fore_length
-    self:setBarPercent(self.foregroundClipLayer, foreground, percent)
+    self:setBarPercent(nil, foreground, percent)
   end
   if mid_length < fore_length - epsilon then
     self.mid_length = fore_length
-    self:setBarPercent(self.midClipLayer, midlayer, fore_length)
+    self:setBarPercent(nil, midlayer, fore_length)
   elseif mid_length > fore_length then
     mid_length = mid_length - inc_speed * dt
     self.mid_length = mid_length
-    self:setBarPercent(self.midClipLayer, midlayer, mid_length)
+    self:setBarPercent(nil, midlayer, mid_length)
   end
   if percent == 0 and self.isMinBlood then
     if fore_length >= mid_length then
       self:resetBloodState()
       self.percent = self.bloodPercent
-      self:setBarPercent(self.foregroundClipLayer, foreground, self.percent)
-      self:setBarPercent(self.midClipLayer, midlayer, 1)
+      self:setBarPercent(nil, foreground, self.percent)
+      self:setBarPercent(nil, midlayer, 1)
       self.fore_length = self.percent
       self.mid_length = 1
       self.bloodIndex = bloodIndex
@@ -198,8 +198,8 @@ function BigHpBar:update(dt)
   elseif percent == 1 and self.isMaxBlood and fore_length >= percent - epsilon then
     self:resetBloodState()
     self.percent = self.bloodPercent
-    self:setBarPercent(self.midClipLayer, midlayer, 0)
-    self:setBarPercent(self.foregroundClipLayer, foreground, 0)
+    self:setBarPercent(nil, midlayer, 0)
+    self:setBarPercent(nil, foreground, 0)
     self.fore_length = 0
     self.mid_length = 0
     self.bloodIndex = bloodIndex
@@ -272,11 +272,8 @@ function BigHpBar:resetBloodState()
   self:resetForegroundAndDecration()
 end
 function BigHpBar:setBarPercent(clipLayer, node, percent)
-  if clipLayer and node then
-    local size = node:getTextureRect().size
-    local scale = self.background:getScaleX()
-    local startPosX = size.width * scale * (1 - percent)
-    clipLayer:setClipRect(CCRectMake(startPosX, 0, size.width, size.height))
+  if node then
+    node:setScaleX(percent)
   end
 end
 function BigHpBar.create(unit, length)
@@ -287,10 +284,8 @@ function BigHpBar.create(unit, length)
     node = CCNode:create(),
     background = ed.createSprite("UI/alpha/HVGA/guild/guildraid_hpbar_boss_bg.png"),
     midlayer = ed.createSprite("UI/alpha/HVGA/guild/guildraid_hpbar_transition.png"),
-    midClipLayer = CCLayer:create(),
     decration = CCSprite:create(),
     foreground = CCSprite:create(),
-    foregroundClipLayer = CCLayer:create(),
     bossIconFrameNode = ed.createSprite("UI/alpha/HVGA/guild/boss_frame.png"),
     bossIconNode = ed.createSprite(unit.bossIconName),
     inc_speed = 0.3,
@@ -325,26 +320,20 @@ function BigHpBar.create(unit, length)
   self.background:addChild(self.decration, 0)
   self.decration:setAnchorPoint(ccp(1, 0.5))
   self.decration:setPosition(ccp(offsetX, offsetY))
-  self.midClipLayer:setAnchorPoint(ed.ccpZero)
-  self.midClipLayer:setClipRect(CCRectMake(0, 0, midlayerSize.width, midlayerSize.height))
-  self.midClipLayer:addChild(self.midlayer)
+  self.background:addChild(self.midlayer, 1)
   self.midlayer:setAnchorPoint(ed.ccpZero)
-  self.background:addChild(self.midClipLayer, 1)
-  self.midClipLayer:setPosition(ccp(offsetXLeft, offsetYDown))
-  self.foregroundClipLayer:setAnchorPoint(ed.ccpZero)
-  self.foregroundClipLayer:setClipRect(CCRectMake(0, 0, foregroundSize.width, foregroundSize.height))
-  self.foregroundClipLayer:addChild(self.foreground)
+  self.midlayer:setPosition(ccp(offsetXLeft, offsetYDown))
+  self.background:addChild(self.foreground, 1)
   self.foreground:setAnchorPoint(ed.ccpZero)
-  self.background:addChild(self.foregroundClipLayer, 1)
-  self.foregroundClipLayer:setPosition(ccp(offsetXLeft, offsetYDown))
+  self.foreground:setPosition(ccp(offsetXLeft, offsetYDown))
+  self.midlayer:setScaleX(self.percent)
+  self.foreground:setScaleX(self.percent)
   self.node:addChild(self.bossIconFrameNode)
   self.bossIconFrameNode:setAnchorPoint(ccp(0, 0.5))
   self.bossIconFrameNode:setPosition(ccp(foregroundSize.width * scale / 2 - 10, 0))
   self.bossIconFrameNode:addChild(self.bossIconNode, 1)
   self.bossIconNode:setAnchorPoint(ccp(0.5, 0.5))
   self.bossIconNode:setPosition(iconFrameSize.width / 2, iconFrameSize.height / 2)
-  self:setBarPercent(self.midClipLayer, self.midlayer, self.percent)
-  self:setBarPercent(self.foregroundClipLayer, self.foreground, self.percent)
   return self
 end
 BigHpBarCreate = BigHpBar.create

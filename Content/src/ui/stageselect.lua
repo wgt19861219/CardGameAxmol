@@ -265,7 +265,7 @@ local function updateGuildInstanceButton(self)
 	if self.mode == "guild" then
 		--self.modeui.guild:setVisible(true)
 		--self.modeui.guild_label:setVisible(true)
-		--ÆÁ±ÎÍÅ¶Ó¸±±¾
+		--ï¿½ï¿½ï¿½ï¿½ï¿½Å¶Ó¸ï¿½ï¿½ï¿½
 		self.modeui.guild:setVisible(false)
 		self.modeui.guild_label:setVisible(false)
 		refreshModeButtonPosition(self)
@@ -281,7 +281,7 @@ local function updateGuildInstanceButton(self)
 		if info and info.guildInstance == true then
 			--self.modeui.guild_label:setVisible(true)
 			--self.modeui.guild:setVisible(true)
-			--ÆÁ±ÎÍÅ¶Ó¸±±¾
+			--ï¿½ï¿½ï¿½ï¿½ï¿½Å¶Ó¸ï¿½ï¿½ï¿½
 			self.modeui.guild_label:setVisible(false)
 			self.modeui.guild:setVisible(false)
 
@@ -1319,17 +1319,11 @@ local function createStage(self, chapter, mode, skipAnim)
 				processBg:setPosition(ccp(40, 60))
 				icon:addChild(processBg)
 				local info = ed.ui.guild.getInstanceInfo(chapter)
-				local layer = CCLayer:create()
-				layer:setAnchorPoint(ccp(0, 0))
-				layer:setPosition(ccp(40, 60))
-				icon:addChild(layer)
 				local process = ed.createSprite("UI/alpha/HVGA/guild/guildraid_stageselect_progress_done.png")
 				process:setAnchorPoint(ccp(0, 0))
-				process:setPosition(ccp(2, 3))
-				layer:addChild(process)
-				local size = process:getContentSize()
-				local width = size.width * info.progress / 10000
-				layer:setClipRect(CCRectMake(0, 0, width, size.height * 1.5))
+				process:setPosition(ccp(42, 63))
+				icon:addChild(process)
+				process:setScaleX(info.progress / 10000)
 			end
 		end
 		local isElite = mode == "elite"
@@ -1599,10 +1593,14 @@ local function create(chapter, mode, stage)
 		self.guildInfo.chapter = chapter
 	end
 	local mainLayer = self.mainLayer
-	local clipLayer = CCLayer:create()
+	local clipLayer = ax.ClippingNode:create()
+	clipLayer:setAlphaThreshold(1.0)
+	local clipStencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+	clipStencil:setContentSize(CCSizeMake(712, 372))
+	clipStencil:setPosition(44, 20)
+	clipLayer:setStencil(clipStencil)
 	self.clipLayer = clipLayer
 	mainLayer:addChild(clipLayer)
-	clipLayer:setClipRect(CCRectMake(44, 20, 712, 372))
 	self:registerRefreshHandler("refreshCurrentTag", self:refreshCurrentTag())
 	self:createMap(chapter, mode)
 	self:createFrame(chapter, mode)

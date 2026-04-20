@@ -446,10 +446,14 @@ local function createMaterialLayer(self)
     self:initMaterialLayer()
     return
   end
-  local container = CCLayer:create()
+  local container = ax.ClippingNode:create()
+  container:setAlphaThreshold(1.0)
+  local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+  stencil:setContentSize(CCSizeMake(800, 155))
+  stencil:setPosition(ccp(0, 42))
+  container:setStencil(stencil)
   self.mtContainer = container
   self.container:addChild(container)
-  self.mtContainer:setClipRect(CCRectMake(0, 42, 800, 155))
   self:createmtListLayer()
   self:createmtList()
 end

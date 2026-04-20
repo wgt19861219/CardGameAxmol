@@ -1096,10 +1096,14 @@ local function create(type)
 	local container = CCSprite:create()
 	mainLayer:addChild(container, 5)
 	self.container = container
-	local clipLayer = CCLayer:create()
-	clipLayer:setClipRect(CCRectMake(44, 20, 712, 370))
-	self.clipLayer = clipLayer
-	mainLayer:addChild(clipLayer)
+	local clipNode = ax.ClippingNode:create()
+	clipNode:setAlphaThreshold(1.0)
+	local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+	stencil:setContentSize(CCSizeMake(712, 370))
+	stencil:setPosition(ccp(44, 20))
+	clipNode:setStencil(stencil)
+	self.clipLayer = clipNode
+	mainLayer:addChild(clipNode)
 	self.ui = {}
 	local ur = self:getres()
 	local ui_info = {

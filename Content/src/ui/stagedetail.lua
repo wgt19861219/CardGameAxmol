@@ -1529,10 +1529,14 @@ local function create(stage, addition, mode)
   self.ui = {}
   local mainLayer = self.mainLayer
   local map_ui = ed.ui.stageselectres.map["chapter" .. info.chapter]
-  local stageContainer = CCLayer:create()
+  local stageContainer = ax.ClippingNode:create()
+  stageContainer:setAlphaThreshold(1.0)
+  local stageStencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+  stageStencil:setContentSize(CCSizeMake(712, 370))
+  stageStencil:setPosition(44, 20)
+  stageContainer:setStencil(stageStencil)
   self.ui.stageContainer = stageContainer
   self.mainLayer:addChild(stageContainer)
-  stageContainer:setClipRect(CCRectMake(44, 20, 712, 370))
   local enemyContainer = CCNode:create()
   self.ui.enemyContainer = enemyContainer
   self.mainLayer:addChild(enemyContainer, 20)

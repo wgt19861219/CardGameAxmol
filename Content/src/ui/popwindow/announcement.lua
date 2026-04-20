@@ -200,8 +200,11 @@ local function createMail(self, index,dataInfo)
   readnode:addNode(ui_info)
 
 
-  local contentContainer = CCLayer:create()
-  contentContainer:setClipRect(CCRectMake(0, 0, board_width, 180))
+  local contentContainer = ax.ClippingNode:create()
+  contentContainer:setAlphaThreshold(1.0)
+  local contentStencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+  contentStencil:setContentSize(CCSizeMake(board_width, 180))
+  contentContainer:setStencil(contentStencil)
   board:addChild(contentContainer, 5)
   ui.contentContainer = contentContainer
   readnode = ed.readnode.create(contentContainer, ui)
@@ -338,7 +341,10 @@ local function doPressIn(self)
       local cc = m.contentContainer
       if ed.containsPoint(board, x, y) then
         board:setScale(0.95)
-        cc:setClipRect(CCRectMake(0, 0, board_width * 0.95, 90.25))
+        local stencil = cc:getStencil()
+        if stencil then
+          stencil:setContentSize(CCSizeMake(board_width * 0.95, 90.25))
+        end
         return i
       end
     end
@@ -353,7 +359,10 @@ local function cancelPressIn(self)
     local m = self.mails[id]
     local board = m.board
     local cc = m.contentContainer
-    cc:setClipRect(CCRectMake(0, 0, board_width, 95))
+    local stencil = cc:getStencil()
+      if stencil then
+        stencil:setContentSize(CCSizeMake(board_width, 95))
+      end
     board:setScale(1)
 	--]]
   end
@@ -368,7 +377,10 @@ local function doClickIn(self)
     local board = m.board
     board:setScale(1)
     local cc = m.contentContainer
-    cc:setClipRect(CCRectMake(0, 0, board_width, 95))
+    local stencil = cc:getStencil()
+      if stencil then
+        stencil:setContentSize(CCSizeMake(board_width, 95))
+      end
     if ed.containsPoint(board, x, y) then
       self:doReadMail(id)
     end
@@ -383,7 +395,10 @@ local function cancelClickIn(self)
     local m = self.mails[id]
     local board = m.board
     local cc = m.contentContainer
-    cc:setClipRect(CCRectMake(0, 0, board_width, 95))
+    local stencil = cc:getStencil()
+      if stencil then
+        stencil:setContentSize(CCSizeMake(board_width, 95))
+      end
     board:setScale(1)
 	--]]
   end

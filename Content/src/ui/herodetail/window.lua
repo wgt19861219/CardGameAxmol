@@ -1662,7 +1662,13 @@ local function refreshStone(self)
   if isMaxStar then
     a, ta = 1, 1
   end
-  self.sbContainer:setClipRect(CCRectMake(0, 0, math.min(a / ta, 1) * self.stone_bar_len, 26))
+  if self.stoneClipNode then
+    local ratio = math.min(a / ta, 1)
+    local stencil = self.stoneClipNode:getStencil()
+    if stencil then
+      stencil:setContentSize(CCSizeMake(self.stone_bar_len * ratio, 26))
+    end
+  end
 end
 class.refreshStone = refreshStone
 local doEvolveRefresh = function(self)
@@ -1672,11 +1678,12 @@ end
 class.doEvolveRefresh = doEvolveRefresh
 local function createStoneBar(self)
   local ui = self.ui
-  local sbContainer = CCLayer:create()
-  self.sbContainer = sbContainer
   local parent = ui.stone_bar_bg
-  sbContainer:setAnchorPoint(ccp(0, 0))
-  parent:addChild(sbContainer)
+  local clipNode = ax.ClippingNode:create()
+  clipNode:setAlphaThreshold(1.0)
+  clipNode:setAnchorPoint(ccp(0, 0))
+  parent:addChild(clipNode)
+  self.stoneClipNode = clipNode
   local stoneBar = ed.createNode({
     t = "Scale9Sprite",
     base = {
@@ -1689,12 +1696,16 @@ local function createStoneBar(self)
     config = {
       scaleSize = CCSizeMake(self.stone_bar_len, 26)
     }
-  }, sbContainer)
+  }, clipNode)
+  self.stoneBar = stoneBar
   local a, ta = ed.readhero.getStoneAmount(self.hid), herodetail.getHeroEvolveStoneNeed(self.hid)
   if herodetail.checkHeroMaxStar(self.hid) then
     a, ta = 1, 1
   end
-  sbContainer:setClipRect(CCRectMake(0, 0, math.min(a / ta, 1) * self.stone_bar_len, 26))
+  local ratio = math.min(a / ta, 1)
+  local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+  stencil:setContentSize(CCSizeMake(self.stone_bar_len * ratio, 26))
+  clipNode:setStencil(stencil)
 end
 class.createStoneBar = createStoneBar
 local createOtherPlayerLayer = function(self)

@@ -418,9 +418,7 @@ local getSetNameCost = function(self)
 end
 class.getSetNameCost = getSetNameCost
 local function getvip(self)
-  local rsum = self._recharge_sum or 0
-  local vt = ed.getDataTable("VIP")
-  return vt:getVipLevel(rsum)
+  return 15
 end
 class.getvip = getvip
 local checkvipGiftValid = function(self, vip)

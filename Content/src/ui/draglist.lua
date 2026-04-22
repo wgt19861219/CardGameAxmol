@@ -262,7 +262,8 @@ end
 class.initParams = initParams
 local setClipRect = function(self, cliprect)
 	if self.listLayer then
-		pcall(clipRectSet, self.listLayer, cliprect.origin.x, cliprect.origin.y, cliprect.size.width, cliprect.size.height)
+		local r = self._originalCliprect or cliprect
+		pcall(clipRectSet, self.listLayer, r.origin.x, r.origin.y, r.size.width, r.size.height)
 	end
 	self.cliprect = cliprect
 end
@@ -297,6 +298,7 @@ end
 class.refreshClipRect = refreshClipRect
 local initClipRect = function(self, rect)
 	self.cliprect = rect
+	self._originalCliprect = rect
 	self.width = rect.size.width
 	self.height = rect.size.height
 end

@@ -421,79 +421,10 @@ local function getvip(self)
   return 15
 end
 class.getvip = getvip
-local checkvipGiftValid = function(self, vip)
-  local vgr = self._vip_gifts_draw or {}
-  local cv = self:getvip()
-  if vip > cv then
-    return false
-  end
-  for i = 1, #vgr do
-    if vgr[i] == vip then
-      return false
-    end
-  end
-  return true
-end
-class.checkvipGiftValid = checkvipGiftValid
-local refreshvipGiftRecord = function(self, vip)
-  local vgr = self._vip_gifts_draw or {}
-  for i = 1, #vgr do
-    if vip == vgr[i] then
-      return
-    end
-  end
-  self._vip_gifts_draw = self._vip_gifts_draw or {}
-  table.insert(self._vip_gifts_draw, vip)
-end
-class.refreshvipGiftRecord = refreshvipGiftRecord
-local function getvipGift(self, vip)
-  if not vip then
-    return
-  end
-  local vgt = ed.getDataTable("VIPGift")
-  local row = vgt[vip]
-  if not row then
-    return
-  end
-  local gt = {}
-  local index = 1
-  while row[string.format("Gift Type %d", index)] do
-    local type = row[string.format("Gift Type %d", index)]
-    local id = row[string.format("Gift ID %d", index)]
-    local amount = row[string.format("Gift Amount %d", index)]
-    gt[index] = {
-      type = type,
-      id = id,
-      amount = amount
-    }
-    index = index + 1
-  end
-  return gt
-end
-class.getvipGift = getvipGift
-local function addvipGift(self, vip)
-  local gt = self:getvipGift(vip) or {}
-  for i = 1, #gt do
-    local g = gt[i]
-    local type = g.type
-    local id = g.id
-    local amount = g.amount or 1
-    if ed.isElementInTable(type, {"Item", "Hero"}) then
-      if id then
-        local t = ed.itemType(id)
-        if t == "hero" then
-          self:addHero(id)
-        elseif t == "equip" then
-          self:addEquip(id, amount)
-        end
-      end
-    elseif type == "Gold" then
-      self:addMoney(amount)
-    end
-  end
-  self:refreshvipGiftRecord(vip)
-end
-class.addvipGift = addvipGift
+class.checkvipGiftValid = function() end
+class.refreshvipGiftRecord = function() end
+class.getvipGift = function() end
+class.addvipGift = function() end
 local addMoney = function(self, money, silent)
   money = money or 0
   self._money = math.max(self._money + money, 0)

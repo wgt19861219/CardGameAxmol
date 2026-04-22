@@ -344,9 +344,11 @@ local updateFca = function(self, dt)
       v.node:removeFromParentAndCleanup(true)
       self.fcaList[k] = nil
     elseif not v.isPause then
-      local okUpdate, _ = pcall(function() v.node:update(dt) end)
-      if not okUpdate then
-        pcall(function() v.node:update(dt, false) end)
+      if v.node:isVisible() then
+        local okUpdate, _ = pcall(function() v.node:update(dt) end)
+        if not okUpdate then
+          pcall(function() v.node:update(dt, false) end)
+        end
       end
     end
     if v.pauseDelayTime then

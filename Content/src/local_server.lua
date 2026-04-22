@@ -705,9 +705,9 @@ end
 
 -- ========== shop_refresh ==========
 -- obj: 刷新商店请求
-local function generateShopGoods()
+local function generateShopGoods(shopId)
+    shopId = shopId or 1
     local goods = {}
-    -- 从 equip 数据表随机取装备
     local equipIds = {}
     pcall(function()
         local equipTable = ed.getDataTable("equip")
@@ -719,7 +719,6 @@ local function generateShopGoods()
             end
         end
     end)
-    -- 数据表不可用时回退到默认ID
     if #equipIds == 0 then
         equipIds = {101, 102, 103, 104, 105, 106, 107, 108, 109, 110}
     end
@@ -729,6 +728,8 @@ local function generateShopGoods()
         local j = math.random(1, i)
         shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
     end
+    local payType = (shopId == 3) and "diamond" or "gold"
+    local priceMul = (shopId == 2) and 0.6 or (shopId == 3) and 2.0 or 1.0
     for i = 1, math.min(6, #shuffled) do
         local price = 100
         pcall(function()
@@ -737,12 +738,14 @@ local function generateShopGoods()
                 price = tonumber(equipTable[shuffled[i]]["Price"]) or math.random(50, 500)
             end
         end)
+        price = math.floor(price * priceMul)
+        if price < 10 then price = 10 end
         goods[i] = {
             _id = shuffled[i],
-            _type = "gold",
+            _type = payType,
             _price = price,
             _amount = 1,
-            _is_sale = false,
+            _is_sale = (shopId == 2),
         }
     end
     return goods
@@ -750,7 +753,7 @@ end
 
 M.handlers.shop_refresh = function(data, obj, localdata)
     local shopId = (obj and obj._shop_id) or (obj and obj._id) or 1
-    local goods = generateShopGoods()
+    local goods = generateShopGoods(shopId)
     -- 存储商品数据供 shop_consume 查找
     localdata.shop_data = localdata.shop_data or {}
     local slotMap = {}
@@ -821,7 +824,7 @@ end
 -- obj: { _shopid = N }
 M.handlers.open_shop = function(data, obj, localdata)
     local shopId = obj._shopid or 1
-    local goods = generateShopGoods()
+    local goods = generateShopGoods(shopId)
     localdata.shop_data = localdata.shop_data or {}
     local slotMap = {}
     for i, g in ipairs(goods) do

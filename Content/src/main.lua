@@ -744,7 +744,9 @@ for _, mod in ipairs(coreModules) do
                     _last_login_date = 0,
                 },
                 _shop = {
-                    { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
+                    { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} },
+                    { id = 2, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} },
+                    { id = 3, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} },
                 },
             }
             if overrides then

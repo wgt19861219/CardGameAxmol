@@ -170,14 +170,9 @@ local function doBuy(self, data)
       ed.showToast(T(LSTR("SHOP.YOUR_PACKAGE_DOESNT_HAVE_ENOUGH_SPACE")))
     elseif not config.checkMoneyEnough(data.pay, data.cost, data.payid) then
       if data.pay == "gold" then
-        ed.showHandyDialog("useMidas", {
-          callback = self:refreshCostHandler(),
-          refreshHandler = self:refreshCostHandler()
-        })
+        ed.showToast("金币不足")
       elseif data.pay == "diamond" then
-        ed.showHandyDialog("toRecharge", {
-          callback = self:refreshCostHandler()
-        })
+        ed.showToast("钻石不足")
       elseif data.pay == "crusadepoint" then
         ed.showToast(T(LSTR("SHOP.INSUFFIENT_INTERFAX_COINS_THUS_YOU_CAN_NOT_BUY")))
       elseif data.pay == "arenapoint" then

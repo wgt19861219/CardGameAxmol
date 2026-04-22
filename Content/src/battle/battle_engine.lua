@@ -709,8 +709,9 @@ local function tick(self)
 	})
 	do
 		local list = self[list_name]
+		local list_len = #list
 		local write = 1
-		for i = 1, #list do
+		for i = 1, list_len do
 			local entity = list[i]
 			if not entity.frozen_model then
 				entity:update(tick_interval)
@@ -720,7 +721,7 @@ local function tick(self)
 				write = write + 1
 			end
 		end
-		for i = write, #list do
+		for i = write, list_len do
 			list[i] = nil
 		end
 	end

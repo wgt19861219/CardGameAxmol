@@ -709,17 +709,20 @@ local function tick(self)
 	})
 	do
 		local list = self[list_name]
-		local new_list = {}
-		for _, entity in ipairs(list) do
-			local f = entity.frozen_model
-			if not f then
+		local write = 1
+		for i = 1, #list do
+			local entity = list[i]
+			if not entity.frozen_model then
 				entity:update(tick_interval)
 			end
 			if not entity.terminated then
-				table.insert(new_list, entity)
+				list[write] = entity
+				write = write + 1
 			end
 		end
-		self[list_name] = new_list
+		for i = write, #list do
+			list[i] = nil
+		end
 	end
 	self.ticks = self.ticks + 1
 	if do_battle_log then

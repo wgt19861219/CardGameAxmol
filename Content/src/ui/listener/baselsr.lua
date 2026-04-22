@@ -53,12 +53,6 @@ local function playerLevelup(self)
 end
 class.playerLevelup = playerLevelup
 local function vipLevelup(self, param)
-  param = param or {}
-  local previp = param.previp
-  ed.announce({
-    type = "vipPrivilege",
-    param = {previp = previp}
-  })
 end
 class.vipLevelup = vipLevelup
 local level_up_hero_list = {}

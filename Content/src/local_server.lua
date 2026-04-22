@@ -705,22 +705,9 @@ end
 
 -- ========== shop_refresh ==========
 -- obj: 刷新商店请求
--- VIP经验商品使用特殊ID "vip_exp"
-local VIP_EXP_SLOT = 1
-local VIP_EXP_REWARD = 100
-local VIP_EXP_PRICE = 200
-
 local function generateShopGoods()
     local goods = {}
-    -- Slot 1: VIP经验商品（固定）
-    goods[1] = {
-        _id = "vip_exp",
-        _type = "diamond",
-        _price = VIP_EXP_PRICE,
-        _amount = 1,
-        _is_sale = false,
-    }
-    -- Slot 2-6: 从 equip 数据表随机取装备
+    -- 从 equip 数据表随机取装备
     local equipIds = {}
     pcall(function()
         local equipTable = ed.getDataTable("equip")
@@ -742,7 +729,7 @@ local function generateShopGoods()
         local j = math.random(1, i)
         shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
     end
-    for i = 1, math.min(5, #shuffled) do
+    for i = 1, math.min(6, #shuffled) do
         local price = 100
         pcall(function()
             local equipTable = ed.getDataTable("equip")
@@ -750,7 +737,7 @@ local function generateShopGoods()
                 price = tonumber(equipTable[shuffled[i]]["Price"]) or math.random(50, 500)
             end
         end)
-        goods[i + 1] = {
+        goods[i] = {
             _id = shuffled[i],
             _type = "gold",
             _price = price,

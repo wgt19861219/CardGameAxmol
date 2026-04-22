@@ -140,15 +140,7 @@ local buyReply = function(self)
     if result and data then
       local shop = data.shop
       local goods = data.goods
-      if goods.id == "vip_exp" then
-        -- VIP经验不进背包，增加充值总额
-        local vipAmount = goods.cost
-        pcall(function()
-          ed.player._recharge_sum = (ed.player._recharge_sum or 0) + vipAmount
-        end)
-      else
-        ed.player:addEquip(goods.id, goods.amount)
-      end
+      ed.player:addEquip(goods.id, goods.amount)
       ed.player:addPoint(goods.pay, -goods.cost)
       ed.player:buyShopGoods(shop, goods.slot)
     end
@@ -174,7 +166,7 @@ end
 class.upBuy = upBuy
 local function doBuy(self, data)
   local function handler()
-    if data.id ~= "vip_exp" and config.checkPackageFull(data.id, data.amount) then
+    if config.checkPackageFull(data.id, data.amount) then
       ed.showToast(T(LSTR("SHOP.YOUR_PACKAGE_DOESNT_HAVE_ENOUGH_SPACE")))
     elseif not config.checkMoneyEnough(data.pay, data.cost, data.payid) then
       if data.pay == "gold" then
@@ -352,27 +344,7 @@ local function createCommon(self)
       v = v.good
     end
     local info = equipInfo[v._id]
-    -- VIP经验商品特殊处理
-    if v._id == "vip_exp" then
-      table.insert(goods, {
-        data = {
-          index = #goods + 1,
-          id = v._id,
-          pay = v._type,
-          payid = nil,
-          price = v._price,
-          amount = v._amount,
-          cost = v._price * math.max(v._amount, 1),
-          slot = slot or k,
-          res = "UI/alpha/HVGA/shop_head.png",
-          name = "VIP Experience",
-          tag = tag,
-          category = "VIP",
-          sale = v._is_sale
-        },
-        ui = {}
-      })
-    elseif info and info.Icon then
+    if info and info.Icon then
       table.insert(goods, {
         data = {
           index = #goods + 1,
@@ -932,25 +904,16 @@ local function create(id)
         config = {visible = false}
       },
       {
-        t = "Sprite",
+        t = "Label",
         base = {
           name = "refresh_label",
-          res = "UI/alpha/HVGA/shop_refresh_label.png",
-          parent = "refresh",
-          z = 3
-        },
-        layout = {mediate = true}
-      },
-      {
-        t = "Sprite",
-        base = {
-          name = "refresh_label_down",
-          res = "UI/alpha/HVGA/shop_refresh_label_down.png",
+          text = "刷新",
+          size = 18,
           parent = "refresh",
           z = 3
         },
         layout = {mediate = true},
-        config = {visible = false}
+        config = {color = ccc3(255, 255, 255)}
       }
     }
     for i = 1, #temp_info do
@@ -971,7 +934,7 @@ local function create(id)
     button = self.ui.refresh,
     press = {
       self.ui.refresh_down,
-      self.ui.refresh_label_down
+      self.ui.refresh_label
     },
     key = "refresh_button",
     clickHandler = function()

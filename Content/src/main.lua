@@ -827,9 +827,12 @@ for _, mod in ipairs(coreModules) do
                                     _last_manual_refresh_time = os.time(),
                                     _today_times = 0,
                                     _current_goods = {
-                                        {_id = "vip_exp", _type = "diamond", _price = 200, _amount = 1, _is_sale = false},
                                         {_id = 101, _type = "gold", _price = 100, _amount = 1, _is_sale = false},
                                         {_id = 102, _type = "gold", _price = 200, _amount = 1, _is_sale = false},
+                                        {_id = 103, _type = "gold", _price = 150, _amount = 1, _is_sale = false},
+                                        {_id = 104, _type = "gold", _price = 180, _amount = 1, _is_sale = false},
+                                        {_id = 105, _type = "gold", _price = 120, _amount = 1, _is_sale = false},
+                                        {_id = 106, _type = "gold", _price = 250, _amount = 1, _is_sale = false},
                                     },
                                 })
                             end

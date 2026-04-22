@@ -641,11 +641,11 @@ local doSendConsume = function(self, id)
     id = self.id,
     amount = self.useAmount
   })
+  self.eatLocked = true
   local msg = ed.upmsg.consume_item()
   msg._hero_id = hid
   msg._item_id = item_info
   ed.send(msg, "consume_item")
-  self.eatLocked = true
 end
 class.doSendConsume = doSendConsume
 local doEat = function(self, id, addition)

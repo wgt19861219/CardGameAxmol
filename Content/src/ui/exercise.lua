@@ -832,28 +832,7 @@ local function checkOpenAllExercise(self, time)
 end
 class.checkOpenAllExercise = checkOpenAllExercise
 local function checkExerciseEnabled(self, key)
-	local row = self:getasRow(key)
-	local wn = ed.getWeekdayName()
-	local pwn = ed.getPreWeekdayName()
-	local nt = ed.serverTime2China()
-	if self:checkOpenAllExercise(nt) then
-		return true
-	end
-	local y, m, d, h, mi, s = ed.time2YMDHMS(nt)
-	local ntt = {
-		d = d,
-		h = h,
-		m = mi,
-		s = s
-	}
-	local boa = ed.checkBOA(ntt)
-	local ckday = row[wn]
-	local ckhour = boa == "after"
-	local ck1 = ckday and ckhour
-	local pckday = row[pwn]
-	local pckhour = boa == "before"
-	local ck2 = pckday and pckhour
-	return ck1 or ck2
+	return true
 end
 class.checkExerciseEnabled = checkExerciseEnabled
 local getExerciseInfo = function(self, key)

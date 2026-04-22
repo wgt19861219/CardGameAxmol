@@ -1259,28 +1259,18 @@ local function refreshShop(self, key)
 	end
 	local button = self.ui[key]
 	self.shopButtonType[key] = "into"
-	local vk = {
-		sshop = "Summon Special Shop",
-		ssshop = "Summon So Special Shop"
-	}
 	local id = {sshop = 2, ssshop = 3}
 	local has = ed.player:checkShopValid(id[key])
-	local k = vk[key]
-	local ul = ed.getDataTable("VIP")[ed.player:getvip()][k]
+	-- 永久显示黑市/地精商店，跳过VIP限制
 	if not has then
-		if ul then
-			button:setVisible(true)
-			self.shopButtonType[key] = "summon"
-			self.mainFcas[key]:useShader("GrayScalingShader")
-			self:createShopTitle({shopType = key, titleType = "summon"})
-		else
-			button:setVisible(false)
+		local shopData = ed.player:getShopData(id[key])
+		if not shopData then
+			table.insert(ed.player._shop, {id = id[key]})
 		end
-	else
-		self.mainFcas[key]:useDefaultShader()
-		button:setVisible(true)
-		self:createShopTitle({shopType = key,titleType = "into"})
 	end
+	self.mainFcas[key]:useDefaultShader()
+	button:setVisible(true)
+	self:createShopTitle({shopType = key, titleType = "into"})
 end
 class.refreshShop = refreshShop
 

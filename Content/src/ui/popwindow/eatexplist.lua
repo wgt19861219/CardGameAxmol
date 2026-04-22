@@ -260,7 +260,7 @@ local createHero = function(self, i, info)
   bg:addChild(markIcon)
   local exp = info._exp
   local maxExp = ed.lookupDataTable("Levels", "Exp", info._level)
-  local scaleX = exp / maxExp
+  local scaleX = math.min(exp / maxExp, 1)
   local expBarBg = ed.createSprite("UI/alpha/HVGA/package_exp_bar_bg.png")
   expBarBg:setPosition(ccp(162, 20))
   bg:addChild(expBarBg)

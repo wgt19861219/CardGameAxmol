@@ -18,49 +18,10 @@ local LancerMirror_update = function(basefunc, unit, dt)
     basefunc(unit, dt)
   end
 end
-local function skillult_takeEffectAt(basefunc, skill, location, source)
-  basefunc(skill, location, source)
-  local caster = skill.caster
-  local attack_counter = skill.attack_counter
-  local locationtb
-  if attack_counter == 1 then
-  end
-  if attack_counter == 2 then
-    local proto = {
-      _tid = 147,
-      _level = skill.level or 1,
-      _stars = caster.stars,
-      _rank = caster.rank
-    }
-    local config = {
-      is_monster = true,
-      estimate_rank = true,
-      hp_mod = caster.config.hp_mod or 1,
-      dps_mod = caster.config.dps_mod or 1
-    }
-    local LancerMirror = ed.UnitCreate(proto, caster.camp, config)
-    local bid = 89
-    local binfo = ed.lookupDataTable("Buff", nil, bid)
-    local buff = LancerMirror:addBuff(binfo, caster)
-    LancerMirror.mDuration = mirror_time
-    LancerMirror.update = override(LancerMirror.update, LancerMirror_update)
-    LancerMirror:setDeathWithEffectOrNot(true)
-    LancerMirror.direction = caster.direction
-    locationtb = {
-      caster.position[1],
-      caster.position[2]
-    }
-    ed.engine:summonUnit(LancerMirror, locationtb, caster)
-    caster.LancerMirrorult = LancerMirror
-  end
-end
-local function skillatk3_takeEffectOn(basefunc, skill, target)
-  basefunc(skill, target)
-  local caster = skill.caster
-  local skillatk3 = caster.skills.Lancer_atk3
+local function createMirrorClone(caster, position)
   local proto = {
     _tid = 147,
-    _level = skillatk3.level or 1,
+    _level = caster.level or 1,
     _stars = caster.stars,
     _rank = caster.rank
   }
@@ -79,62 +40,43 @@ local function skillatk3_takeEffectOn(basefunc, skill, target)
   LancerMirror:setDeathWithEffectOrNot(true)
   LancerMirror.direction = caster.direction
   local locationtb = {
-    target.position[1] + 70 * LancerMirror.direction,
-    target.position[2]
+    position[1],
+    position[2]
   }
-  if locationtb[1] > 799 or locationtb[1] < 1 then
-    locationtb[1] = target.position[1] - 70 * LancerMirror.direction
+  ed.engine:summonUnit(LancerMirror, locationtb, caster)
+  return LancerMirror
+end
+local function skillult_takeEffectAt(basefunc, skill, location, source)
+  basefunc(skill, location, source)
+end
+local function skillatk3_takeEffectOn(basefunc, skill, target)
+  basefunc(skill, target)
+  local caster = skill.caster
+  if not caster:isAlive() then
+    return
   end
-  local owner = skill.caster
-  local skillatk3 = owner.skills.Lancer_atk3
-  local mobrate = skillatk3.info["Script Arg2"]
-  if skill.caster:isAlive() then
-    ed.engine:summonUnit(LancerMirror, locationtb, caster)
+  local LancerMirror = createMirrorClone(caster, {
+    target.position[1] + 70 * caster.direction,
+    target.position[2]
+  })
+  if LancerMirror.position[1] > 799 or LancerMirror.position[1] < 1 then
+    LancerMirror.position[1] = target.position[1] - 70 * caster.direction
   end
   caster.LancerMirror3 = LancerMirror
 end
 local function skillatk2_takeEffectAt(basefunc, skill, location, source)
   basefunc(skill, location, source)
   local caster = skill.caster
-  local proto = {
-    _tid = 147,
-    _level = skill.level or 1,
-    _stars = caster.stars,
-    _rank = caster.rank
-  }
-  local config = {
-    is_monster = true,
-    estimate_rank = true,
-    hp_mod = caster.config.hp_mod or 1,
-    dps_mod = caster.config.dps_mod or 1
-  }
-  local LancerMirror1 = ed.UnitCreate(proto, caster.camp, config)
-  local bid = 89
-  local binfo = ed.lookupDataTable("Buff", nil, bid)
-  local buff = LancerMirror1:addBuff(binfo, caster)
-  LancerMirror1.mDuration = mirror_time
-  LancerMirror1.update = override(LancerMirror1.update, LancerMirror_update)
-  LancerMirror1:setDeathWithEffectOrNot(true)
-  local LancerMirror2 = ed.UnitCreate(proto, caster.camp, config)
-  local bid = 89
-  local binfo = ed.lookupDataTable("Buff", nil, bid)
-  local buff = LancerMirror2:addBuff(binfo, caster)
-  LancerMirror2.mDuration = mirror_time
-  LancerMirror2.update = override(LancerMirror2.update, LancerMirror_update)
-  LancerMirror2:setDeathWithEffectOrNot(true)
-  LancerMirror1.direction = caster.direction
-  local locationtb21 = {
-    location[1] + LancerMirror1.direction * 40,
-    location[2] + LancerMirror1.direction * 30
-  }
-  local locationtb22 = {
-    location[1] + LancerMirror2.direction * 40,
-    location[2] - LancerMirror2.direction * 30
-  }
-  caster.position[1] = caster.position[1] - LancerMirror1.direction * 40
-  ed.engine:summonUnit(LancerMirror1, locationtb21, caster, "Birth")
+  local LancerMirror1 = createMirrorClone(caster, {
+    location[1] + caster.direction * 40,
+    location[2] + caster.direction * 30
+  })
+  local LancerMirror2 = createMirrorClone(caster, {
+    location[1] + caster.direction * 40,
+    location[2] - caster.direction * 30
+  })
+  caster.position[1] = caster.position[1] - caster.direction * 40
   caster.LancerMirror21 = LancerMirror1
-  ed.engine:summonUnit(LancerMirror2, locationtb22, caster, "Birth")
   caster.LancerMirror22 = LancerMirror2
 end
 local skillult_power = function(basefunc, self, source, target)
@@ -236,6 +178,14 @@ local function skillult_onAttackFrame(basefunc, skill)
     })
     basefunc(skill)
     skill.info = originfo
+  end
+  if skill.attack_counter == 2 and skill.caster:isAlive() then
+    local caster = skill.caster
+    local LancerMirror = createMirrorClone(caster, {
+      caster.position[1],
+      caster.position[2]
+    })
+    caster.LancerMirrorult = LancerMirror
   end
 end
 local skillatk_finish = function(basefunc, skill)

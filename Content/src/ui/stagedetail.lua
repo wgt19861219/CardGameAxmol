@@ -1617,11 +1617,11 @@ local function create(stage, addition, mode)
       },
       layout = {
         anchor = ccp(0, 0.5),
-        position = ccp(70, 300)
+        position = ccp(70, 290)
       },
       config = {
         color = ed.toccc3(16777215),
-        dimension = CCSizeMake(660, 300),
+        dimension = CCSizeMake(660, 60),
         horizontalAlignment = kCCTextAlignmentLeft,
         verticalAlignment = kCCVerticalTextAlignmentCenter,
         visible = info.isKeyStage,

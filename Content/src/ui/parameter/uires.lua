@@ -55,6 +55,6 @@ dailylogin_radius = 23
 mrv_scale = 1
 mrv_scale_large = 1.5
 --add by cooper.x for activity
-activity_pos = ccpAdd(ori_pos, ccpMult(d_pos, 2))
+activity_pos = ccpAdd(ori_pos, ccpMult(d_pos, 1))
 activity_radius = 23
 --

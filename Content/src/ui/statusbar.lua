@@ -375,44 +375,6 @@ local function createTitleButton(self)
       {
         t = "Sprite",
         base = {
-          name = "recharge",
-          res = "UI/alpha/HVGA/main_icon_recharge_1.png",
-          z = 10
-        },
-        layout = {
-          position = res.recharge_pos
-        },
-        config = {}
-      },
-      {
-        t = "Sprite",
-        base = {
-          name = "recharge_press",
-          res = "UI/alpha/HVGA/main_icon_recharge_2.png",
-          parent = "recharge"
-        },
-        layout = {
-          anchor = ccp(0, 0),
-          position = ccp(0, 0)
-        },
-        config = {visible = false}
-      }
-    }
-    readNode:addNode(ui_info)
-  end
-  self:btRegisterButtonClick({
-    button = ui.recharge,
-    press = ui.recharge_press,
-    clickHandler = function()
-      self:doClickrmb()
-    end,
-    priority = sb_touch_priority
-  })
-  if tolua.isnull(ui.dailylogin) then
-    ui_info = {
-      {
-        t = "Sprite",
-        base = {
           name = "dailylogin",
           res = "UI/alpha/HVGA/main_dailyreward_1.png",
           z = 10
@@ -620,7 +582,7 @@ local function createHead(self)
         position = ccp(90, 58)
       },
       config = {
-        visible = self.vip > 0
+        visible = false
       }
     },
     {
@@ -634,7 +596,7 @@ local function createHead(self)
         position = ccp(85, 58)
       },
       config = {
-        visible = self.vip > 0
+        visible = false
       }
     },
     {

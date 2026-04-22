@@ -173,16 +173,6 @@ end
 class.doClickMidas = doClickMidas
 
 local function doClickrmb(self)
-	--[[
-	lsr:report("clickrmb")
-	local rechargeLayer = ed.ui.recharge.create()
-	self.mainLayer:addChild(rechargeLayer.mainLayer, 150)
-	--]]
-	local rechargeLayer = newrecharge.create()
-	local scene=CCDirector:sharedDirector():getRunningScene()
-	if scene~=nil then
-		scene:addChild(rechargeLayer, 101000)
-	end
 end
 class.doClickrmb = doClickrmb
 

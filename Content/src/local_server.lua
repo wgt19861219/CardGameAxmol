@@ -351,7 +351,7 @@ local function generateLoots(stage_id)
 
     for i = 1, 7 do
         local rewardId = stageCfg["UI reward" .. i]
-        local rewardPro = stageCfg["UI reward" .. i .. " Pro"] or 0
+        local rewardPro = stageCfg["UI reward" .. i .. " Pro"] or 100
         if rewardId and rewardId ~= 0 and math_random(1, 100) <= (rewardPro or 0) then
             local packed = ed.makebits(3, 1, 3, 1, 10, rewardId)
             table_insert(loots, packed)

@@ -430,10 +430,8 @@ local function syncActors(self)
 		self.lastSync = ed.engine.ticks
 		for unit in ed.engine:foreachAliveUnit(ed.emCampBoth) do
 			if not unit.actor then
-				local ok, actor = pcall(function()
-					return ed.UnitActorCreate(unit)
-				end)
-				if ok and actor then
+				local actor = ed.UnitActorCreate(unit)
+				if actor then
 					unit.actor = actor
 					actor._inScene = true
 					self:addActor(actor)
@@ -452,14 +450,9 @@ local function syncActors(self)
 		end
 		for npc in ed.engine:foreachNpc() do
 			if not npc.actor then
-				local ok, ret = pcall(function()
-					npc.actor = ed.NpcActorCreate(npc)
-					npc:setAction(npc.bornActionName, true)
-					return npc.actor
-				end)
-				if ok and ret then
-					self:addActor(ret)
-				end
+				npc.actor = ed.NpcActorCreate(npc)
+				npc:setAction(npc.bornActionName, true)
+				self:addActor(npc.actor)
 			end
 		end
 	end

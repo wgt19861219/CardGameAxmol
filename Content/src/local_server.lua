@@ -2040,7 +2040,7 @@ M.handlers.fb_attention = function(data, obj, localdata)
     data._fb_attention_reply = { _result = "success" }
 end
 
--- get_vip_gift: VIP 礼包领取
+-- get_vip_gift: VIP 已移除，保留空 handler 避免报错
 M.handlers.get_vip_gift = function(data, obj, localdata)
     data._get_vip_gift_reply = { _result = "success" }
 end

@@ -261,16 +261,8 @@ local update = function(self)
 end
 class.initParams = initParams
 local setClipRect = function(self, cliprect)
-	pcall(function() self.clipLayer:setClipRect(cliprect) end)
-	-- 同步更新 ClippingNode 的 stencil
-	if self.clipNode then
-		local cx, cy = cliprect.origin.x, cliprect.origin.y
-		local cw, ch = cliprect.size.width, cliprect.size.height
-		-- 用 LayerColor 做矩形 stencil
-		local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
-		stencil:setContentSize(CCSizeMake(cw, ch))
-		stencil:setPosition(ccp(cx, cy))
-		self.clipNode:setStencil(stencil)
+	if self.listLayer then
+		pcall(clipRectSet, self.listLayer, cliprect.origin.x, cliprect.origin.y, cliprect.size.width, cliprect.size.height)
 	end
 	self.cliprect = cliprect
 end
@@ -376,6 +368,7 @@ local initLayer = function(self, info)
 	self.listLayer = listLayer
 	self.listScheduler = self.listLayer:getScheduler()
 	layer:addChild(listLayer)
+	pcall(clipRectWrap, layer, listLayer, cliprect.origin.x, cliprect.origin.y, cliprect.size.width, cliprect.size.height)
 	self:initShade(shadeRes, rect, noshade)
 	if info.message == true or info.message == nil then
 		layer:setTouchEnabled(true)

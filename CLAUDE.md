@@ -11,7 +11,7 @@
 
 ## Godot 项目
 
-- **项目路径**: `D:\workspace\projects\CardGameAxmol\godot\`
+- **项目路径**: `D:\workspace\projects\CardGame\`
 - **引擎**: Godot 4.5.1 (gl_compatibility)
 - **分辨率**: 960x640 (横屏HVGA)
 - **语言**: GDScript

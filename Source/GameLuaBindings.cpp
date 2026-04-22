@@ -3,6 +3,7 @@
 #include "CCBContainer.h"
 #include "SpineContainer.h"
 #include "LegendAnimation.h"
+#include "ClipRectNode.h"
 #include "axmol/axmol.h"
 
 extern "C" {
@@ -1478,6 +1479,84 @@ int register_game_bindings(lua_State* L)
         return 0;
     });
     lua_setglobal(L, "LegendSetSoundSwitch");
+
+    // ---- ClipRectNode 裁剪功能（全局函数，不暴露自定义 userdata）----
+    // clipRectWrap(parent, child, x, y, w, h)
+    //   将 child 从 parent 移除，在中间插入 ClipRectNode 做裁剪
+    //   parent → ClipRectNode → child
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        void** parentPtr = (void**)lua_touserdata(L, 1);
+        void** childPtr  = (void**)lua_touserdata(L, 2);
+        if (!parentPtr || !*parentPtr || !childPtr || !*childPtr) {
+            AXLOGW("clipRectWrap: null parent or child");
+            return 0;
+        }
+        auto* parent = static_cast<ax::Node*>(*parentPtr);
+        auto* child  = static_cast<ax::Node*>(*childPtr);
+        float x = (float)luaL_checknumber(L, 3);
+        float y = (float)luaL_checknumber(L, 4);
+        float w = (float)luaL_checknumber(L, 5);
+        float h = (float)luaL_checknumber(L, 6);
+
+        // 保存 child 在 parent 中的位置信息
+        int zOrder = child->getLocalZOrder();
+        int tag    = child->getTag();
+
+        // 从 parent 移除 child（不释放）
+        child->retain();
+        parent->removeChild(child, false);
+
+        // 创建 ClipRectNode 并插入
+        auto* clipNode = ClipRectNode::create();
+        clipNode->setClipRect(ax::Rect(x, y, w, h));
+        clipNode->setTag(tag);
+        parent->addChild(clipNode, zOrder);
+        clipNode->addChild(child);
+        child->release();
+
+        // 存储映射：child* → ClipRectNode*，供 setClipRect 查找
+        lua_getglobal(L, "__clipRectMap");
+        if (!lua_istable(L, -1)) {
+            lua_pop(L, 1);
+            lua_newtable(L);
+            lua_setglobal(L, "__clipRectMap");
+            lua_getglobal(L, "__clipRectMap");
+        }
+        // 用 child 指针作为 key（lightuserdata）
+        lua_pushlightuserdata(L, child);
+        lua_pushlightuserdata(L, clipNode);
+        lua_settable(L, -3);
+        lua_pop(L, 1);  // pop __clipRectMap
+
+        return 0;
+    });
+    lua_setglobal(L, "clipRectWrap");
+
+    // clipRectSet(child, x, y, w, h)
+    //   通过 child 查找关联的 ClipRectNode，更新裁剪区域
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        void** childPtr = (void**)lua_touserdata(L, 1);
+        if (!childPtr || !*childPtr) return 0;
+        auto* child = static_cast<ax::Node*>(*childPtr);
+        float x = (float)luaL_checknumber(L, 2);
+        float y = (float)luaL_checknumber(L, 3);
+        float w = (float)luaL_checknumber(L, 4);
+        float h = (float)luaL_checknumber(L, 5);
+
+        // 从映射中查找 ClipRectNode
+        lua_getglobal(L, "__clipRectMap");
+        if (!lua_istable(L, -1)) { lua_pop(L, 1); return 0; }
+        lua_pushlightuserdata(L, child);
+        lua_gettable(L, -2);
+        if (!lua_islightuserdata(L, -1)) { lua_pop(L, 2); return 0; }
+        auto* clipNode = static_cast<ClipRectNode*>(lua_touserdata(L, -1));
+        lua_pop(L, 2);
+        if (clipNode) {
+            clipNode->setClipRect(ax::Rect(x, y, w, h));
+        }
+        return 0;
+    });
+    lua_setglobal(L, "clipRectSet");
 
     AXLOGI("Game Lua bindings registered successfully");
     return 0;

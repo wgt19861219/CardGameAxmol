@@ -1103,6 +1103,10 @@ local function castManualSkill(self)
 		self.current_skill:interrupt()
 	end
 	self:castSkill(self.manual_skill, self.ai.target)
+		local heroName = self.name and string.upper(self.name)
+		if heroName then
+			ed.playEffect("sound/" .. heroName .. "_ULT.mp3")
+		end
 	self.manually_casting = true
 	ed.engine:freeze()
 	self:unfreeze()
@@ -1142,6 +1146,11 @@ local function die(self, killer)
 	end
 	if do_battle_log then
 		btlog("%s died.", self:display())
+	end
+	-- play hero death sound
+	local heroName = self.name and string.upper(self.name)
+	if heroName then
+		ed.playEffect("sound/" .. heroName .. "_DEATH.mp3")
 	end
 	self:removeSignedBuffer()
 	if self.manually_casting then

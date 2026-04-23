@@ -410,6 +410,14 @@ local function onAttackFrame(self)
 		self.caster.manually_casting = false
 	end
 	self.attack_counter = self.attack_counter + 1
+	-- play hero attack sound
+	local heroName = self.caster and self.caster.name and string.upper(self.caster.name)
+	if heroName then
+		local atkSounds = {"ATK", "ATK2", "ATK3"}
+		local snd = atkSounds[((self.attack_counter - 1) % #atkSounds) + 1]
+		local sndFile = "sound/" .. heroName .. "_" .. snd .. ".mp3"
+		ed.playEffect(sndFile)
+	end
 	if self.info["Target Type"] == "random" or self.target == nil or not self.target:isAlive() then
 		self:selectTarget(nil)
 	end

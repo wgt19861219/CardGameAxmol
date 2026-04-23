@@ -19,6 +19,10 @@ local dragMode = false
 local crusadeScope = {}
 local maxRight = -100
 local acts = require("util.cocos2dx.actions")
+local function boxImg(index, state)
+  local tier = (index == 5 or index == 10 or index == 15) and (index == 15 and "gold" or "silver") or "bronze"
+  return string.format("UI/alpha/HVGA/crusade/crusade_box_%s_%s.png", tier, state)
+end
 local function refreshMaxRight()
   if currentStage > 5 then
     maxRight = -720
@@ -30,7 +34,13 @@ end
 local function shakeBox()
   if battleState[currentStage - 1] ~= nil and battleState[currentStage - 1] == "passed" then
     local box = string.format("box%d", currentStage - 1)
-    panel.dragLayer[box]:setAction("Shake")
+    local boxNode = panel.dragLayer[box]
+    if boxNode then
+      boxNode:runAction(CCSequence:createWithTwoActions(
+        CCScaleTo:create(0.2, 1.15),
+        CCScaleTo:create(0.2, 1.0)
+      ))
+    end
   end
 end
 local function refreshFog()
@@ -318,12 +328,13 @@ local function refreshBattleState()
     else
       panel.dragLayer[battle]:enable(true)
     end
+    local boxNode = panel.dragLayer[box]
     if battleState[i] == "rewarded" then
-      panel.dragLayer[box]:setAction("Opened")
+      if boxNode.setTexture then boxNode:setTexture(boxImg(i, "open")) end
     elseif battleState[i] == "unpassed" then
-      panel.dragLayer[box]:setAction("Close")
+      if boxNode.setTexture then boxNode:setTexture(boxImg(i, "closed")) end
     else
-      panel.dragLayer[box]:setAction("Shake")
+      if boxNode.setTexture then boxNode:setTexture(boxImg(i, "closed")) end
     end
   end
   refreshHintPos()
@@ -641,7 +652,16 @@ local function getReward(data)
     do
       local box = string.format("box%d", data._stage_id)
       if panel then
-        panel.dragLayer[box]:setAction("Opening")
+        local boxNode = panel.dragLayer[box]
+        if boxNode then
+          boxNode:runAction(CCSequence:createWithTwoActions(
+            CCScaleTo:create(0.15, 1.3),
+            CCScaleTo:create(0.15, 1.0)
+          ))
+          ListenTimer(Timer:Once(0.3), function()
+            if boxNode.setTexture then boxNode:setTexture(boxImg(data._stage_id, "open")) end
+          end, crusadeScope)
+        end
       end
       battleState[data._stage_id] = "rewarded"
       local reward = data._rewards

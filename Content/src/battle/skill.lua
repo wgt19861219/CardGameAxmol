@@ -5,6 +5,8 @@ local class = {
 ed.Skill = class
 class.mt.__index = class
 
+local ATK_SOUNDS = {"ATK", "ATK2", "ATK3"}
+
 local function getSkillInfo(group, level)
 	local skill_info = ed.lookupDataTable("Skill", nil, group["Skill Group ID"], 0)
 	skill_info.groupId = group["Skill Group ID"]
@@ -413,8 +415,7 @@ local function onAttackFrame(self)
 	-- play hero attack sound
 	local heroName = self.caster and self.caster.name and string.upper(self.caster.name)
 	if heroName then
-		local atkSounds = {"ATK", "ATK2", "ATK3"}
-		local snd = atkSounds[((self.attack_counter - 1) % #atkSounds) + 1]
+		local snd = ATK_SOUNDS[((self.attack_counter - 1) % #ATK_SOUNDS) + 1]
 		local sndFile = "sound/" .. heroName .. "_" .. snd .. ".mp3"
 		ed.playEffect(sndFile)
 	end

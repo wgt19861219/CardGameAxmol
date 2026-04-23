@@ -21,7 +21,7 @@ UIRes = {
           anchor = ccp(0, 0.5),
           position = ccp(25, 210)
         },
-        config = {}
+        config = {scale = 2.0}
       },
       {
         t = "Sprite",
@@ -34,7 +34,7 @@ UIRes = {
           anchor = ccp(0, 0.5),
           position = ccp(752, 210)
         },
-        config = {}
+        config = {scale = 2.0}
       },
       {
         t = "Sprite",
@@ -47,7 +47,7 @@ UIRes = {
           anchor = ccp(0, 0.5),
           position = ccp(1477, 210)
         },
-        config = {}
+        config = {scale = 2.0}
       },
       {
         t = "Sprite",
@@ -843,7 +843,7 @@ UIRes = {
           anchor = ccp(0, 0.5),
           position = ccp(25, 210)
         },
-        config = {}
+        config = {scale = 4.0}
       },
       {
         t = "Sprite",
@@ -856,7 +856,7 @@ UIRes = {
           anchor = ccp(0, 0.5),
           position = ccp(25, 210)
         },
-        config = {}
+        config = {scale = 4.0}
       },
       {
         t = "Sprite",
@@ -869,7 +869,7 @@ UIRes = {
           anchor = ccp(0, 0.5),
           position = ccp(25, 210)
         },
-        config = {}
+        config = {scale = 4.0}
       },
       {
         t = "Sprite",
@@ -882,7 +882,7 @@ UIRes = {
           anchor = ccp(0, 0.5),
           position = ccp(25, 210)
         },
-        config = {}
+        config = {scale = 4.0}
       }
     }
   },

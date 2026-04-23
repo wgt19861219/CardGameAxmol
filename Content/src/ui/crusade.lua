@@ -17,19 +17,14 @@ local dragPressX = 0
 local layerOriPos = ccp(0, 0)
 local dragMode = false
 local crusadeScope = {}
-local maxRight = -100
+local maxRight = -1259
 local acts = require("util.cocos2dx.actions")
 local function boxImg(index, state)
   local tier = (index == 5 or index == 10 or index == 15) and (index == 15 and "gold" or "silver") or "bronze"
   return string.format("UI/alpha/HVGA/crusade/crusade_box_%s_%s.png", tier, state)
 end
 local function refreshMaxRight()
-  if currentStage > 5 then
-    maxRight = -720
-  end
-  if currentStage > 8 then
-    maxRight = -1220
-  end
+  maxRight = -1259
 end
 local function shakeBox()
   if battleState[currentStage - 1] ~= nil and battleState[currentStage - 1] == "passed" then
@@ -590,14 +585,25 @@ function crusade.create()
   local newscene = base.create("crusade")
   setmetatable(newscene, crusade)
   panel = panelMeta:new(newscene, EDTables.crusadeConfig.UIRes)
-  local rect = panel.mainLayer.bgframe:boundingBox()
+  if not panel then
+    return newscene
+  end
+  local bg = panel.mainLayer.bgframe
+  if not bg then return newscene end
+  local bgSize = bg:getContentSize()
+  local bgPosX, bgPosY = bg:getPosition()
+  local rect = CCRectMake(bgPosX, bgPosY, bgSize.width, bgSize.height)
   rect.origin.x = rect.origin.x + 0.04 * rect.size.width
   rect.origin.y = rect.origin.y + 0.05 * rect.size.height
   rect.size.width = rect.size.width * 0.93
   rect.size.height = rect.size.height * 0.91
-  panel.dragLayer:setClipRect(rect)
-  panel.dragLayer.mainLayer:setTouchEnabled(true)
-  panel.dragLayer.mainLayer:registerScriptTouchHandler(dragLayerTouch, false, 0, false)
+  if panel.dragLayer and panel.dragLayer.setClipRect then
+    panel.dragLayer:setClipRect(rect)
+  end
+  if panel.dragLayer and panel.dragLayer.mainLayer then
+    panel.dragLayer.mainLayer:setTouchEnabled(true)
+    panel.dragLayer.mainLayer:registerScriptTouchHandler(dragLayerTouch, false, 0, false)
+  end
   newscene:registerOnEnterHandler("onEnterCrusade", onEnterCrusade)
   newscene:registerOnExitHandler("onExitCrusade", onExitCrusade)
   newscene:registerOnPopSceneHandler("onPopScene", onPopScene)
@@ -631,18 +637,21 @@ local function endBattle(data)
   if nil == data then
     return
   end
-  if "victory" == data._result or "timeout" == data._result then
+  local result = data._result
+  if result == 0 or result == "victory" then
     ed.record:refreshCommonRecord("completeCrusadeStage")
     battleState[currentStage] = "passed"
     lastStage = currentStage
     currentStage = currentStage + 1
-    refreshBattleState()
   end
   if ed.netreply.exitStageReply then
-    ed.netreply.exitStageReply(data._result)
+    ed.netreply.exitStageReply(result == 0 or result == "victory")
     ed.netreply.exitStageReply = nil
   end
   refreshMaxRight()
+  if result == 0 or result == "victory" then
+    ed.replaceScene(ed.ui.crusade.create())
+  end
 end
 local function getReward(data)
   if nil == data then
@@ -690,7 +699,9 @@ local function OnCrusadeRsp(msg)
     if panel == nil then
       pcall(function() ed.pushScene(ed.ui.crusade.create()) end)
     end
-    initPanel(msg._open_panel._info)
+    if panel then
+      initPanel(msg._open_panel._info)
+    end
   elseif msg._query_oppo then
     showBattleInfo(msg._query_oppo)
   elseif msg._start_bat then

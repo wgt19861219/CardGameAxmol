@@ -62,12 +62,12 @@ function panelLayer:touch(event, x, y)
   end
 end
 function panelLayer:setVisible(visible)
-  if self.mainLayer then
+  if self.mainLayer and not tolua.isnull(self.mainLayer) then
     self.mainLayer:setVisible(visible)
   end
 end
 function panelLayer:getVisible()
-  if self.mainLayer then
+  if self.mainLayer and not tolua.isnull(self.mainLayer) then
     return self.mainLayer:isVisible()
   end
   return false

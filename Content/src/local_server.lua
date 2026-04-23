@@ -1677,19 +1677,19 @@ local function getHeroCrusadeList(localdata)
     for i, h in ipairs(localdata.heroes or {}) do
         local cd = localdata.crusade and localdata.crusade.hero_crusade_data
         local hcd = cd and cd[h.tid]
+        local hpPerc = hcd and hcd._hp_perc or 10000
+        local mpPerc = hcd and hcd._mp_perc or 0
         local entry = {
             _tid = h.tid,
             _level = h.level,
             _stars = h.stars,
             _rank = h.rank,
+            _dyna = {
+                _hp_perc = hpPerc,
+                _mp_perc = mpPerc,
+                _custom_data = nil,
+            },
         }
-        if hcd then
-            entry._hp_perc = hcd._hp_perc or 10000
-            entry._mp_perc = hcd._mp_perc or 0
-        else
-            entry._hp_perc = 10000
-            entry._mp_perc = 0
-        end
         table.insert(result, entry)
     end
     return result

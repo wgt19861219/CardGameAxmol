@@ -1103,10 +1103,10 @@ local function castManualSkill(self)
 		self.current_skill:interrupt()
 	end
 	self:castSkill(self.manual_skill, self.ai.target)
-		local heroName = self.name and string.upper(self.name)
-		if heroName then
-			ed.playEffect("sound/" .. heroName .. "_ULT.mp3")
-		end
+	local heroName = self.name and string.upper(self.name)
+	if heroName then
+		ed.playEffect("sound/" .. heroName .. "_ULT.mp3")
+	end
 	self.manually_casting = true
 	ed.engine:freeze()
 	self:unfreeze()

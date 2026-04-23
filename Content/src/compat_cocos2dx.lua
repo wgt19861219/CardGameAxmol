@@ -643,13 +643,18 @@ function SimpleAudioEngine.sharedEngine()
         return _effectVolume
     end
     function engine:playMusic(file, loop)
-        ax.AudioEngine.stopAll()
-        local ok, id = pcall(function() return ax.AudioEngine.play2d(file, loop ~= false) end)
-        if ok and id then
+        if _musicId then
+            pcall(function() ax.AudioEngine.stop(_musicId) end)
+            _musicId = nil
+        end
+        local loopFlag = true
+        if loop == false then loopFlag = false end
+        local ok, id = pcall(ax.AudioEngine.play2d, ax.AudioEngine, file, loopFlag)
+        if ok and id and id ~= -1 then
             _musicId = id
             pcall(function() ax.AudioEngine.setVolume(id, _musicVolume) end)
+            return id
         end
-        return id
     end
     function engine:stopMusic()
         if _musicId then
@@ -677,11 +682,14 @@ function SimpleAudioEngine.sharedEngine()
     end
     function engine:playBackgroundMusic(file, loop)
         if not file or file == "" then return end
-        pcall(function() ax.AudioEngine.stopAll() end)
+        if _musicId then
+            pcall(function() ax.AudioEngine.stop(_musicId) end)
+            _musicId = nil
+        end
         local loopFlag = true
         if loop == false then loopFlag = false end
-        local ok, id = pcall(function() return ax.AudioEngine.play2d(file, loopFlag) end)
-        if ok and id then
+        local ok, id = pcall(ax.AudioEngine.play2d, ax.AudioEngine, file, loopFlag)
+        if ok and id and id ~= -1 then
             _musicId = id
             pcall(function() ax.AudioEngine.setVolume(id, _musicVolume) end)
             return id
@@ -700,13 +708,16 @@ function SimpleAudioEngine.sharedEngine()
         end
     end
     function engine:getBackgroundMusicVolume()
-        return 1.0
+        return _musicVolume
     end
     function engine:preloadEffect(file) end
     function engine:preloadBackgroundMusic(file) end
     function engine:unloadEffect(file) end
     function engine:willPlayMusic() return false end
-    function engine:isBackgroundMusicPlaying() return false end
+    function engine:isBackgroundMusicPlaying()
+        if _musicId and _musicId ~= -1 then return true end
+        return false
+    end
     return engine
 end
 

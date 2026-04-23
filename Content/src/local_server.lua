@@ -728,7 +728,8 @@ local function generateShopGoods(shopId)
         local j = math.random(1, i)
         shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
     end
-    local payType = (shopId == 3) and "diamond" or "gold"
+    local payTypeMap = { [3] = "diamond", [4] = "crusadepoint", [5] = "arenapoint", [6] = "guildpoint" }
+    local payType = payTypeMap[shopId] or "gold"
     local priceMul = (shopId == 2) and 0.6 or (shopId == 3) and 2.0 or 1.0
     for i = 1, math.min(6, #shuffled) do
         local price = 100
@@ -793,6 +794,9 @@ M.handlers.shop_consume = function(data, obj, localdata)
     -- 余额检查使用运行时 ed.player（localdata.player.money/rmb 可能为 nil）
     local playerMoney = (ed.player and ed.player._money) or 0
     local playerRmb = (ed.player and ed.player._rmb) or 0
+    local function getPoint(pt)
+        return ed.player and ed.player:getPoint(pt) or 0
+    end
     if payType == "gold" then
         if playerMoney < totalCost then
             data._shop_consume_reply = { _result = "fail" }
@@ -800,6 +804,11 @@ M.handlers.shop_consume = function(data, obj, localdata)
         end
     elseif payType == "diamond" then
         if playerRmb < totalCost then
+            data._shop_consume_reply = { _result = "fail" }
+            return
+        end
+    elseif payType == "crusadepoint" or payType == "arenapoint" or payType == "guildpoint" then
+        if getPoint(payType) < totalCost then
             data._shop_consume_reply = { _result = "fail" }
             return
         end

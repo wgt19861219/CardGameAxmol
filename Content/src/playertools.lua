@@ -30,12 +30,16 @@ local function addPoint(self, name, amount)
   elseif name == "diamond" then
     self:addrmb(amount)
   else
-    if self._points then
-      for k, v in pairs(self._points) do
-        if v._type == name then
-          v._value = v._value + amount
-        end
+    self._points = self._points or {}
+    local found = false
+    for k, v in pairs(self._points) do
+      if v._type == name then
+        v._value = v._value + amount
+        found = true
       end
+    end
+    if not found then
+      table.insert(self._points, { _type = name, _value = amount })
     end
   end
 end

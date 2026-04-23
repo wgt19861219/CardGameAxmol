@@ -1737,7 +1737,28 @@ local function getCrusadeReward(stageId, resetTimes)
             if t == "crusadepoint" then
                 table.insert(rewards, { _type = "crusadepoint", _param1 = amount * 10, _param2 = 0 })
             elseif t == "chestbox" then
-                table.insert(rewards, { _type = "gold", _param1 = amount * 1000, _param2 = 0 })
+                local itemGroups = ed.getDataTable("ItemGroups")
+                local tavernBoxType = ed.getDataTable("TavernBoxType")
+                if itemGroups and tavernBoxType and id > 0 then
+                    local boxInfo = tavernBoxType[id]
+                    if boxInfo then
+                        local boxEntry = boxInfo[0]
+                        if boxEntry then
+                            local groupId = boxEntry["Chest Group ID"]
+                            local group = itemGroups[groupId]
+                            if group then
+                                local items = {}
+                                for _, item in pairs(group) do
+                                    table.insert(items, item)
+                                end
+                                if #items > 0 then
+                                    local picked = items[math.random(1, #items)]
+                                    table.insert(rewards, { _type = "item", _param1 = picked["id"], _param2 = picked["amout"] or 1 })
+                                end
+                            end
+                        end
+                    end
+                end
             elseif t == "item" then
                 table.insert(rewards, { _type = "item", _param1 = id, _param2 = amount })
             end
@@ -1786,6 +1807,9 @@ M.handlers.tbc = function(data, obj, localdata)
         local cd = initCrusade(localdata)
         local result = obj._end_bat._result or "defeat"
         local stageId = obj._end_bat._stage_id or cd.cur_stage
+        if stageId and stageId < 0 then
+            stageId = -stageId - 2
+        end
         if result == "victory" or result == 0 then
             cd.stages[stageId] = cd.stages[stageId] or { _status = 0, _rewards = {} }
             cd.stages[stageId]._status = 1

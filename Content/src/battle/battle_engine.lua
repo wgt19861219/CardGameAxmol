@@ -1346,6 +1346,7 @@ local function getExitMsg(self, result)
 		msg = ed.upmsg.tbc()
 		msg._end_bat = {}
 		msg._end_bat._result = result
+		msg._end_bat._stage_id = self.stage_info and self.stage_info["Stage ID"]
 		msg._end_bat._self_heroes = selfHero
 		msg._end_bat._oppo_heroes = enemyHero
 		msg._end_bat._oprations = self:getOprationList()

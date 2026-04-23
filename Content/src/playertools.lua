@@ -30,9 +30,11 @@ local function addPoint(self, name, amount)
   elseif name == "diamond" then
     self:addrmb(amount)
   else
-    for k, v in pairs(self._points) do
-      if v._type == name then
-        v._value = v._value + amount
+    if self._points then
+      for k, v in pairs(self._points) do
+        if v._type == name then
+          v._value = v._value + amount
+        end
       end
     end
   end

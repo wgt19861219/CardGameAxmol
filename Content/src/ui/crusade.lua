@@ -513,7 +513,7 @@ local function initPanelData(data)
     ed.player:setHeroCrusadeData(v)
   end
   local vipLevel = ed.player:getvip()
-  local totalTime = ed.getDataTable("VIP")[vipLevel]["Crusade Free Chance"]
+  local totalTime = 10
   leftTime = totalTime - data._reset_times
   refreshLeftTime()
   refreshFog()

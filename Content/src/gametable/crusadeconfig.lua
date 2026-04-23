@@ -1310,6 +1310,7 @@ UIRes = {
   },
   {
     layerName = "battleLayer",
+    initVisible = false,
     touchInfo = {
       iPriority = 0,
       bSwallowsTouches = true,

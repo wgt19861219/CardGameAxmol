@@ -615,109 +615,151 @@ end
 
 SimpleAudioEngine = {}
 
+local _sae_musicId = nil
+local _sae_musicFile = nil
+local _sae_musicLoop = true
+local _sae_musicVolume = 1.0
+local _sae_effectVolume = 1.0
+local _sae_effectIds = {}
+local _sae_engine = nil
+
 function SimpleAudioEngine.sharedEngine()
+    if _sae_engine then return _sae_engine end
+    local AE = ax.AudioEngine
     local engine = {}
-    local _musicId = nil
-    local _musicVolume = 1.0
-    local _effectVolume = 1.0
     function engine:playEffect(file, loop)
         if not file or file == "" then return end
         local loopFlag = false
         if loop ~= nil then loopFlag = loop end
-        local ok, id = pcall(ax.AudioEngine.play2d, ax.AudioEngine, file, loopFlag)
+        local ok, id = pcall(AE.play2d, AE, file, loopFlag)
         if ok and id and id ~= -1 then
-            pcall(function() ax.AudioEngine.setVolume(id, _effectVolume) end)
+            pcall(AE.setVolume, AE, id, _sae_effectVolume)
+            _sae_effectIds[id] = true
             return id
         end
     end
     function engine:stopEffect(id)
-        pcall(function() ax.AudioEngine.stop(id) end)
+        if id then
+            pcall(AE.stop, AE, id)
+            _sae_effectIds[id] = nil
+        end
     end
     function engine:stopAllEffects()
-        pcall(function() ax.AudioEngine.stopAll() end)
+        for id, _ in pairs(_sae_effectIds) do
+            pcall(AE.stop, AE, id)
+        end
+        _sae_effectIds = {}
     end
     function engine:setEffectsVolume(vol)
-        _effectVolume = vol or 1.0
+        _sae_effectVolume = vol or 1.0
+        for id, _ in pairs(_sae_effectIds) do
+            pcall(AE.setVolume, AE, id, _sae_effectVolume)
+        end
     end
     function engine:getEffectsVolume()
-        return _effectVolume
+        return _sae_effectVolume
     end
     function engine:playMusic(file, loop)
-        if _musicId then
-            pcall(function() ax.AudioEngine.stop(_musicId) end)
-            _musicId = nil
+        if _sae_musicId then
+            pcall(AE.stop, AE, _sae_musicId)
+            _sae_musicId = nil
         end
         local loopFlag = true
         if loop == false then loopFlag = false end
-        local ok, id = pcall(ax.AudioEngine.play2d, ax.AudioEngine, file, loopFlag)
+        local ok, id = pcall(AE.play2d, AE, file, loopFlag)
         if ok and id and id ~= -1 then
-            _musicId = id
-            pcall(function() ax.AudioEngine.setVolume(id, _musicVolume) end)
+            _sae_musicId = id
+            _sae_musicFile = file
+            _sae_musicLoop = loopFlag
+            pcall(AE.setVolume, AE, id, _sae_musicVolume)
             return id
         end
     end
     function engine:stopMusic()
-        if _musicId then
-            pcall(function() ax.AudioEngine.stop(_musicId) end)
-            _musicId = nil
+        if _sae_musicId then
+            pcall(AE.stop, AE, _sae_musicId)
+            _sae_musicId = nil
         end
     end
     function engine:setMusicVolume(vol)
-        _musicVolume = vol or 1.0
-        if _musicId then
-            pcall(function() ax.AudioEngine.setVolume(_musicId, _musicVolume) end)
+        _sae_musicVolume = vol or 1.0
+        if _sae_musicId then
+            pcall(AE.setVolume, AE, _sae_musicId, _sae_musicVolume)
         end
     end
     function engine:pauseEffect(id)
-        pcall(function() ax.AudioEngine.pause(id) end)
+        pcall(AE.pause, AE, id)
     end
     function engine:resumeEffect(id)
-        pcall(function() ax.AudioEngine.resume(id) end)
+        pcall(AE.resume, AE, id)
     end
     function engine:pauseAllEffects()
-        pcall(function() ax.AudioEngine.pauseAll() end)
+        for id, _ in pairs(_sae_effectIds) do
+            pcall(AE.pause, AE, id)
+        end
     end
     function engine:resumeAllEffects()
-        pcall(function() ax.AudioEngine.resumeAll() end)
+        for id, _ in pairs(_sae_effectIds) do
+            pcall(AE.resume, AE, id)
+        end
     end
     function engine:playBackgroundMusic(file, loop)
         if not file or file == "" then return end
-        if _musicId then
-            pcall(function() ax.AudioEngine.stop(_musicId) end)
-            _musicId = nil
+        if _sae_musicId then
+            pcall(AE.stop, AE, _sae_musicId)
+            _sae_musicId = nil
         end
         local loopFlag = true
         if loop == false then loopFlag = false end
-        local ok, id = pcall(ax.AudioEngine.play2d, ax.AudioEngine, file, loopFlag)
+        local ok, id = pcall(AE.play2d, AE, file, loopFlag)
         if ok and id and id ~= -1 then
-            _musicId = id
-            pcall(function() ax.AudioEngine.setVolume(id, _musicVolume) end)
+            _sae_musicId = id
+            _sae_musicFile = file
+            _sae_musicLoop = loopFlag
+            pcall(AE.setVolume, AE, id, _sae_musicVolume)
             return id
         end
     end
     function engine:stopBackgroundMusic()
-        if _musicId then
-            pcall(function() ax.AudioEngine.stop(_musicId) end)
-            _musicId = nil
+        if _sae_musicId then
+            pcall(AE.stop, AE, _sae_musicId)
+            _sae_musicId = nil
         end
-    end
-    function engine:setBackgroundMusicVolume(vol)
-        _musicVolume = vol or 1.0
-        if _musicId then
-            pcall(function() ax.AudioEngine.setVolume(_musicId, _musicVolume) end)
-        end
+        _sae_musicFile = nil
     end
     function engine:getBackgroundMusicVolume()
-        return _musicVolume
+        return _sae_musicVolume
     end
     function engine:preloadEffect(file) end
     function engine:preloadBackgroundMusic(file) end
     function engine:unloadEffect(file) end
     function engine:willPlayMusic() return false end
     function engine:isBackgroundMusicPlaying()
-        if _musicId and _musicId ~= -1 then return true end
+        if _sae_musicId and _sae_musicId ~= -1 then return true end
         return false
     end
+    function engine:pauseBackgroundMusic()
+        if _sae_musicId then
+            pcall(AE.stop, AE, _sae_musicId)
+            _sae_musicId = nil
+        end
+    end
+    function engine:resumeBackgroundMusic()
+        if _sae_musicFile then
+            local ok, id = pcall(AE.play2d, AE, _sae_musicFile, _sae_musicLoop)
+            if ok and id and id ~= -1 then
+                _sae_musicId = id
+                pcall(AE.setVolume, AE, id, _sae_musicVolume)
+            end
+        end
+    end
+    function engine:setBackgroundMusicVolume(vol)
+        _sae_musicVolume = vol or 1.0
+        if _sae_musicId then
+            pcall(AE.setVolume, AE, _sae_musicId, _sae_musicVolume)
+        end
+    end
+    _sae_engine = engine
     return engine
 end
 

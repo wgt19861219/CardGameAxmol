@@ -91,10 +91,8 @@ local function playMusic(name, isRepeat)
 end
 ed.playMusic = playMusic
 local function stopMusic()
-  if SimpleAudioEngine:sharedEngine():isBackgroundMusicPlaying() then
-    SimpleAudioEngine:sharedEngine():stopBackgroundMusic()
-    audioParam.music = nil
-  end
+  SimpleAudioEngine:sharedEngine():stopBackgroundMusic()
+  audioParam.music = nil
 end
 ed.stopMusic = stopMusic
 local function getSoundSwitch()

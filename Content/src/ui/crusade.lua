@@ -487,7 +487,16 @@ local function initPanelData(data)
     currentStage = maxBattleMax + 1
   end
   for i = 1, maxBattleMax do
-    battleState[i] = data._stages[i]._status
+    local status = data._stages[i]._status
+    if status == 0 or status == false then
+      battleState[i] = "unpassed"
+    elseif status == 1 then
+      battleState[i] = "passed"
+    elseif status == 2 then
+      battleState[i] = "rewarded"
+    else
+      battleState[i] = status
+    end
     battleReward[i] = data._stages[i]._rewards
   end
   refreshMaxRight()

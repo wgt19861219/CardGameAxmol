@@ -1785,6 +1785,14 @@ M.handlers.tbc = function(data, obj, localdata)
     elseif obj._end_bat then
         local cd = initCrusade(localdata)
         local result = obj._end_bat._result or "defeat"
+        local stageId = obj._end_bat._stage_id or cd.cur_stage
+        if result == "victory" or result == 0 then
+            cd.stages[stageId] = cd.stages[stageId] or { _status = 0, _rewards = {} }
+            cd.stages[stageId]._status = 1
+            if stageId >= cd.cur_stage then
+                cd.cur_stage = stageId + 1
+            end
+        end
         -- 保存战斗后英雄状态
         if obj._end_bat._self_heroes then
             cd.hero_crusade_data = cd.hero_crusade_data or {}

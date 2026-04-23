@@ -1265,16 +1265,16 @@ if ax.Sprite then
     end
 end
 
--- setMessageRect 等编辑框方法安全 stub（readnode.lua 会对各类 node 调用）
+-- setMessageRect / getMessageRect：cocos2d-x 2.x 节点方法，用于触摸检测矩形
 if ax.Node then
     if not ax.Node.setMessageRect then
-        function ax.Node:setMessageRect() end
+        function ax.Node:setMessageRect(rect)
+            self._messageRect = rect
+        end
     end
-    -- getMessageRect 兼容：cocos2d-x 2.x 节点方法，返回用于触摸检测的矩形
-    -- 默认返回零矩形，使 getNodeSize 回退到 getContentSize
     if not ax.Node.getMessageRect then
         function ax.Node:getMessageRect()
-            return {origin = {x = 0, y = 0}, size = {width = 0, height = 0}}
+            return self._messageRect or {origin = {x = 0, y = 0}, size = {width = 0, height = 0}}
         end
     end
 end

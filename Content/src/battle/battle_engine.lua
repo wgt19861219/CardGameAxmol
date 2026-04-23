@@ -1102,10 +1102,10 @@ local function downExit(self, result)
 		local stage = self.stage_info["Stage ID"]
 		if isKnown then
 			if result == 0 then
-					if self.crusade_mode then
-						ed.playEffect(ed.sound.battle.win)
-					else
-					do
+				if self.crusade_mode then
+					local id = ed.playEffect(ed.sound.battle.win)
+					ed.audioParam.effects.battleResult = id
+				else
 						local ok_v, err_v
 						ok_v, err_v = pcall(function()
 							local type = ed.stageType(stage)
@@ -1141,8 +1141,7 @@ local function downExit(self, result)
 							isPveMode = pveMode(self)
 						}
 						xpcall(function() ed.ui.stageaccount.initialize(args) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
-					end
-					end
+				end
 			elseif result == 1 then
 				self:doFailed({
 					stage_id = stage,
@@ -1467,6 +1466,7 @@ local function exitStage(self, result, exitFlag)
 	if ed.run_with_scene then
 		self:printStatistics()
 		ed.stopMusic()
+		ed.stopAllEffects()
 		if self.gmMode then
 			doTimeOut()
 			return

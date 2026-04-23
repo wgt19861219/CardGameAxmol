@@ -3,6 +3,7 @@ crusade.__index = crusade
 local base = ed.ui.framework
 setmetatable(crusade, base.mt)
 ed.ui.crusade = crusade
+local needRefreshOnEnter = false
 local panel
 local maxBattleMax = 15
 local battleState = {}
@@ -89,6 +90,12 @@ local function onEnterCrusade()
   CloseScope(crusadeScope)
   ListenTimer(Timer:Always(1.5), shakeBox, crusadeScope)
   refreshFogAnimation()
+  if needRefreshOnEnter and panel then
+    needRefreshOnEnter = false
+    local msg = ed.upmsg.tbc()
+    msg._open_panel = 1
+    ed.send(msg, "tbc")
+  end
 end
 local onExitCrusade = function()
 end
@@ -670,6 +677,7 @@ local function endBattle(data)
   end
   refreshMaxRight()
   if result == 0 or result == "victory" then
+    needRefreshOnEnter = true
     ed.replaceScene(ed.ui.crusade.create())
   end
 end

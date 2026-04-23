@@ -592,13 +592,24 @@ function crusade.create()
   if not bg then return newscene end
   local bgSize = bg:getContentSize()
   local bgPosX, bgPosY = bg:getPosition()
-  local rect = CCRectMake(bgPosX, bgPosY, bgSize.width, bgSize.height)
-  rect.origin.x = rect.origin.x + 0.04 * rect.size.width
-  rect.origin.y = rect.origin.y + 0.05 * rect.size.height
-  rect.size.width = rect.size.width * 0.93
-  rect.size.height = rect.size.height * 0.91
-  if panel.dragLayer and panel.dragLayer.setClipRect then
-    panel.dragLayer:setClipRect(rect)
+  local frameLeft = bgPosX - bgSize.width / 2
+  local frameBottom = bgPosY - bgSize.height / 2
+  local insetL, insetR, insetT, insetB = 18, 28, 18, 18
+  local clipW = bgSize.width - insetL - insetR
+  local clipH = bgSize.height - insetT - insetB
+  if panel.dragLayer and panel.dragLayer.dragContainer then
+    local clipNode = ax.ClippingNode:create()
+    clipNode:setAlphaThreshold(0.5)
+    local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+    stencil:setContentSize(CCSizeMake(clipW, clipH))
+    stencil:setPosition(ccp(frameLeft + insetL, frameBottom + insetB))
+    clipNode:setStencil(stencil)
+    local container = panel.dragLayer.dragContainer
+    container:retain()
+    container:removeFromParent(false)
+    clipNode:addChild(container)
+    container:release()
+    panel.dragLayer.mainLayer:addChild(clipNode, 0)
   end
   if panel.dragLayer and panel.dragLayer.mainLayer then
     panel.dragLayer.mainLayer:setTouchEnabled(true)

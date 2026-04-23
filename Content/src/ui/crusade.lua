@@ -101,11 +101,11 @@ function crusade.closeBattleInfo()
   panel.battleLayer:setVisible(false)
 end
 function crusade.reqEnemyInfo(index)
+  currentSelectStage = index
   local msg = ed.upmsg.tbc()
   msg._query_oppo = {}
   msg._query_oppo._stage_id = index
   ed.send(msg, "tbc")
-  currentSelectStage = index
 end
 local function refreshLocalHeros(data)
   if nil == data then

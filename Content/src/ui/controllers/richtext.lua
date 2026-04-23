@@ -196,8 +196,9 @@ function richText:getControllerSize()
   local childCount = self.rootNode:getChildrenCount()
   local children = self.rootNode:getChildren()
   if children then
-    for i = 0, children:count() - 1 do
-      local child = children:objectAtIndex(i)
+    local count = type(children.count) == "function" and children:count() or #children
+    for i = 0, count - 1 do
+      local child = type(children.objectAtIndex) == "function" and children:objectAtIndex(i) or children[i + 1]
       if child then
         local rect = ed.getNodeSize(child)
         if rect then

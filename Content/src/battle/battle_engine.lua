@@ -546,7 +546,10 @@ class.enterArena = enterArena
 local function enterCrusade(self, hero_list, enemy_list, enemy_is_bot, self_crusade, enemy_crusade, stage_id)
 	self:resetStage()
 	self.crusade_mode = true
-	self.stage_info = ed.lookupDataTable("Stage", stage_id)
+	self.stage_info = ed.lookupDataTable("Stage", stage_id) or {
+		["Stage ID"] = stage_id,
+		Waves = 1,
+	}
 	self.hero_list = hero_list
 	sortHeroList(hero_list)
 	sortHeroList(enemy_list)
@@ -1099,43 +1102,47 @@ local function downExit(self, result)
 		local stage = self.stage_info["Stage ID"]
 		if isKnown then
 			if result == 0 then
-				do
-					local ok_v, err_v
-					ok_v, err_v = pcall(function()
-						local type = ed.stageType(stage)
-						local s = ed.elite2NormalStage(stage)
-						if type == "elite" then
-							ed.player:addStageLimit(s)
-						end
-						if type == "act" then
-							local sg = self.stage_info["Stage Group"]
-							ed.player:addActTimes(sg)
-							ed.player:refreshActResetTime(sg)
-						end
-						ed.player:takeStageReward(stage, self.result_stars - getMercenaryNum(self), self.hero_list, ed.player:getStageLoots())
-						if pveMode(self) == true then
-							local vit = self.stage_info["Vit Return"]
-							ed.player:addVitality(-vit)
-						end
-						local id = ed.playEffect(ed.sound.battle.win)
-						ed.audioParam.effects.battleResult = id
-					end)
-					if not ok_v then print("[downExit] reward ERROR: " .. tostring(err_v)) end
+					if self.crusade_mode then
+						ed.playEffect(ed.sound.battle.win)
+					else
+					do
+						local ok_v, err_v
+						ok_v, err_v = pcall(function()
+							local type = ed.stageType(stage)
+							local s = ed.elite2NormalStage(stage)
+							if type == "elite" then
+								ed.player:addStageLimit(s)
+							end
+							if type == "act" then
+								local sg = self.stage_info["Stage Group"]
+								ed.player:addActTimes(sg)
+								ed.player:refreshActResetTime(sg)
+							end
+							ed.player:takeStageReward(stage, self.result_stars - getMercenaryNum(self), self.hero_list, ed.player:getStageLoots())
+							if pveMode(self) == true then
+								local vit = self.stage_info["Vit Return"]
+								ed.player:addVitality(-vit)
+							end
+							local id = ed.playEffect(ed.sound.battle.win)
+							ed.audioParam.effects.battleResult = id
+						end)
+						if not ok_v then print("[downExit] reward ERROR: " .. tostring(err_v)) end
 
-					local args = {
-						stage_id = stage,
-						victory = result == 0,
-						heroes = self.hero_id_list,
-						stars = pveMode(self) and self.exitStageMSG._stars - getMercenaryNum(self) or {},
-						loots = ed.player:getStageLoots(),
-						replayMode = self.replayMode,
-						bestRankReward = bestRankReward,
-						mercenaryInfo = getTeamMercenaryInfo(self),
-						excavate_mode = self.excavate_mode,
-						isPveMode = pveMode(self)
-					}
-					xpcall(function() ed.ui.stageaccount.initialize(args) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
-				end
+						local args = {
+							stage_id = stage,
+							victory = result == 0,
+							heroes = self.hero_id_list,
+							stars = pveMode(self) and self.exitStageMSG._stars - getMercenaryNum(self) or {},
+							loots = ed.player:getStageLoots(),
+							replayMode = self.replayMode,
+							bestRankReward = bestRankReward,
+							mercenaryInfo = getTeamMercenaryInfo(self),
+							excavate_mode = self.excavate_mode,
+							isPveMode = pveMode(self)
+						}
+						xpcall(function() ed.ui.stageaccount.initialize(args) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
+					end
+					end
 			elseif result == 1 then
 				self:doFailed({
 					stage_id = stage,

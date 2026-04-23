@@ -83,211 +83,196 @@ UIRes = {
         }
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box1",
-          res = "eff_UI_box_bronze",
-          parent = "laftMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "laftMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(100, 155)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box2",
-          res = "eff_UI_box_bronze",
-          parent = "laftMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "laftMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(350, 110)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box3",
-          res = "eff_UI_box_silver",
-          parent = "laftMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_silver_closed.png",
+          parent = "laftMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(410, 310)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box4",
-          res = "eff_UI_box_bronze",
-          parent = "laftMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "laftMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(488, 162)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box5",
-          res = "eff_UI_box_bronze",
-          parent = "rightMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_silver_closed.png",
+          parent = "rightMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(-10, 170)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box6",
-          res = "eff_UI_box_silver",
-          parent = "rightMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_silver_closed.png",
+          parent = "rightMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(215, 117)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box7",
-          res = "eff_UI_box_bronze",
-          parent = "rightMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "rightMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(320, 186)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box8",
-          res = "eff_UI_box_bronze",
-          parent = "rightMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "rightMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(370, 305)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box9",
-          res = "eff_UI_box_silver",
-          parent = "rightMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_silver_closed.png",
+          parent = "rightMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(468, 133)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box10",
-          res = "eff_UI_box_bronze",
-          parent = "rightMap",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_gold_closed.png",
+          parent = "rightMap"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(627, 262)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box11",
-          res = "eff_UI_box_bronze",
-          parent = "rightMap2",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "rightMap2"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(-10, 175)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box12",
-          res = "eff_UI_box_silver",
-          parent = "rightMap2",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_silver_closed.png",
+          parent = "rightMap2"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(157, 130)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box13",
-          res = "eff_UI_box_bronze",
-          parent = "rightMap2",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "rightMap2"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(233, 310)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box14",
-          res = "eff_UI_box_bronze",
-          parent = "rightMap2",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png",
+          parent = "rightMap2"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(350, 195)
         },
         config = {scale = 0.8}
       },
       {
-        t = "FcaEffect",
+        t = "Sprite",
         base = {
           name = "box15",
-          res = "eff_UI_box_gold",
-          parent = "rightMap2",
-          action = ""
+          res = "UI/alpha/HVGA/crusade/crusade_box_gold_closed.png",
+          parent = "rightMap2"
         },
         layout = {
-          anchor = ccp(0, 0.5),
+          anchor = ccp(0.5, 0.5),
           position = ccp(435, 125)
         },
         config = {scale = 0.8}

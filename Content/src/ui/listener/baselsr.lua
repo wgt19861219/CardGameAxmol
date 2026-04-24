@@ -41,7 +41,7 @@ local function playerLevelup(self)
     Crusade = "unlockCrusade",
     Guild = "unlockGuild",
     WorldChannel = "unlockWorldChannel",
-    --Excavate = "unlockExcavate"
+    Excavate = "unlockExcavate"
   }
   for k, v in pairs(unlock) do
     if ed.playerlimit.checkAreaUnlock(k) then

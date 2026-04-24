@@ -18,8 +18,8 @@ class.button_key = {
   "exercise",
   "volcano",
   "starshop",
---  "excavate"
- "ranklist"
+  "excavate",
+  "ranklist"
 }
 class.unlock_keys = {
   defence = "COT",

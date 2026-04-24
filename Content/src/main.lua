@@ -838,6 +838,20 @@ for _, mod in ipairs(coreModules) do
                                     },
                                 })
                             end
+                            -- 初始化 starshop（星际旅行商人）
+                            if not ed.player._sshop then
+                                ed.player:refreshStarShopData({
+                                    _id = 6,
+                                    _expire_time = os.time() + 86400 * 30,
+                                    _star_goods = {
+                                        {_type = 0, _amount = 1, _stone_id = 8, _stone_amount = 50},
+                                        {_type = 0, _amount = 1, _stone_id = 8, _stone_amount = 50},
+                                        {_type = 1, _amount = 1, _stone_id = 9, _stone_amount = 100},
+                                        {_type = 1, _amount = 1, _stone_id = 9, _stone_amount = 100},
+                                        {_type = 2, _amount = 1, _stone_id = 10, _stone_amount = 200},
+                                    },
+                                })
+                            end
                         end
                     end)
                     if ed.setUserid then ed.setUserid(1) end

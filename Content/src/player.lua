@@ -65,7 +65,19 @@ local function PlayerCreate()
     loots = {},
     hpLoots = {},
     initialized = false,
-    time_diff = 0
+    time_diff = 0,
+    -- 竞技场数据
+    _pvp = {
+      rank = 1001,           -- 当前排名
+      gs = 0,                -- 竞技场积分
+      left_count = 5,        -- 剩余挑战次数
+      buy_times = 0,         -- 已购买次数
+      last_bt_time = 0,      -- 上次战斗时间戳
+      highest_rank = 1001,   -- 历史最高排名
+      enemies = {},          -- 当前对手列表
+      records = {},          -- 战斗记录
+      defend_lineup = {},    -- 防守阵容
+    }
   }
   setmetatable(self, class.mt)
   return self
@@ -507,6 +519,14 @@ local addPvpMoney = function(self, amount)
   self:addPoint("arenapoint", amount)
 end
 class.addPvpMoney = addPvpMoney
+local function getPvpGs(self)
+  local total = 0
+  for _, hero in pairs(self.heroes or {}) do
+    total = total + (hero._gs or 0)
+  end
+  return total
+end
+class.getPvpGs = getPvpGs
 local addGuildMoney = function(self, amount)
   amount = amount or 0
   self:addPoint("guildpoint", amount)

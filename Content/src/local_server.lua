@@ -428,6 +428,17 @@ M.handlers.login = function(data, obj, localdata)
     localdata.player.sessionid = math_random(100000, 999999)
     LocalData.save(localdata)
 
+    -- 恢复竞技场数据
+    do
+      local pvpJson = CCUserDefault:sharedUserDefault():getStringForKey("pvp_data")
+      if pvpJson and pvpJson ~= "" then
+        local ok, pvpData = pcall(json.decode, pvpJson)
+        if ok and pvpData then
+            localdata.player._pvp = pvpData
+        end
+      end
+    end
+
     data._login_reply = {
         _result = "success",
         _user = buildUser(localdata),
@@ -2405,6 +2416,18 @@ M.handlers.ladder = function(data, obj, localdata)
         reply._set_lineup = {
             _result = "success",
         }
+    end
+
+    -- 自动保存竞技场数据
+    savePvpData(localdata.player)
+end
+
+-- 保存竞技场数据到CCUserDefault
+local function savePvpData(player)
+    if player._pvp then
+        local pvpJson = json.encode(player._pvp)
+        CCUserDefault:sharedUserDefault():setStringForKey("pvp_data", pvpJson)
+        CCUserDefault:sharedUserDefault():flush()
     end
 end
 

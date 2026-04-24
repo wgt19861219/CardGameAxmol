@@ -2298,7 +2298,7 @@ M.handlers.ladder = function(data, obj, localdata)
 
         -- fallback: 如果在 enemies 中找不到，用 oppoUserId 反推 rank 并生成
         if not enemy then
-            local rank = oppoUserId - 10000
+            local rank = math.max(1, oppoUserId - 10000)
             enemy = generateAiPlayer(rank, player.level or 1)
         end
 

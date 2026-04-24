@@ -391,8 +391,10 @@ local function replaceScene(scene)
 	if #scene_stack > 0 then
 		local top = scene_stack[#scene_stack]
 		if top.identity == "main" or top.identity == "pvp" then
-			pushScene(scene)
-			return
+			if #scene_stack < 10 then
+				pushScene(scene)
+				return
+			end
 		end
 		local old = table.remove(scene_stack, #scene_stack)
 		if old.OnPopScene then

@@ -2078,6 +2078,119 @@ M.handlers.guild = function(data, obj, localdata)
     data._guild_reply = data._guild_reply or {}
 end
 
+------------------------------------------------------------------------
+-- 竞技场 AI 对手生成
+------------------------------------------------------------------------
+local pvp_names = {
+  "亚历山大", "贝奥武夫", "克里斯蒂娜", "达芙妮", "埃里克",
+  "菲奥娜", "加雷斯", "海伦娜", "伊莎贝拉", "贾斯汀",
+  "凯瑟琳", "莱昂纳多", "米开朗基罗", "娜塔莎", "奥利维亚",
+  "帕特里克", "昆廷", "罗莎琳德", "塞巴斯蒂安", "特里斯坦",
+  "乌苏拉", "薇薇安", "沃尔特", "谢丽尔", "尤里乌斯",
+  "赵云", "关羽", "张飞", "诸葛亮", "周瑜",
+  "吕布", "貂蝉", "孙策", "马超", "黄忠"
+}
+
+local function generateAiPlayer(rank, playerLevel)
+  local nameIdx = math.random(1, #pvp_names)
+  local name = pvp_names[nameIdx]
+  local level = math.max(1, math.min(playerLevel + math.random(-3, 3), playerLevel + 5))
+  local avatar = math.random(1, 8)
+  local vip = math.random(0, math.min(5, math.floor(playerLevel / 20)))
+
+  local pvpEnemy = ed.getDataTable("PVPEmeny")
+  local heroConfig = nil
+  if pvpEnemy then
+    for _, row in pairs(pvpEnemy) do
+      if row["Rank"] and rank >= row["Rank"] then
+        heroConfig = row
+        break
+      end
+    end
+  end
+
+  local heroes = {}
+  if heroConfig then
+    for i = 1, 5 do
+      local heroId = heroConfig["Hero" .. i]
+      if heroId and heroId > 0 then
+        local heroLevel = math.max(1, level - math.random(0, 2))
+        table.insert(heroes, {
+          _tid = heroId,
+          _level = heroLevel,
+          _stars = math.max(1, math.min(5, math.floor(level / 15) + math.random(0, 1))),
+          _rank = math.min(12, math.floor(level / 10) + 1),
+        })
+      end
+    end
+  end
+
+  if #heroes == 0 then
+    local allHeroes = {}
+    local unitTable = ed.getDataTable("Unit")
+    if unitTable then
+      for tid, row in pairs(unitTable) do
+        if type(tid) == "number" and row["Type"] ~= "Boss" then
+          table.insert(allHeroes, tid)
+        end
+      end
+    end
+    local count = math.random(3, 5)
+    for i = 1, count do
+      if #allHeroes > 0 then
+        local idx = math.random(1, #allHeroes)
+        local tid = allHeroes[idx]
+        table.insert(heroes, {
+          _tid = tid,
+          _level = math.max(1, level - math.random(0, 3)),
+          _stars = math.random(1, math.min(5, math.floor(level / 15) + 1)),
+          _rank = math.min(12, math.max(1, math.floor(level / 10))),
+        })
+      end
+    end
+  end
+
+  local gs = 0
+  for _, h in ipairs(heroes) do
+    gs = gs + h._level * 10 + h._stars * 50 + h._rank * 30
+  end
+
+  return {
+    _user_id = 10000 + rank,
+    _name = name,
+    _avatar = avatar,
+    _level = level,
+    _vip = vip,
+    _gs = gs,
+    _rank = rank,
+    _heroes = heroes,
+    _is_robot = 1,
+  }
+end
+
+local function generateAiOpponents(playerRank, playerLevel, count)
+  local opponents = {}
+  for i = 1, count do
+    local targetRank = math.max(1, playerRank - math.random(1, 50 * i))
+    local opponent = generateAiPlayer(targetRank, playerLevel)
+    table.insert(opponents, opponent)
+  end
+  table.sort(opponents, function(a, b) return a._rank < b._rank end)
+  return opponents
+end
+
+local function generateRankBoard(playerRank, playerLevel, count)
+  local board = {}
+  count = count or 20
+  for i = 1, count do
+    local rank = i
+    local entry = generateAiPlayer(rank, playerLevel)
+    entry._rank = rank
+    table.insert(board, entry)
+  end
+  return board
+end
+
 -- ladder: 天梯/PVP 系统，触发 FireEvent("pvpRsp")
 M.handlers.ladder = function(data, obj, localdata)
     data._ladder_reply = data._ladder_reply or {}

@@ -310,7 +310,11 @@ local function buildUser(localdata)
         _month_card = {},
         _user_guild = { _id = 0, _name = "" },
         _chat = { _world_chat_times = 0, _last_reset_world_chat_time = 0 },
-        _sshop = nil,
+        _sshop = {
+            _id = 6,
+            _expire_time = os.time() + 86400 * 30,
+            _star_goods = generateStarGoods(),
+        },
         _facebook_follow = 1,
         _praise = "",
         _sessionid = p.sessionid or 0,
@@ -324,6 +328,24 @@ end
 -- 获取当前时间戳
 local function getTimestamp()
     return os.time()
+end
+
+-- 生成星际商店商品
+-- TavernBoxType: 8=stone_green(小), 9=stone_blue(中), 10=stone_purple(大)
+local function generateStarGoods()
+    local goods = {}
+    local types = { 0, 0, 1, 1, 2 }
+    local stoneIds = { [0] = 8, [1] = 9, [2] = 10 }
+    local prices = { [0] = 50, [1] = 100, [2] = 200 }
+    for i, t in ipairs(types) do
+        table.insert(goods, {
+            _type = t,
+            _amount = 1,
+            _stone_id = stoneIds[t],
+            _stone_amount = prices[t],
+        })
+    end
+    return goods
 end
 
 -- 生成随机种子
@@ -827,6 +849,21 @@ M.handlers.shop_consume = function(data, obj, localdata)
     end
 
     data._shop_consume_reply = { _result = "success" }
+end
+
+-- ========== shop_star_consume ==========
+-- obj: 星际商店购买
+M.handlers.shop_star_consume = function(data, obj, localdata)
+    local slot = obj._star_goods_slot
+    local sshop = localdata.player._sshop
+    if sshop and sshop._star_goods and sshop._star_goods[slot] then
+        local good = sshop._star_goods[slot]
+        if good._amount > 0 then
+            good._amount = 0
+            LocalData.save(localdata)
+        end
+    end
+    data._shop_star_consume_reply = { _result = "success" }
 end
 
 -- ========== open_shop ==========

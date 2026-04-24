@@ -272,7 +272,7 @@ end
 class.gotoBattle = gotoBattle
 local function doPvp(self)
   local function handler(force)
-    lsr:report("clickgo")	
+    lsr:report("clickgo")
     if #(self.team or {}) == 0 then
       ed.showToast(T(LSTR("BATTLEPREPARE.PLEASE_SELECT_BATTLE_HERO")))
       return

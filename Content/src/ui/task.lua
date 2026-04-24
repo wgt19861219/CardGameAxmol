@@ -189,7 +189,7 @@ local function getCount(info)
       if v ~= 0 then
         local index = 0
         for id, hero in pairs(ed.player.heroes) do
-          if v <= hero._rank then
+          if v <= (hero._rank or 0) then
             index = index + 1
           end
         end

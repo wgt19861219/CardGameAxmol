@@ -2046,9 +2046,554 @@ M.handlers.ladder = function(data, obj, localdata)
     data._ladder_reply = data._ladder_reply or {}
 end
 
+-----------------------------------------------------------------------
+-- 挖矿系统辅助函数
+-----------------------------------------------------------------------
+local ExcavateTreasureTable = nil
+local ExcavateWildEnemyTable = nil
+local GradientPriceTable = nil
+
+local function getExcavateConfig()
+    if not ExcavateTreasureTable then
+        ExcavateTreasureTable = ed.getDataTable("ExcavateTreasure")
+    end
+    if not ExcavateWildEnemyTable then
+        ExcavateWildEnemyTable = ed.getDataTable("ExcavateWildEnemy")
+    end
+    if not GradientPriceTable then
+        GradientPriceTable = ed.getDataTable("GradientPrice")
+    end
+end
+
+local function initExcavate(localdata)
+    if not localdata.excavate then
+        localdata.excavate = {
+            mines = {},
+            searched_id = 0,
+            search_times = 0,
+            last_search_ts = 0,
+            last_search_type = 0,
+            attacking_id = 0,
+            attack_team_id = 0,
+            history = {},
+            next_mine_id = 1,
+            next_history_id = 1,
+        }
+    end
+    return localdata.excavate
+end
+
+-- 根据权重随机选择矿点类型（1-9）
+local function randomExcavateType(playerLevel)
+    getExcavateConfig()
+    if not ExcavateTreasureTable then return 4 end
+
+    local candidates = {}
+    local totalWeight = 0
+    for i = 1, 9 do
+        local row = ExcavateTreasureTable[i]
+        if row then
+            local lvlReq = row["Level Requirement"] or 1
+            if playerLevel >= lvlReq then
+                local w = row["Prob Weight"] or 0
+                table_insert(candidates, { type_id = i, weight = w })
+                totalWeight = totalWeight + w
+            end
+        end
+    end
+    if #candidates == 0 then return 4 end
+
+    local r = math_random(1, math_floor(totalWeight + 0.5))
+    local acc = 0
+    for _, c in ipairs(candidates) do
+        acc = acc + c.weight
+        if r <= acc then return c.type_id end
+    end
+    return candidates[#candidates].type_id
+end
+
+-- 获取当前服务器时间戳（秒）
+local function getExcavateTime()
+    return ed.getServerTime and ed.getServerTime() or os.time()
+end
+
+-- 构建矿点回复数据（down.proto excavate 结构）
+local function buildExcavateReply(mine)
+    local typeRow = nil
+    getExcavateConfig()
+    if ExcavateTreasureTable then
+        typeRow = ExcavateTreasureTable[mine.type_id]
+    end
+
+    local teams = {}
+    for _, t in ipairs(mine.teams or {}) do
+        table_insert(teams, {
+            _team_id = t.team_id,
+            _player = t.player,
+            _hero_bases = t.hero_bases,
+            _hero_dynas = t.hero_dynas,
+            _res_got = t.res_got or 0,
+        })
+    end
+
+    return {
+        _owner = mine.owner or "monster",
+        _id = mine.id,
+        _type_id = mine.type_id,
+        _team = teams,
+        _state = mine.state,
+        _state_end_ts = mine.state_end_ts or 0,
+        _produce_speed = mine.produce_speed or (typeRow and typeRow["Priduce Speed Per Minute"] or 0),
+        _storage = mine.storage or (typeRow and typeRow["Storage Amount"] or 0),
+    }
+end
+
+-- 计算矿点已产出资源量
+local function calcProduced(mine, now)
+    if not mine.found_ts or mine.found_ts == 0 then return 0 end
+    local elapsed = (now or getExcavateTime()) - mine.found_ts
+    if elapsed < 0 then elapsed = 0 end
+    return math_floor(mine.produce_speed * elapsed / 60 + 0.5)
+end
+
+-- 检查并更新矿点状态
+local function updateMineState(mine, now)
+    if not mine then return end
+    now = now or getExcavateTime()
+    if mine.state == "searched" and mine.state_end_ts > 0 and now >= mine.state_end_ts then
+        mine.state = "empty"
+        mine.state_end_ts = 0
+    elseif mine.state == "prepare" and mine.state_end_ts > 0 and now >= mine.state_end_ts then
+        mine.state = "occupy"
+        mine.state_end_ts = 0
+    elseif mine.state == "protect" and mine.state_end_ts > 0 and now >= mine.state_end_ts then
+        mine.state = "occupy"
+        mine.state_end_ts = 0
+    end
+end
+
+-- 从玩家英雄池生成野怪AI防守队伍
+local function generateWildTeam(mineTypeId, teamCount)
+    getExcavateConfig()
+    local typeRow = ExcavateTreasureTable and ExcavateTreasureTable[mineTypeId]
+    if not typeRow then return {} end
+
+    local wildKey = "Wild ID " .. tostring(teamCount)
+    local wildList = typeRow[wildKey]
+    local wildIds = {}
+    if wildList then
+        for _, id in ipairs(wildList) do
+            table_insert(wildIds, tonumber(id))
+        end
+    end
+    if #wildIds == 0 then return {} end
+
+    local wildIdx = wildIds[math_random(1, #wildIds)]
+    local wildData = ExcavateWildEnemyTable and ExcavateWildEnemyTable[wildIdx]
+
+    local team = {
+        team_id = 1,
+        player = {
+            _name = wildData and wildData["Player Name"] or "野怪",
+            _level = wildData and wildData["Player Level"] or 50,
+            _avatar = wildData and wildData["Avatar ID"] or 1,
+            _vip = 0,
+            _guild_name = "",
+        },
+        hero_bases = {},
+        hero_dynas = {},
+        res_got = 0,
+    }
+
+    local playerHeroes = {}
+    if ed.player and ed.player.heroes then
+        for tid, h in pairs(ed.player.heroes) do
+            if type(h) == "table" and h._level then
+                table_insert(playerHeroes, {
+                    tid = tid,
+                    level = h._level or 1,
+                    stars = h._stars or 1,
+                    rank = h._rank or 0,
+                })
+            end
+        end
+    end
+
+    for i = #playerHeroes, 2, -1 do
+        local j = math_random(1, i)
+        playerHeroes[i], playerHeroes[j] = playerHeroes[j], playerHeroes[i]
+    end
+
+    local count = math.min(5, #playerHeroes)
+    for i = 1, count do
+        local h = playerHeroes[i]
+        table_insert(team.hero_bases, {
+            _tid = h.tid,
+            _level = h.level,
+            _stars = h.stars,
+            _rank = h.rank,
+        })
+        table_insert(team.hero_dynas, {
+            _hp_perc = 10000,
+            _mp_perc = 0,
+        })
+    end
+
+    return { team }
+end
+
+-- 检查搜索次数是否需要跨天重置
+local function checkSearchDayReset(exc)
+    if exc.search_times > 0 then
+        local lastTs = exc.last_search_ts
+        local nowTs = getExcavateTime()
+        if ed.checkTwoDateod and ed.checkTwoDateod(lastTs, nowTs) then
+            exc.search_times = 0
+            exc.last_search_ts = nowTs
+        end
+    end
+end
+
+-- 按 ID 查找矿点
+local function findMine(exc, id)
+    for _, m in ipairs(exc.mines) do
+        if m.id == id then return m end
+    end
+    return nil
+end
+
+-- 构建资源奖励结构
+local function buildResourceReward(typeRow, amount)
+    if not amount or amount <= 0 then return nil end
+    local produceType = typeRow and typeRow["Produce Type"] or "Gold"
+    local rewardType = "gold"
+    if produceType == "Diamond" then rewardType = "diamond"
+    elseif produceType == "Item" then rewardType = "item"
+    end
+    if rewardType == "item" then
+        local produceId = typeRow and typeRow["Produce ID"] or 218
+        return { _type = "item", _param1 = produceId, _param2 = amount }
+    else
+        return { _type = rewardType, _param1 = amount }
+    end
+end
+
+-----------------------------------------------------------------------
 -- excavate: 挖矿系统
+-----------------------------------------------------------------------
 M.handlers.excavate = function(data, obj, localdata)
-    data._excavate_reply = data._excavate_reply or {}
+    local exc = initExcavate(localdata)
+    local reply = {}
+    local now = getExcavateTime()
+
+    for _, mine in ipairs(exc.mines) do
+        updateMineState(mine, now)
+    end
+
+    checkSearchDayReset(exc)
+
+    if obj._query_excavate_data then
+        local mineReplies = {}
+        for _, mine in ipairs(exc.mines) do
+            table_insert(mineReplies, buildExcavateReply(mine))
+        end
+
+        reply._query_excavate_data_reply = {
+            _excavate = mineReplies,
+            _searched_id = exc.searched_id or 0,
+            _search_times = exc.search_times or 0,
+            _last_search_ts = exc.last_search_ts or 0,
+            _attacking_id = exc.attacking_id or 0,
+            _bat_heroes = {},
+            _cfg = { _attack_timeout = 180 },
+        }
+
+    elseif obj._search_excavate then
+        local playerLevel = (localdata.player and localdata.player.level) or 1
+        local times = exc.search_times + 1
+
+        getExcavateConfig()
+        local cost = 100
+        if GradientPriceTable and GradientPriceTable[times] then
+            cost = GradientPriceTable[times]["Excavate Search"] or 100
+            if cost <= 0 then
+                for i = 1, 20 do
+                    if GradientPriceTable[i] and GradientPriceTable[i]["Excavate Search"] and GradientPriceTable[i]["Excavate Search"] > 0 then
+                        cost = GradientPriceTable[i]["Excavate Search"]
+                    end
+                end
+            end
+        end
+
+        local gold = (localdata.player and localdata.player.gold) or 0
+        if gold < cost then
+            reply._search_excavate_reply = { _result = "lack_money" }
+        else
+            localdata.player.gold = gold - cost
+
+            local typeId = randomExcavateType(playerLevel)
+            local typeRow = ExcavateTreasureTable and ExcavateTreasureTable[typeId]
+
+            local mine = {
+                id = exc.next_mine_id,
+                type_id = typeId,
+                owner = "monster",
+                state = "searched",
+                state_end_ts = now + 300,
+                teams = generateWildTeam(typeId, 1),
+                produce_speed = typeRow and typeRow["Priduce Speed Per Minute"] or 30,
+                storage = typeRow and typeRow["Storage Amount"] or 72000,
+                found_ts = now,
+            }
+
+            table_insert(exc.mines, mine)
+            exc.next_mine_id = exc.next_mine_id + 1
+            exc.searched_id = mine.id
+            exc.search_times = times
+            exc.last_search_ts = now
+            exc.last_search_type = typeId
+
+            LocalData.save(localdata)
+
+            reply._search_excavate_reply = {
+                _result = "success",
+                _excavate = buildExcavateReply(mine),
+            }
+        end
+
+    elseif obj._set_excavate_team then
+        local excId = obj._set_excavate._excavate_id
+        local tids = obj._set_excavate._tid or {}
+
+        local mine = findMine(exc, excId)
+
+        if not mine then
+            reply._set_excavate_team_reply = { _result = "expired" }
+        elseif mine.owner ~= "mine" then
+            reply._set_excavate_team_reply = { _result = "fall" }
+        else
+            local heroBases = {}
+            local heroDynas = {}
+            for _, tid in ipairs(tids) do
+                local h = ed.player.heroes and ed.player.heroes[tid]
+                if h then
+                    table_insert(heroBases, {
+                        _tid = tid,
+                        _level = h._level or 1,
+                        _stars = h._stars or 1,
+                        _rank = h._rank or 0,
+                    })
+                    table_insert(heroDynas, {
+                        _hp_perc = 10000,
+                        _mp_perc = 0,
+                    })
+                end
+            end
+
+            if mine.teams and #mine.teams > 0 then
+                mine.teams[1].hero_bases = heroBases
+                mine.teams[1].hero_dynas = heroDynas
+            else
+                mine.teams = {{
+                    team_id = 1,
+                    player = { _name = localdata.player.name or "Player", _level = localdata.player.level or 1, _avatar = localdata.player.avatar or 0, _vip = 0, _guild_name = "" },
+                    hero_bases = heroBases,
+                    hero_dynas = heroDynas,
+                    res_got = 0,
+                }}
+            end
+
+            LocalData.save(localdata)
+            reply._set_excavate_team_reply = { _result = "success" }
+        end
+
+    elseif obj._excavate_start_battle then
+        local excId = obj._excavate_start_battle._excavate_id
+        local teamId = obj._excavate_start_battle._team_id or 1
+
+        local mine = findMine(exc, excId)
+
+        if not mine then
+            reply._excavate_start_battle_reply = { _result = "failed", _rseed = 0 }
+        else
+            exc.attacking_id = excId
+            exc.attack_team_id = teamId
+            mine.state = "battle"
+
+            local rseed = math_random(1, 2147483647)
+            local heroBases = {}
+            local heroDynas = {}
+            if mine.teams then
+                for _, team in ipairs(mine.teams) do
+                    if team.team_id == teamId then
+                        heroBases = team.hero_bases or {}
+                        heroDynas = team.hero_dynas or {}
+                        break
+                    end
+                end
+            end
+
+            LocalData.save(localdata)
+            reply._excavate_start_battle_reply = {
+                _result = "success",
+                _rseed = rseed,
+                _hero_bases = heroBases,
+                _hero_dynas = heroDynas,
+            }
+        end
+
+    elseif obj._excavate_end_battle then
+        local result = obj._excavate_end_battle._result or "defeat"
+        local excId = exc.attacking_id or 0
+
+        local mine = findMine(exc, excId)
+
+        exc.attacking_id = 0
+        exc.attack_team_id = 0
+
+        if not mine then
+            LocalData.save(localdata)
+            reply._excavate_end_battle_reply = { _result = result }
+        elseif result == "victory" or result == 0 then
+            local typeRow = ExcavateTreasureTable and ExcavateTreasureTable[mine.type_id]
+            local prepareTime = typeRow and typeRow["Prepare Time"] or 7200
+
+            local produced = calcProduced(mine, now)
+            local lootRatio = typeRow and typeRow["Loot Ratio"] or 0.2
+            local lootAmount = math_floor(produced * lootRatio)
+            local safeAmount = typeRow and typeRow["Safe Amount"] or 0
+            if lootAmount < safeAmount then lootAmount = 0 end
+
+            mine.owner = "mine"
+            mine.state = "prepare"
+            mine.state_end_ts = now + prepareTime
+            mine.teams = {{
+                team_id = 1,
+                player = { _name = localdata.player.name or "Player", _level = localdata.player.level or 1, _avatar = localdata.player.avatar or 0, _vip = 0, _guild_name = "" },
+                hero_bases = {},
+                hero_dynas = {},
+                res_got = 0,
+            }}
+            mine.found_ts = now
+
+            local reward = buildResourceReward(typeRow, lootAmount)
+            end
+
+            LocalData.save(localdata)
+            reply._excavate_end_battle_reply = {
+                _result = result,
+                _excavate = buildExcavateReply(mine),
+                _reward = reward,
+            }
+        else
+            mine.state = "occupy"
+            LocalData.save(localdata)
+            reply._excavate_end_battle_reply = { _result = result }
+        end
+
+    elseif obj._query_excavate_history then
+        reply._query_excavate_history_reply = {
+            _excavate_history = exc.history or {},
+        }
+
+    elseif obj._query_excavate_battle then
+        reply._query_excavate_battle_reply = { _battles = {} }
+
+    elseif obj._query_excavate_def then
+        local mineId = obj._query_excavate_def._mine_id
+        local mine = findMine(exc, mineId)
+        if mine and mine.owner == "mine" then
+            reply._query_excavate_def_reply = { _excavate = buildExcavateReply(mine) }
+        else
+            reply._query_excavate_def_reply = {}
+        end
+
+    elseif obj._clear_excavate_battle then
+        if exc.attacking_id and exc.attacking_id > 0 then
+            local mine = findMine(exc, exc.attacking_id)
+            if mine then mine.state = "occupy" end
+            exc.attacking_id = 0
+            exc.attack_team_id = 0
+            LocalData.save(localdata)
+        end
+        reply._clear_excavate_battle_reply = { _result = "success" }
+
+    elseif obj._withdraw_excavate_hero then
+        local heroId = obj._withdraw_excavate_hero._hero_id
+        local found = false
+        for _, mine in ipairs(exc.mines) do
+            if mine.teams then
+                for _, team in ipairs(mine.teams) do
+                    for i, base in ipairs(team.hero_bases or {}) do
+                        if base._tid == heroId then
+                            table.remove(team.hero_bases, i)
+                            table.remove(team.hero_dynas, i)
+                            found = true
+                            break
+                        end
+                    end
+                    if found then break end
+                end
+            end
+            if found then break end
+        end
+        LocalData.save(localdata)
+        reply._withdraw_excavate_hero_reply = { _result = "success" }
+
+    elseif obj._draw_excavate_def_rwd then
+        local histId = obj._draw_excavate_def_rwd._id
+        local vitReward = 10
+        for i, h in ipairs(exc.history or {}) do
+            if h._id == histId then
+                vitReward = h._vatility or 10
+                table.remove(exc.history, i)
+                break
+            end
+        end
+        if localdata.vitality then
+            localdata.vitality.current = (localdata.vitality.current or 0) + vitReward
+        end
+        LocalData.save(localdata)
+        reply._draw_excavate_def_rwd_reply = {
+            _result = "success",
+            _draw_vitality = vitReward,
+        }
+
+    elseif obj._drop_excavate then
+        local mineId = obj._drop_excavate._mine_id
+        local removedMine = nil
+        for i, m in ipairs(exc.mines) do
+            if m.id == mineId then
+                removedMine = m
+                table.remove(exc.mines, i)
+                break
+            end
+        end
+
+        local reward = nil
+        if removedMine then
+            local produced = calcProduced(removedMine, now)
+            local typeRow = ExcavateTreasureTable and ExcavateTreasureTable[removedMine.type_id]
+            reward = buildResourceReward(typeRow, produced)
+            end
+            if exc.searched_id == mineId then
+                exc.searched_id = 0
+            end
+        end
+
+        LocalData.save(localdata)
+        reply._drop_excavate_reply = {
+            _result = "success",
+            _reward = reward,
+        }
+
+    elseif obj._query_replay then
+        data._record_index = obj._query_replay._record_index or 0
+        data._record_svrid = obj._query_replay._record_svrid or 0
+        data._replay_data = ""
+    end
+
+    data._excavate_reply = reply
 end
 
 -- change_server: 切换服务器

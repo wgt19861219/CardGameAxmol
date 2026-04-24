@@ -9,8 +9,10 @@ setmetatable(class, base.mt)
 local function rollName(self)
   local name = ""
   local ac = ed.getDataTable("affixcount")
-  name = ac[math.random(1, #ac)]
-  self:setName(name)
+  if ac and #ac > 0 then
+    name = ac[math.random(1, #ac)]
+    self:setName(name)
+  end
 end
 class.rollName = rollName
 local getNameLength = function(self)
@@ -24,79 +26,105 @@ local getName = function(self)
 end
 class.getName = getName
 local setName = function(self, name)
-  local edit = self.edit
-  edit:setString(name)
+  self.edit:setString(name)
 end
 class.setName = setName
 local createEdit = function(self)
-  local parent = self.ui.name_bg
-  local fontColor = ccc3(198, 175, 126)
-  local info = {
-    config = {
-      editSize = CCSize(220, 45),
-      maxLength = 20,
-      fontColor,
-      fontSize = 20,
-      position = ccp(365, 360)
-    }
-  }
-  local edit = editBox:new(info)
-  edit:setPlaceHolder(T(""))
-  self.mainLayer:addChild(edit.edit)
-  self.edit = edit
+  local nameLabel = CCLabelTTF:create("", ed.font, 22)
+  nameLabel:setColor(ccc3(198, 175, 126))
+  nameLabel:setAnchorPoint(ccp(0, 0.5))
+  nameLabel:setPosition(ccp(40, 95))
+  self.ui.bg:addChild(nameLabel)
+  self.edit = nameLabel
   local gameCenterNickName = CCUserDefault:sharedUserDefault():getStringForKey("OC_GAME_CENTER_NICK_NAME_KEY")
-  local uname =  self:getName() or ""
+  local uname = self:getName() or ""
   if string.len(uname) == 0 and string.len(gameCenterNickName) > 0 then
-     self:setName(gameCenterNickName)
+    self:setName(gameCenterNickName)
   else
-      if not ispvp then
-       self:rollName()
-      end
+    if not ispvp then
+      self:rollName()
+    end
   end
 end
 class.createEdit = createEdit
 local registerTouchHandler = function(self)
   local ui = self.ui
   local mainLayer = self.mainLayer
-  self:btRegisterButtonClick({
-    button = ui.ok,
-    press = ui.ok_press,
-    key = "ok_button",
-    clickHandler = function()
-      self:doClickok()
-    end
-  })
-  self:btRegisterButtonClick({
-    button = ui.cancel,
-    press = ui.cancel_press,
-    key = "cancel_button",
-    clickHandler = function()
-      self:doClickCancel()
-    end
-  })
-  self:btRegisterButtonClick({
-    button = ui.roll,
-    press = ui.roll_press,
-    key = "roll_button",
-    clickHandler = function()
-      self:doClickRoll()
-    end
-  })
-  self:btRegisterHandler({
-    handler = function(event, x, y)
-      self.edit:touch(event, x, y)
-    end,
-    key = "edit"
-  })
-  self:btRegisterOutClick({
-    area = ui.bg,
-    key = "out_click",
-    clickHandler = function()
-      self:doClickCancel()
-    end
-  })
+
+  -- 手动计算按钮在mainLayer坐标系中的hit区域，绕过ed.containsPoint的worldSpace问题
+  local bg = ui.bg
+  local bgPosX, bgPosY = bg:getPosition()
+  local bgAnchor = bg:getAnchorPoint()
+  local bgSize = bg:getContentSize()
+  -- bg在mainLayer中的包围盒
+  local bgRect = {x = bgPosX - bgAnchor.x * bgSize.width, y = bgPosY - bgAnchor.y * bgSize.height, w = bgSize.width, h = bgSize.height}
+
+  local function pointInBgRect(lx, ly)
+    return lx >= bgRect.x and lx <= bgRect.x + bgRect.w and ly >= bgRect.y and ly <= bgRect.y + bgRect.h
+  end
+
+  -- ok按钮在bg内的相对位置: ccp(235, 35)，size 110x45
+  local okRelX, okRelY, okW, okH = 235, 35, 110, 45
+  local function pointInOk(lx, ly)
+    local ox = bgRect.x + okRelX - okW/2
+    local oy = bgRect.y + okRelY - okH/2
+    return lx >= ox and lx <= ox + okW and ly >= oy and ly <= oy + okH
+  end
+
+  -- cancel按钮在bg内的相对位置: ccp(115, 35)，size 110x45
+  local cancelRelX, cancelRelY = 115, 35
+  local function pointInCancel(lx, ly)
+    local ox = bgRect.x + cancelRelX - okW/2
+    local oy = bgRect.y + cancelRelY - okH/2
+    return lx >= ox and lx <= ox + okW and ly >= oy and ly <= oy + okH
+  end
+
+  -- roll按钮在bg内的相对位置: ccp(300, 95)，size约62x59
+  local rollRelX, rollRelY, rollW, rollH = 300, 95, 62, 59
+  local function pointInRoll(lx, ly)
+    local ox = bgRect.x + rollRelX - rollW/2
+    local oy = bgRect.y + rollRelY - rollH/2
+    return lx >= ox and lx <= ox + rollW and ly >= oy and ly <= oy + rollH
+  end
+
+  local isOk, isCancel, isRoll
+  local function handler(event, x, y)
+    xpcall(function()
+      if event == "began" then
+        isOk, isCancel, isRoll = nil, nil, nil
+        if pointInOk(x, y) then
+          isOk = true
+          if not tolua.isnull(ui.ok_press) then ui.ok_press:setVisible(true) end
+        elseif pointInCancel(x, y) then
+          isCancel = true
+          if not tolua.isnull(ui.cancel_press) then ui.cancel_press:setVisible(true) end
+        elseif pointInRoll(x, y) then
+          isRoll = true
+          if not tolua.isnull(ui.roll_press) then ui.roll_press:setVisible(true) end
+        end
+      elseif event == "ended" then
+        if isOk then
+          if not tolua.isnull(ui.ok_press) then ui.ok_press:setVisible(false) end
+          if pointInOk(x, y) then self:doClickok() end
+        elseif isCancel then
+          if not tolua.isnull(ui.cancel_press) then ui.cancel_press:setVisible(false) end
+          self:doClickCancel()
+        elseif isRoll then
+          if not tolua.isnull(ui.roll_press) then ui.roll_press:setVisible(false) end
+          self:doClickRoll()
+        else
+          if not pointInBgRect(x, y) then
+            self:doClickCancel()
+          end
+        end
+        isOk, isCancel, isRoll = nil, nil, nil
+      end
+    end, EDDebug)
+    return true
+  end
+
   mainLayer:setTouchEnabled(true)
-  mainLayer:registerScriptTouchHandler(self:btGetMainTouchHandler(), false, self.mainTouchPriority, true)
+  mainLayer:registerScriptTouchHandler(handler, false, self.mainTouchPriority, true)
 end
 class.registerTouchHandler = registerTouchHandler
 local function create(param)
@@ -327,9 +355,6 @@ local destroy = function(self)
 end
 class.destroy = destroy
 local doClickName = function(self)
-  if not tolua.isnull(self.edit) then
-    self.edit:openKeyBoard()
-  end
 end
 class.doClickName = doClickName
 local doClickRoll = function(self)

@@ -402,15 +402,7 @@ local function refreshSetNameTime(self)
 end
 class.refreshSetNameTime = refreshSetNameTime
 local function getNameCountdown(self)
-  local lt = self._name_card._last_set_name_time
-  local cd = 604800
-  local time = ed.getServerTime()
-  if cd < time - lt then
-    return nil
-  else
-    local dt = cd - (time - lt)
-    return ed.getdhmsCString(dt)
-  end
+  return nil
 end
 class.getNameCountdown = getNameCountdown
 local getSetNameCost = function(self)

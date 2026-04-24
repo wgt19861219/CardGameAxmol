@@ -10,6 +10,13 @@ local audioParam = {
 }
 ed.audioParam = audioParam
 ed.soundSwitch = true
+-- 立即从UserDefault读取保存的设置
+local _sv = CCUserDefault:sharedUserDefault():getStringForKey("swq_s")
+if _sv == "y" then
+  ed.soundSwitch = true
+elseif _sv == "n" then
+  ed.soundSwitch = false
+end
 LegendSetSoundSwitch(ed.soundSwitch and 0 or 1)
 local getSoundPath = function(file)
   if false then

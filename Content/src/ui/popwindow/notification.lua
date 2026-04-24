@@ -4,6 +4,8 @@ local class = {
 class.mt.__index = class
 local base = ed.ui.popwindow
 setmetatable(class, base.mt)
+require("ui/uieditor/setup")
+require("ui/uieditor/setuplist")
 ed.ui.notification = class
 local createListLayer = function(self)
   local info = {
@@ -50,9 +52,9 @@ local function create()
   self:initTouchHandler()
   self:refreshSoundButton()
   self:refreshSwitchButton()
-  --Ê±ÇøÊ±¼ä²î
-  local serverZone = ed.serverTimeZone;
-  local systemZone = ed.getCurrentZoneDiff();
+  --Ê±ï¿½ï¿½Ê±ï¿½ï¿½ï¿½
+  local serverZone = ed.serverTimeZone or 0;
+  local systemZone = ed.getCurrentZoneDiff() or 0;
   local diff = math.ceil((systemZone - serverZone)/(60*60));
   --21:00
   local time21 = 21+diff;

@@ -842,12 +842,11 @@ ed.uieditor.setuplist = {
     },
     t = "DGButton",
     base = {
-      normal = "UI/alpha/HVGA/shop_refresh_button.png",
+      normal = "UI/alpha/HVGA/blank_1px.png",
       name = "sound",
       z = 1,
-      capInsets = CCRectMake(19.53, 15.63, 74.22, 19.53),
       text = "",
-      press = "UI/alpha/HVGA/shop_refresh_button_down.png",
+      press = "UI/alpha/HVGA/blank_1px.png",
       size = 10
     },
     layout = {
@@ -954,7 +953,7 @@ ed.uieditor.setuplist = {
   {
     config = {
       rotation = 0,
-      scaleSize = CCSizeMake(181.25, 58.59),
+      scaleSize = CCSizeMake(55, 55),
       flip = "",
       labelConfig = {
         color = ccc3(255, 255, 255)
@@ -965,13 +964,12 @@ ed.uieditor.setuplist = {
     },
     t = "DGButton",
     base = {
-      normal = "UI/alpha/HVGA/playerinfo_button_sound_off_1.png",
-      capInsets = CCRectMake(19.53, 15.63, 74.22, 19.53),
+      normal = "UI/alpha/HVGA/sound_off.png",
       name = "sound_off",
       z = 0,
       parent = "sound",
       text = "",
-      press = "UI/alpha/HVGA/playerinfo_button_sound_off_2.png",
+      press = "UI/alpha/HVGA/sound_off.png",
       size = 10
     },
     layout = {
@@ -982,7 +980,7 @@ ed.uieditor.setuplist = {
   {
     config = {
       rotation = 0,
-      scaleSize = CCSizeMake(181.25, 58.59),
+      scaleSize = CCSizeMake(55, 55),
       flip = "",
       labelConfig = {
         color = ccc3(255, 255, 255)
@@ -993,13 +991,12 @@ ed.uieditor.setuplist = {
     },
     t = "DGButton",
     base = {
-      normal = "UI/alpha/HVGA/playerinfo_button_sound_on_1.png",
-      capInsets = CCRectMake(19.53, 15.63, 74.22, 19.53),
+      normal = "UI/alpha/HVGA/sound_on.png",
       name = "sound_on",
       z = 0,
       parent = "sound",
       text = "",
-      press = "UI/alpha/HVGA/playerinfo_button_sound_on_2.png",
+      press = "UI/alpha/HVGA/sound_on.png",
       size = 10
     },
     layout = {

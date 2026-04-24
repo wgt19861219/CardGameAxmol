@@ -90,9 +90,15 @@ end
 function ed.saveSoundSwitch()
 	local v = ed.soundSwitch and "y" or "n"
 	CCUserDefault:sharedUserDefault():setStringForKey("swq_s", v)
+	CCUserDefault:sharedUserDefault():flush()
 end
 
 function ed.loadSoundSwitch()
-	ed.soundSwitch = CCUserDefault:sharedUserDefault():getStringForKey("swq_s") ~= "n"
+	local v = CCUserDefault:sharedUserDefault():getStringForKey("swq_s")
+	if v == "y" then
+		ed.soundSwitch = true
+	elseif v == "n" then
+		ed.soundSwitch = false
+	end
 	LegendSetSoundSwitch(ed.soundSwitch and 0 or 1)
 end

@@ -1448,8 +1448,14 @@ local destroy = function(self)
 end
 class.destroy = destroy
 local function doClickSetupButton(self)
-  local layer = ed.ui.notification.create().mainLayer
-  self.mainLayer:addChild(layer, 220)
+  local ok, result = xpcall(function()
+    return ed.ui.notification.create()
+  end, function(err)
+    return nil
+  end)
+  if ok and result then
+    self.mainLayer:addChild(result.mainLayer, 220)
+  end
 end
 class.doClickSetupButton = doClickSetupButton
 local function doSetupButtonTouch(self)

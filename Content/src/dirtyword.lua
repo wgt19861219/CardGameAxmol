@@ -1,12 +1,29 @@
 local ed = ed
 local dict
+local function utf8_iter(s)
+  local i = 0
+  return function()
+    if #s == 0 then return nil end
+    local b = s:byte(1)
+    local len
+    if b < 128 then len = 1
+    elseif b < 224 then len = 2
+    elseif b < 240 then len = 3
+    else len = 4
+    end
+    local c = s:sub(1, len)
+    s = s:sub(len + 1)
+    i = i + 1
+    return i, c
+  end
+end
 local function make_dict()
   local tab = ed.getDataTable("dirtywords")
   dict = {}
   for k, _ in pairs(tab) do
     if k ~= name then
       local node = dict
-      for i, c, b in utf8.chars(k) do
+      for i, c in utf8_iter(k) do
         if not node[c] then
           node[c] = {}
         end
@@ -36,7 +53,7 @@ local function dirtyword_check(text)
     make_dict()
   end
   local array = {}
-  for i, c, b in utf8.chars(text) do
+  for i, c in utf8_iter(text) do
     array[i] = c
   end
   for i = 1, #array do

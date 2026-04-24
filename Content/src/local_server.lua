@@ -2191,9 +2191,221 @@ local function generateRankBoard(playerRank, playerLevel, count)
   return board
 end
 
--- ladder: 天梯/PVP 系统，触发 FireEvent("pvpRsp")
+-- ladder: 天梯/PVP 系统
 M.handlers.ladder = function(data, obj, localdata)
     data._ladder_reply = data._ladder_reply or {}
+    local reply = data._ladder_reply
+    local player = localdata.player
+    local pvp = player._pvp
+
+    -- 确保竞技场数据初始化
+    if not pvp then
+        pvp = {
+            rank = 1001,
+            gs = 0,
+            left_count = 5,
+            buy_times = 0,
+            last_bt_time = 0,
+            highest_rank = 1001,
+            enemies = {},
+            records = {},
+            defend_lineup = {},
+        }
+        player._pvp = pvp
+    end
+
+    -- 刷新GS
+    if player.getPvpGs then
+        pvp.gs = player:getPvpGs()
+    end
+
+    local now = os.time()
+    pvp.left_count = pvp.left_count or 5
+
+    -- 打开面板
+    if obj._open_panel then
+        pvp.enemies = generateAiOpponents(pvp.rank, player.level or 1, 3)
+        reply._open_panel = {
+            _rank = pvp.rank,
+            _gs = pvp.gs,
+            _left_count = pvp.left_count,
+            _buy_times = pvp.buy_times,
+            _last_bt_time = pvp.last_bt_time,
+            _highestrank = pvp.highest_rank,
+            _oppos = pvp.enemies,
+            _lineup = pvp.defend_lineup,
+        }
+    end
+
+    -- 刷新对手
+    if obj._apply_opponent then
+        pvp.enemies = generateAiOpponents(pvp.rank, player.level or 1, 3)
+        reply._apply_opponent = {
+            _oppos = pvp.enemies,
+        }
+    end
+
+    -- 开始战斗
+    if obj._start_battle then
+        local attackLineup = obj._start_battle._attack_lineup or {}
+        local oppoUserId = obj._start_battle._oppo_user_id
+
+        local enemy = nil
+        for _, e in ipairs(pvp.enemies or {}) do
+            if e._user_id == oppoUserId then
+                enemy = e
+                break
+            end
+        end
+
+        if enemy then
+            local enemyHeroes = {}
+            for _, h in ipairs(enemy._heroes or {}) do
+                table.insert(enemyHeroes, h._tid)
+            end
+
+            local selfHeroes = {}
+            for _, tid in ipairs(attackLineup) do
+                table.insert(selfHeroes, tid)
+            end
+
+            pvp.left_count = math.max(0, pvp.left_count - 1)
+            pvp.last_bt_time = now
+
+            reply._start_battle = {
+                _heroes = enemyHeroes,
+                _self_heroes = selfHeroes,
+                _is_robot = enemy._is_robot or 1,
+                _rseed = math.random(1, 999999),
+            }
+        end
+    end
+
+    -- 结束战斗
+    if obj._end_battle then
+        local result = obj._end_battle._result
+        table.insert(pvp.records, 1, {
+            _result = result,
+            _time = now,
+            _rank = pvp.rank,
+        })
+        while #pvp.records > 20 do
+            table.remove(pvp.records)
+        end
+
+        if result == "victory" then
+            local oldRank = pvp.rank
+            pvp.rank = math.max(1, pvp.rank - math.random(1, 10))
+            if pvp.rank < pvp.highest_rank then
+                pvp.highest_rank = pvp.rank
+            end
+
+            local rewardAmount = math.max(10, 100 - pvp.rank)
+            player:addPvpMoney(rewardAmount)
+
+            reply._end_battle = {
+                _result = "victory",
+                _rank = pvp.rank,
+                _prev_rank = oldRank,
+                _reward = rewardAmount,
+            }
+        else
+            reply._end_battle = {
+                _result = "defeat",
+                _rank = pvp.rank,
+                _prev_rank = pvp.rank,
+                _reward = 0,
+            }
+        end
+    end
+
+    -- 购买挑战次数
+    if obj._buy_battle_chance then
+        local priceTable = ed.getDataTable("GradientPrice")
+        local cost = 50
+        if priceTable then
+            local row = priceTable[pvp.buy_times + 1]
+            if row then cost = tonumber(row["PVP Buy"]) or 50 end
+        end
+        if player._rmb >= cost then
+            player._rmb = player._rmb - cost
+            pvp.buy_times = pvp.buy_times + 1
+            pvp.left_count = pvp.left_count + 1
+            reply._buy_battle_chance = {
+                _result = "success",
+                _left_count = pvp.left_count,
+                _buy_times = pvp.buy_times,
+            }
+        else
+            reply._buy_battle_chance = {
+                _result = "fail",
+            }
+        end
+    end
+
+    -- 清除战斗CD
+    if obj._clear_battle_cd then
+        local cdCost = 50
+        if player._rmb >= cdCost then
+            player._rmb = player._rmb - cdCost
+            pvp.last_bt_time = 0
+            reply._clear_battle_cd = {
+                _result = "success",
+            }
+        else
+            reply._clear_battle_cd = {
+                _result = "fail",
+            }
+        end
+    end
+
+    -- 查询战斗记录
+    if obj._query_records then
+        reply._query_records = {
+            _records = pvp.records,
+        }
+    end
+
+    -- 查询排行榜
+    if obj._query_rankborad then
+        local board = generateRankBoard(pvp.rank, player.level or 1, 20)
+        table.insert(board, {
+            _user_id = 0,
+            _name = player.name or "Player",
+            _avatar = player.avatar or 1,
+            _level = player.level or 1,
+            _vip = player:getvip(),
+            _gs = pvp.gs,
+            _rank = pvp.rank,
+            _is_self = 1,
+        })
+        reply._query_rankborad = {
+            _rankboard = board,
+        }
+    end
+
+    -- 查询对手详情
+    if obj._query_oppo then
+        local oppoId = obj._query_oppo._user_id
+        local foundEnemy = nil
+        for _, e in ipairs(pvp.enemies or {}) do
+            if e._user_id == oppoId then
+                foundEnemy = e
+                break
+            end
+        end
+        if foundEnemy then
+            reply._query_oppo = foundEnemy
+        end
+    end
+
+    -- 设置防守阵容
+    if obj._set_lineup then
+        pvp.defend_lineup = obj._set_lineup._lineup or {}
+        reply._set_lineup = {
+            _result = "success",
+        }
+    end
 end
 
 -----------------------------------------------------------------------

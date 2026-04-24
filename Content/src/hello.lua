@@ -389,7 +389,8 @@ ed.popScene2 = popScene2
 
 local function replaceScene(scene)
 	if #scene_stack > 0 then
-		if scene_stack[#scene_stack].identity == "main" then
+		local top = scene_stack[#scene_stack]
+		if top.identity == "main" or (ed.engine and ed.engine.arena_mode) then
 			pushScene(scene)
 			return
 		end

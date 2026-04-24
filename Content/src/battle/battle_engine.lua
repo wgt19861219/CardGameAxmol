@@ -1482,11 +1482,13 @@ local function exitStage(self, result, exitFlag)
 		end
 			if result == 0 then
 				FireEvent("BattleEnding", self.stage_info["Stage ID"], "success")
+				self.arena_mode = nil
 				ed.netreply.exitStageReply = self:downExit(result)
 				ed.scene:autoCollectLoots(2.8)
 		elseif result == 1 then
 			FireEvent("BattleEnding", self.stage_info["Stage ID"], "failed")
 			for unit in self:foreachAliveUnit(ed.emCampEnemy) do
+				self.arena_mode = nil
 				if unit.actor then
 					unit.actor:waitAfterBattle()
 				end

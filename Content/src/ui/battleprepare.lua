@@ -1689,12 +1689,14 @@ end
 class.createListLayer = createListLayer
 local getInformation = function(self, addition)
   local heroLimit = addition.heroLimit
+  LegendLog("[bp] getInformation start, heroLimit=" .. tostring(heroLimit))
   local all, front, middle, back
   if heroLimit then
     all, front, middle, back = ed.readhero.classify("exercise", "position", {limit = heroLimit})
   else
     all, front, middle, back = ed.readhero.classify("prepare", "position")
   end
+  LegendLog("[bp] classify done, all=" .. tostring(all and #all or "nil"))
   self.listData = {
     all = all,
     front = front,
@@ -1713,6 +1715,7 @@ end
 class.getInformation = getInformation
 local function create(info)
   info = info or {}
+  LegendLog("[bp] create called, pvpMode=" .. tostring(info.pvpMode) .. " heros=" .. tostring(info.heros and #info.heros or "nil"))
   local self = base.create("battlePrepare")
   setmetatable(self, class.mt)
   prepareInfo = info
@@ -1744,6 +1747,7 @@ local function create(info)
   self:getInformation({
     heroLimit = self.heroLimit
   })
+  LegendLog("[bp] getInformation done, listData.all=" .. tostring(self.listData and #self.listData.all or "nil"))
   local mainLayer = CCLayer:create()
   self.mainLayer = mainLayer
   scene:addChild(mainLayer)
@@ -2291,6 +2295,7 @@ local function create(info)
   ListenEvent("PlayerMoneyChange", function(money)
     refreshMercenaryIcon(self, money)
   end, battlePrepareScope)
+  LegendLog("[bp] create done, returning self")
   return self
 end
 class.create = create

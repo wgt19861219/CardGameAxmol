@@ -832,12 +832,12 @@ local orderHeroFunction = function(list)
     for j = i, 2, -1 do
       local h = list[j]
       local ph = list[j - 1]
-      if h._level > ph._level then
+      if (h._level or 0) > (ph._level or 0) then
         up(j)
-      elseif h._level == ph._level then
-        if h._stars > ph._stars then
+      elseif (h._level or 0) == (ph._level or 0) then
+        if (h._stars or 0) > (ph._stars or 0) then
           up(j)
-        elseif h._stars == ph._stars and h._rank > ph._rank then
+        elseif (h._stars or 0) == (ph._stars or 0) and (h._rank or 0) > (ph._rank or 0) then
           up(j)
         end
       end

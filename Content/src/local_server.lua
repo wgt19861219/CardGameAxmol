@@ -2102,6 +2102,15 @@ local pvp_names = {
   "吕布", "貂蝉", "孙策", "马超", "黄忠"
 }
 
+-- 保存竞技场数据到CCUserDefault
+local function savePvpData(player)
+    if player._pvp then
+        local pvpJson = json.encode(player._pvp)
+        CCUserDefault:sharedUserDefault():setStringForKey("pvp_data", pvpJson)
+        CCUserDefault:sharedUserDefault():flush()
+    end
+end
+
 local function generateAiPlayer(rank, playerLevel)
   local nameIdx = math.random(1, #pvp_names)
   local name = pvp_names[nameIdx]
@@ -2130,7 +2139,7 @@ local function generateAiPlayer(rank, playerLevel)
           _tid = heroId,
           _level = heroLevel,
           _stars = math.max(1, math.min(5, math.floor(level / 15) + math.random(0, 1))),
-          _rank = math.min(12, math.floor(level / 10) + 1),
+          _rank = math.max(5, math.min(12, math.floor(level / 10) + 1)),
         })
       end
     end
@@ -2155,7 +2164,7 @@ local function generateAiPlayer(rank, playerLevel)
           _tid = tid,
           _level = math.max(1, level - math.random(0, 3)),
           _stars = math.random(1, math.min(5, math.floor(level / 15) + 1)),
-          _rank = math.min(12, math.max(1, math.floor(level / 10))),
+          _rank = math.max(5, math.min(12, math.max(1, math.floor(level / 10)))),
         })
       end
     end
@@ -2168,10 +2177,12 @@ local function generateAiPlayer(rank, playerLevel)
 
   return {
     _user_id = 10000 + rank,
-    _name = name,
-    _avatar = avatar,
-    _level = level,
-    _vip = vip,
+    _summary = {
+      _name = name,
+      _avatar = avatar,
+      _level = level,
+      _vip = vip,
+    },
     _gs = gs,
     _rank = rank,
     _heroes = heroes,
@@ -2231,9 +2242,10 @@ M.handlers.ladder = function(data, obj, localdata)
     end
 
     local now = os.time()
-    pvp.left_count = pvp.left_count or 5
-
-    -- 打开面板
+    -- 单机版：每次打开面板恢复5次挑战机会
+    if obj._open_panel then
+        pvp.left_count = 5
+    end
     if obj._open_panel then
         pvp.enemies = generateAiOpponents(pvp.rank, player.level or 1, 3)
         reply._open_panel = {
@@ -2269,15 +2281,26 @@ M.handlers.ladder = function(data, obj, localdata)
             end
         end
 
+        -- fallback: 如果在 enemies 中找不到，用 oppoUserId 反推 rank 并生成
+        if not enemy then
+            local rank = oppoUserId - 10000
+            enemy = generateAiPlayer(rank, player.level or 1)
+        end
+
         if enemy then
             local enemyHeroes = {}
             for _, h in ipairs(enemy._heroes or {}) do
-                table.insert(enemyHeroes, h._tid)
+                table.insert(enemyHeroes, h)
             end
 
             local selfHeroes = {}
             for _, tid in ipairs(attackLineup) do
-                table.insert(selfHeroes, tid)
+                local hero = player._heroes and player._heroes[tid]
+                if hero then
+                    table.insert(selfHeroes, hero)
+                else
+                    table.insert(selfHeroes, {_tid = tid, _level = 1})
+                end
             end
 
             pvp.left_count = math.max(0, pvp.left_count - 1)
@@ -2382,10 +2405,12 @@ M.handlers.ladder = function(data, obj, localdata)
         local board = generateRankBoard(pvp.rank, player.level or 1, 20)
         table.insert(board, {
             _user_id = 0,
-            _name = player.name or "Player",
-            _avatar = player.avatar or 1,
-            _level = player.level or 1,
-            _vip = player:getvip(),
+            _summary = {
+                _name = player.name or "Player",
+                _avatar = player.avatar or 1,
+                _level = player.level or 1,
+                _vip = player:getvip(),
+            },
             _gs = pvp.gs,
             _rank = pvp.rank,
             _is_self = 1,
@@ -2422,14 +2447,6 @@ M.handlers.ladder = function(data, obj, localdata)
     savePvpData(localdata.player)
 end
 
--- 保存竞技场数据到CCUserDefault
-local function savePvpData(player)
-    if player._pvp then
-        local pvpJson = json.encode(player._pvp)
-        CCUserDefault:sharedUserDefault():setStringForKey("pvp_data", pvpJson)
-        CCUserDefault:sharedUserDefault():flush()
-    end
-end
 
 -----------------------------------------------------------------------
 -- 挖矿系统辅助函数
@@ -3625,6 +3642,30 @@ local function local_dispatch(msg)
         local keys = {}
         for k, _ in pairs(data) do keys[#keys+1] = k end
         LegendLog("[local_dispatch] NO _exit_stage_reply in data, keys: " .. table.concat(keys, ","))
+    end
+
+    -- ladder / PVP 回复
+    if data._ladder_reply then
+        LegendLog("[local_dispatch] processing _ladder_reply, has_start_battle=" .. tostring(data._ladder_reply._start_battle ~= nil) .. " has_callback=" .. tostring(ed.netreply.gotoPvpBattleReply ~= nil))
+        if FireEvent then
+            FireEvent("pvpRsp", data._ladder_reply)
+        end
+        if ed.netreply.gotoPvpBattleReply and data._ladder_reply._start_battle then
+            local enemyList = data._ladder_reply._start_battle._heroes
+            local selfList = data._ladder_reply._start_battle._self_heroes
+            local isBot = data._ladder_reply._start_battle._is_robot
+            isBot = isBot and isBot > 0
+            LegendLog("[local_dispatch] calling gotoPvpBattleReply, enemies=" .. tostring(#enemyList) .. " self=" .. tostring(#selfList) .. " isBot=" .. tostring(isBot))
+            ed.netreply.gotoPvpBattleReply(enemyList, isBot, selfList)
+            ed.srand(data._ladder_reply._start_battle._rseed)
+            if FireEvent then
+                FireEvent("StartPVPBattle")
+            end
+        end
+        if ed.netreply.exitStageReply and data._ladder_reply._end_battle then
+            ed.netreply.exitStageReply(data._ladder_reply._end_battle._result, data._ladder_reply._end_battle)
+            ed.netreply.exitStageReply = nil
+        end
     end
 
     -- shop_refresh / shop_consume 回复

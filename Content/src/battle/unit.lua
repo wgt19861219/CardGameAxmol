@@ -214,8 +214,13 @@ local function UnitCreate(proto, camp, config, extraData)
 	self:rebuild()
 	initHpMpInfo(self)
 	if self.info.Script then
-		local init_func = require(self.info.Script)
-		self = init_func(self)
+		local ok, init_func = pcall(require, self.info.Script)
+		if ok and init_func then
+			local ok2, result = pcall(init_func, self)
+			if ok2 then
+				self = result or self
+			end
+		end
 	end
 	self:idle()
 	if self.actionStageId ~= nil then

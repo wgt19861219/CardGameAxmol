@@ -2272,6 +2272,7 @@ M.handlers.ladder = function(data, obj, localdata)
             _oppos = pvp.enemies,
             _lineup = pvp.defend_lineup,
         }
+        LegendLog("[PVP] _open_panel: rank=" .. pvp.rank)
     end
 
     -- 刷新对手
@@ -2331,6 +2332,7 @@ M.handlers.ladder = function(data, obj, localdata)
 
             pvp.left_count = math.max(0, pvp.left_count - 1)
             pvp.last_bt_time = now
+            pvp.last_oppo_rank = enemy._rank
 
             reply._start_battle = {
                 _heroes = enemyHeroes,
@@ -2344,6 +2346,7 @@ M.handlers.ladder = function(data, obj, localdata)
     -- 结束战斗
     if obj._end_battle then
         local result = obj._end_battle._result
+        LegendLog("[PVP] _end_battle received: result=" .. tostring(result) .. " type=" .. type(result))
         table.insert(pvp.records, 1, {
             _result = result,
             _time = now,
@@ -2355,7 +2358,11 @@ M.handlers.ladder = function(data, obj, localdata)
 
         if result == "victory" or result == 0 then
             local oldRank = pvp.rank
-            pvp.rank = math.max(1, pvp.rank - math.random(1, 10))
+            local oppoRank = pvp.last_oppo_rank or pvp.rank
+            if oppoRank < pvp.rank then
+                pvp.rank = oppoRank
+            end
+            LegendLog("[PVP] _end_battle VICTORY: oldRank=" .. oldRank .. " newRank=" .. pvp.rank)
             if pvp.rank < pvp.highest_rank then
                 pvp.highest_rank = pvp.rank
             end

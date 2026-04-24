@@ -20,7 +20,7 @@ local hasRewarded = false
 local currentRank
 local reqRecord = true
 local reqRank = true
-local pvpCD = 600
+local pvpCD = 0
 local resetCDCost = 50
 local replayId = 0
 local oppsName = ""
@@ -3254,6 +3254,13 @@ local function pvpMsgRsp(msg)
     initEnemyList(msg._apply_oppo._oppos)
   elseif msg._start_battle then
   elseif msg._end_battle then
+    local data = msg._end_battle
+    if data._rank and mainPanelLayer then
+      currentRank = data._rank
+      local w = ed.createNumbers(mainPanelLayer.myRank, tostring(data._rank), -2, nil, "big_pvp1")
+      mainPanelLayer.myRank:setContentSize(CCSizeMake(w, 20))
+    end
+    bDataValid = false
   elseif msg._set_lineup then
     if msg._set_lineup._result == "success" then
       initDefandHeroList(msg._set_lineup._lineup)

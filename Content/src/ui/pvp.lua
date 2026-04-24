@@ -93,11 +93,13 @@ function panelLayer:new(scene, pvpScene)
 end
 function panelLayer:touch(event, x, y)
   if not self:getVisible() then
+    LegendLog("[pvp] panelLayer:touch NOT visible")
     return
   end
   if event == "began" then
     for k, v in pairs(self.buttonList) do
       if ed.checkVisible(v) and ed.containsPoint(v, x, y) then
+        LegendLog("[pvp] touch began hit button: " .. tostring(k))
         if self.pressButtonList[k] ~= nil then
           self.pressButtonList[k]:setVisible(true)
           v:setVisible(false)
@@ -107,11 +109,13 @@ function panelLayer:touch(event, x, y)
       end
     end
   elseif event == "ended" and self.currentPressName ~= nil and self.currentPressName ~= "" then
+    LegendLog("[pvp] touch ended, currentPressName=" .. tostring(self.currentPressName))
     self.buttonList[self.currentPressName]:setVisible(true)
     if self.pressButtonList[self.currentPressName] ~= nil then
       self.pressButtonList[self.currentPressName]:setVisible(false)
     end
     if ed.containsPoint(self.buttonList[self.currentPressName], x, y) then
+      LegendLog("[pvp] containsPoint ok, calling pvp." .. tostring(self.currentPressName))
       if pvp[self.currentPressName] then
         pvp[self.currentPressName]()
       end
@@ -144,12 +148,21 @@ function pvp.closeRecordInfo()
   mainPanelLayer:setVisible(true)
 end
 function pvp.adjustHero()
+  LegendLog("[pvp] adjustHero called, defandHeros=" .. tostring(defandHeros and #defandHeros or "nil"))
   ed.playEffect(ed.sound.pvp.clickChangeTeam)
-  ed.pushScene(ed.ui.battleprepare.create({
-    pvpMode = "defend",
-    heros = defandHeros,
-    stage_id = -1
-  }))
+  local ok, err = pcall(function()
+    local bp = ed.ui.battleprepare.create({
+      pvpMode = "defend",
+      heros = defandHeros,
+      stage_id = -1
+    })
+    LegendLog("[pvp] battleprepare created, bp=" .. tostring(bp ~= nil))
+    ed.pushScene(bp)
+    LegendLog("[pvp] pushScene done")
+  end)
+  if not ok then
+    LegendLog("[pvp] adjustHero ERROR: " .. tostring(err))
+  end
 end
 function pvp.closeRewardLayer()
   rewardPanelLayer:setVisible(false)
@@ -1909,6 +1922,9 @@ function pvp.changeEnemy()
   end
 end
 local function mainLayerTouch(event, x, y)
+  if event == "began" then
+    LegendLog("[pvp] mainLayerTouch began x=" .. tostring(x) .. " y=" .. tostring(y))
+  end
   if mainPanelLayer then
     return mainPanelLayer:touch(event, x, y)
   end
@@ -1920,6 +1936,7 @@ local function createMainLayer(self)
   mainPanelLayer.mainLayer:registerScriptTouchHandler(mainLayerTouch, false, 0, false)
   mainPanelLayer.mainLayer:setTouchEnabled(true)
   self.scene:addChild(mainPanelLayer.mainLayer)
+  LegendLog("[pvp] createMainLayer done, scene children=" .. tostring(self.scene:getChildrenCount()))
   local mainUIRes = {
     {
       t = "Sprite",
@@ -3193,6 +3210,7 @@ local function onEnterWork()
   onPvpNotifyChange(ed.queryNotifyData("PvpNotifyData"))
 end
 function pvp.create()
+  LegendLog("[pvp] pvp.create called")
   local self = base.create("pvp")
   setmetatable(self, pvp)
   createMainLayer(self)
@@ -3225,8 +3243,10 @@ local function buyPvpTimesRsp(data)
   end
 end
 local function pvpMsgRsp(msg)
+  LegendLog("[pvp] pvpMsgRsp called, _open_panel=" .. tostring(msg._open_panel ~= nil) .. " mainPanelLayer=" .. tostring(mainPanelLayer ~= nil))
   if msg._open_panel then
     if mainPanelLayer == nil then
+      LegendLog("[pvp] pvpMsgRsp: pushing pvp scene")
       ed.pushScene(ed.ui.pvp.create())
     end
     initPanel(msg._open_panel)

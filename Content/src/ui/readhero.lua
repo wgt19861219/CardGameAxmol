@@ -481,7 +481,7 @@ local function createIconByHero(hero, addition)
     rank = hero._rank,
     level = hero._level,
     maxRange = maxRange,
-    stars = hero._stars + addStar,
+    stars = (hero._stars or 0) + addStar,
     length = length,
     hp = hero:hp_perc(hmMode),
     mp = hero:mp_perc(hmMode),

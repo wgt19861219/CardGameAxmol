@@ -2237,8 +2237,8 @@ M.handlers.ladder = function(data, obj, localdata)
     end
 
     -- 刷新GS
-    if player.getPvpGs then
-        pvp.gs = player:getPvpGs()
+    if ed.player and ed.player.getPvpGs then
+        pvp.gs = ed.player:getPvpGs()
     end
 
     local now = os.time()
@@ -2248,6 +2248,20 @@ M.handlers.ladder = function(data, obj, localdata)
     end
     if obj._open_panel then
         pvp.enemies = generateAiOpponents(pvp.rank, player.level or 1, 3)
+        -- 默认防守阵容：如果为空，取玩家前5个英雄
+        if not pvp.defend_lineup or #pvp.defend_lineup == 0 then
+            pvp.defend_lineup = {}
+            local runtimeHeroes = ed.player and (ed.player._heroes or {})
+            local count = 0
+            for _, h in ipairs(runtimeHeroes) do
+                if count >= 5 then break end
+                local tid = type(h) == "table" and h._tid or h
+                if tid then
+                    table.insert(pvp.defend_lineup, tid)
+                    count = count + 1
+                end
+            end
+        end
         reply._open_panel = {
             _rank = pvp.rank,
             _gs = pvp.gs,
@@ -2295,10 +2309,22 @@ M.handlers.ladder = function(data, obj, localdata)
 
             local selfHeroes = {}
             for _, tid in ipairs(attackLineup) do
-                local hero = player._heroes and player._heroes[tid]
+                local hero = ed.player and ed.player.heroes and ed.player.heroes[tid]
+                LegendLog("[PVP] self_hero tid=" .. tostring(tid) .. " hero=" .. tostring(hero ~= nil) .. " level=" .. tostring(hero and hero._level))
                 if hero then
-                    table.insert(selfHeroes, hero)
+                    local heroData = {
+                        _tid = hero._tid,
+                        _level = hero._level,
+                        _rank = hero._rank,
+                        _stars = hero._stars,
+                        _exp = hero._exp,
+                        _items = hero._items,
+                        _skill_levels = hero._skill_levels,
+                        _state = hero._state,
+                    }
+                    table.insert(selfHeroes, heroData)
                 else
+                    LegendLog("[PVP] WARNING: hero tid=" .. tostring(tid) .. " not found in ed.player.heroes, fallback to level 1")
                     table.insert(selfHeroes, {_tid = tid, _level = 1})
                 end
             end
@@ -2327,7 +2353,7 @@ M.handlers.ladder = function(data, obj, localdata)
             table.remove(pvp.records)
         end
 
-        if result == "victory" then
+        if result == "victory" or result == 0 then
             local oldRank = pvp.rank
             pvp.rank = math.max(1, pvp.rank - math.random(1, 10))
             if pvp.rank < pvp.highest_rank then
@@ -2335,7 +2361,9 @@ M.handlers.ladder = function(data, obj, localdata)
             end
 
             local rewardAmount = math.max(10, 100 - pvp.rank)
-            player:addPvpMoney(rewardAmount)
+            if ed.player and ed.player.addPvpMoney then
+                ed.player:addPvpMoney(rewardAmount)
+            end
 
             reply._end_battle = {
                 _result = "victory",
@@ -2438,8 +2466,11 @@ M.handlers.ladder = function(data, obj, localdata)
     -- 设置防守阵容
     if obj._set_lineup then
         pvp.defend_lineup = obj._set_lineup._lineup or {}
+        pvp.gs = ed.player and ed.player.getPvpGs and ed.player:getPvpGs() or 0
         reply._set_lineup = {
             _result = "success",
+            _lineup = pvp.defend_lineup,
+            _gs = tostring(pvp.gs),
         }
     end
 
@@ -3663,7 +3694,9 @@ local function local_dispatch(msg)
             end
         end
         if ed.netreply.exitStageReply and data._ladder_reply._end_battle then
-            ed.netreply.exitStageReply(data._ladder_reply._end_battle._result, data._ladder_reply._end_battle)
+            local r = data._ladder_reply._end_battle._result
+            if r == "victory" then r = 0 elseif r == "defeat" then r = 1 end
+            ed.netreply.exitStageReply(r, data._ladder_reply._end_battle)
             ed.netreply.exitStageReply = nil
         end
     end

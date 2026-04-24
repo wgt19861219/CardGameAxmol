@@ -117,10 +117,10 @@ local function teachOpenModule(self)
       t = "openExercise",
       k = "exercise"
     },
---[[    Excavate = {
+    Excavate = {
       t = "openExcavate",
       k = "excavate"
-    }]]--
+    }
   }
   for k, v in pairs(keys) do
     if ed.playerlimit.checkAreaUnlock(k) then

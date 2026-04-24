@@ -2477,7 +2477,6 @@ M.handlers.excavate = function(data, obj, localdata)
             mine.found_ts = now
 
             local reward = buildResourceReward(typeRow, lootAmount)
-            end
 
             LocalData.save(localdata)
             reply._excavate_end_battle_reply = {
@@ -2575,7 +2574,6 @@ M.handlers.excavate = function(data, obj, localdata)
             local produced = calcProduced(removedMine, now)
             local typeRow = ExcavateTreasureTable and ExcavateTreasureTable[removedMine.type_id]
             reward = buildResourceReward(typeRow, produced)
-            end
             if exc.searched_id == mineId then
                 exc.searched_id = 0
             end

@@ -117,7 +117,7 @@ local function unlockRequire(key)
     ["ssshop"] = "playerlevel",
     ["Crusade"] = "playerlevel",
     ["Guild"] = "playerlevel",
-    --["Excavate"] = "playerlevel",
+    ["Excavate"] = "playerlevel",
     ["Awake"] = "playerlevel",
     ["Skill Upgrade CD Reset"] = "vip",
     ["Item One-Click-Upgrade"] = "vip",

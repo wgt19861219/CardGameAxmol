@@ -205,9 +205,9 @@ local t_keys = {
 
   unlockGuild = {id = 89},
   unlockWorldChannel = {id = 90},
---  unlockExcavate = {id = 91},
+  unlockExcavate = {id = 91},
   unlockStarShop = {id = 92},
---  openExcavate = {id = 93},
+  openExcavate = {id = 93},
   openStarshop = {id = 94},
   clickExcavatePoint2 = {id = 95},
   clickExcavatePoint3 = {id = 96}

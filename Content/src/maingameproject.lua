@@ -95,6 +95,7 @@ ed.needLoadFiles = {
 	"ui/popwindow/languagechange",
 	"ui/popwindow/notification",
 	"ui/popwindow/configure",
+	"ui/popwindow/savemanager",
 	"ui/popwindow/dailylogin",
 	"ui/popwindow/explainwindow",
 	"ui/popwindow/excavatehistory",

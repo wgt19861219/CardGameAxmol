@@ -1264,12 +1264,12 @@ local function createWindow(self)
     {
       t = "Scale9Sprite",
       base = {
-        name = "export_save",
+        name = "save_manager",
         res = "UI/alpha/HVGA/sell_number_button.png",
         capInsets = CCRectMake(15, 22, 15, 25)
       },
       layout = {
-        position = ccp(615, 252)
+        position = ccp(615, 222)
       },
       config = {
         scaleSize = CCSizeMake(130, 55)
@@ -1278,10 +1278,10 @@ local function createWindow(self)
     {
       t = "Scale9Sprite",
       base = {
-        name = "export_save_press",
+        name = "save_manager_press",
         res = "UI/alpha/HVGA/sell_number_button_down.png",
         capInsets = CCRectMake(15, 22, 15, 25),
-        parent = "export_save"
+        parent = "save_manager"
       },
       layout = {
         anchor = ccp(0, 0),
@@ -1295,11 +1295,11 @@ local function createWindow(self)
     {
       t = "Label",
       base = {
-        name = "export_save_label",
-        text = "导出存档",
+        name = "save_manager_label",
+        text = "存档管理",
         fontinfo = "ui_normal_button",
         size = 20,
-        parent = "export_save"
+        parent = "save_manager"
       },
       layout = {
         position = ccp(65, 27)
@@ -1312,57 +1312,6 @@ local function createWindow(self)
         }
       }
     },
-    {
-      t = "Scale9Sprite",
-      base = {
-        name = "import_save",
-        res = "UI/alpha/HVGA/sell_number_button.png",
-        capInsets = CCRectMake(15, 22, 15, 25)
-      },
-      layout = {
-        position = ccp(615, 192)
-      },
-      config = {
-        scaleSize = CCSizeMake(130, 55)
-      }
-    },
-    {
-      t = "Scale9Sprite",
-      base = {
-        name = "import_save_press",
-        res = "UI/alpha/HVGA/sell_number_button_down.png",
-        capInsets = CCRectMake(15, 22, 15, 25),
-        parent = "import_save"
-      },
-      layout = {
-        anchor = ccp(0, 0),
-        position = ccp(0, 0)
-      },
-      config = {
-        scaleSize = CCSizeMake(130, 55),
-        visible = false
-      }
-    },
-    {
-      t = "Label",
-      base = {
-        name = "import_save_label",
-        text = "导入存档",
-        fontinfo = "ui_normal_button",
-        size = 20,
-        parent = "import_save"
-      },
-      layout = {
-        position = ccp(65, 27)
-      },
-      config = {
-        color = ccc3(235, 223, 207),
-        shadow = {
-          color = ccc3(0, 0, 0),
-          offset = ccp(0, 2)
-        }
-      }
-    }
   }
   readnode:addNode(ui_info)
 
@@ -1904,6 +1853,47 @@ local function doImportSaveTouch(self)
   return handler
 end
 class.doImportSaveTouch = doImportSaveTouch
+local function doClickSaveManager(self)
+  local ok, result = xpcall(function()
+    return ed.ui.savemanager.create()
+  end, function(err)
+    print("savemanager error: " .. tostring(err))
+    return nil
+  end)
+  if ok and result then
+    self.mainLayer:addChild(result.mainLayer, 220)
+  end
+end
+class.doClickSaveManager = doClickSaveManager
+
+local function doSaveManagerTouch(self)
+  local isPress
+  local ui = self.ui
+  local button = ui.save_manager
+  local press = ui.save_manager_press
+  local function handler(event, x, y)
+    if tolua.isnull(button) then
+      return
+    end
+    if event == "began" then
+      if ed.containsPoint(button, x, y) then
+        isPress = true
+        press:setVisible(true)
+      end
+    elseif event == "ended" then
+      if isPress then
+        press:setVisible(false)
+        if ed.containsPoint(button, x, y) then
+          self:doClickSaveManager()
+        end
+      end
+      isPress = nil
+    end
+  end
+  return handler
+end
+class.doSaveManagerTouch = doSaveManagerTouch
+
 local function doCloseTouch(self)
   local isPressClose, isPressOut
   local ui = self.ui
@@ -2102,8 +2092,7 @@ local doMainLayerTouch = function(self)
   local closeTouch = self:doCloseTouch()
   local changeHeadTouch = self:doChangeHeadTouch()
   local changeNameTouch = self:doChangeNameTouch()
-  local exportSaveTouch = self:doExportSaveTouch()
-  local importSaveTouch = self:doImportSaveTouch()
+  local saveManagerTouch = self:doSaveManagerTouch()
   local quitSocietyTouch = self:doQuitSocietyTouch()
   local setupTouch = self:doSetupButtonTouch()
   local selectServerTouch = self:doSelectServerTouch()
@@ -2129,8 +2118,7 @@ local supportTouch = self:doSupportTouch()
       closeTouch(event, x, y)
       changeHeadTouch(event, x, y)
       changeNameTouch(event, x, y)
-      exportSaveTouch(event, x, y)
-      importSaveTouch(event, x, y)
+      saveManagerTouch(event, x, y)
       quitSocietyTouch(event, x, y)
       setupTouch(event, x, y)
       selectServerTouch(event,x,y)

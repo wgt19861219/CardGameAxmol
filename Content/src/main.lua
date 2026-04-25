@@ -524,6 +524,7 @@ local function saveGame()
             return false
         end
         print("[SAVE] Saved " .. #encoded .. " bytes (v" .. SAVE_VERSION .. ")")
+        pcall(updateSaveIndex)
         return true
     end)
     if not ok then
@@ -583,6 +584,70 @@ local function loadSaveData()
 end
 ed.loadSaveData = loadSaveData
 ed.saveDirty = false
+
+local SAVE_INDEX_FILE = "cardgame_save_index.json"
+
+local function updateSaveIndex()
+    if not ed.player then return end
+    local fu = CCFileUtils:sharedFileUtils()
+    local writablePath = fu:getWritablePath()
+    local indexPath = writablePath .. SAVE_INDEX_FILE
+
+    -- 读取已有索引
+    local index = {}
+    local f = io.open(indexPath, "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+        if content and #content > 0 then
+            local ok, data = pcall(json.decode, content)
+            if ok and type(data) == "table" then
+                index = data
+            end
+        end
+    end
+
+    -- 构建新快照
+    local level = ed.player._level or 1
+    local teamHeroes = {}
+    local teamData = ed.getTeamData and ed.getTeamData("common") or {}
+    for i = 1, math.min(#teamData, 5) do
+        local tid = tonumber(teamData[i])
+        if tid then
+            local hero = ed.player.heroes and ed.player.heroes[tid]
+            table.insert(teamHeroes, {
+                tid = tid,
+                stars = hero and hero._stars or 1,
+                level = hero and hero._level or 1,
+                rank = hero and hero._rank or 0
+            })
+        end
+    end
+
+    local snapshot = {
+        level = level,
+        team = teamHeroes,
+        time = os.time(),
+        type = ed.saveDirty and "auto" or "manual"
+    }
+
+    -- 插入到头部
+    table.insert(index, 1, snapshot)
+    -- 保留最多 5 个
+    while #index > 5 do
+        table.remove(index)
+    end
+
+    -- 写回
+    local ok, encoded = pcall(json.encode, index)
+    if ok and encoded then
+        local out = io.open(indexPath, "w")
+        if out then
+            out:write(encoded)
+            out:close()
+        end
+    end
+end
 
 -- 定时自动保存（每60秒，仅脏时执行）
 local function startAutoSave()

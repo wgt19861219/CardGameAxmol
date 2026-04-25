@@ -554,6 +554,7 @@ M.handlers.exit_stage = function(data, obj, localdata)
     end
 
     LocalData.save(localdata)
+    pcall(function() ed.saveDirty = true end)
 
     data._exit_stage_reply = {
         _result = result,
@@ -653,6 +654,7 @@ M.handlers.hero_evolve = function(data, obj, localdata)
             },
         }
     end
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== consume_item ==========
@@ -687,6 +689,7 @@ M.handlers.consume_item = function(data, obj, localdata)
             _items = buildHeroEquips(),
         } or nil,
     }
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== equip_synthesis ==========
@@ -734,6 +737,7 @@ M.handlers.wear_equip = function(data, obj, localdata)
         _result = "success",
         _gs = gs,
     }
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== shop_refresh ==========
@@ -860,6 +864,7 @@ M.handlers.shop_consume = function(data, obj, localdata)
     end
 
     data._shop_consume_reply = { _result = "success" }
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== shop_star_consume ==========
@@ -977,6 +982,7 @@ M.handlers.hero_equip_upgrade = function(data, obj, localdata)
             _result = "fail",
         }
     end
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== trigger_task ==========
@@ -1223,6 +1229,7 @@ M.handlers.buy_vitality = function(data, obj, localdata)
     data._sync_vitality_reply = {
         _vitality = buildVitality(localdata.vitality),
     }
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== tutorial ==========
@@ -1248,6 +1255,7 @@ M.handlers.set_name = function(data, obj, localdata)
             _result = "success",  -- 客户端已校验
         }
     end
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== set_avatar ==========
@@ -1587,6 +1595,7 @@ M.handlers.buy_skill_stren_point = function(data, obj, localdata)
     data._sync_skill_stren_reply = {
         _skill_level_up = buildSkillLevelUp(localdata.skill),
     }
+    pcall(function() ed.saveDirty = true end)
 end
 
 -- ========== sync_skill_stren ==========
@@ -2340,6 +2349,7 @@ M.handlers.ladder = function(data, obj, localdata)
                 _is_robot = enemy._is_robot or 1,
                 _rseed = math.random(1, 999999),
             }
+            pcall(function() ed.saveDirty = true end)
         end
     end
 
@@ -2386,6 +2396,7 @@ M.handlers.ladder = function(data, obj, localdata)
                 _reward = 0,
             }
         end
+        pcall(function() ed.saveDirty = true end)
     end
 
     -- 购买挑战次数
@@ -2410,6 +2421,7 @@ M.handlers.ladder = function(data, obj, localdata)
                 _result = "fail",
             }
         end
+        pcall(function() ed.saveDirty = true end)
     end
 
     -- 清除战斗CD
@@ -2426,6 +2438,7 @@ M.handlers.ladder = function(data, obj, localdata)
                 _result = "fail",
             }
         end
+        pcall(function() ed.saveDirty = true end)
     end
 
     -- 查询战斗记录
@@ -3382,6 +3395,7 @@ local function local_dispatch(msg)
                 end
             end)
         end
+        pcall(function() ed.saveDirty = true end)
         -- 扣费处理
         pcall(function()
             local nd = ed.netdata
@@ -3500,6 +3514,7 @@ local function local_dispatch(msg)
                 end
             end)
         end
+        pcall(function() ed.saveDirty = true end)
     end
 
     -- skill_levelup 回复
@@ -3557,6 +3572,7 @@ local function local_dispatch(msg)
                 ed.player:resetHero(hero)
             end)
             ed.netdata.evolve = nil
+            pcall(function() ed.saveDirty = true end)
         end
         if ed.netreply and ed.netreply.evolve then
             ed.netreply.evolve(result)
@@ -3577,6 +3593,7 @@ local function local_dispatch(msg)
                 ed.player.heroes[rdata.hid]:resetgs(gs)
             end)
             ed.netdata.putonReply = nil
+            pcall(function() ed.saveDirty = true end)
         end
         if ed.netreply and ed.netreply.putonReply then
             ed.netreply.putonReply(result)
@@ -3744,6 +3761,7 @@ local function local_dispatch(msg)
                 end
                 ed.player:addEquip(rdata.id)
             end)
+            pcall(function() ed.saveDirty = true end)
         end
         if ed.netreply and ed.netreply.craftReply then
             ed.netreply.craftReply(result)
@@ -3763,6 +3781,7 @@ local function local_dispatch(msg)
                     ed.player:addEquip(info.makeId)
                 end
             end)
+            pcall(function() ed.saveDirty = true end)
         end
         if ed.netreply and ed.netreply.composeFragmentReply then
             ed.netreply.composeFragmentReply(result)
@@ -3775,6 +3794,7 @@ local function local_dispatch(msg)
         local result = data._hero_equip_upgrade_reply._result == "success"
         local hero = data._hero_equip_upgrade_reply._hero
         if result and hero then pcall(function() ed.player:resetHero(hero) end) end
+        pcall(function() ed.saveDirty = true end)
         local handler = ed.netreply and ed.netreply.equipUpgrade
         if handler then handler(result); ed.netreply.equipUpgrade = nil end
     end
@@ -3825,6 +3845,7 @@ local function local_dispatch(msg)
             end)
         end
         if handler then handler() end
+        pcall(function() ed.saveDirty = true end)
         if ed.saveGame then pcall(function() ed.saveGame() end) end
     end
 
@@ -3840,6 +3861,7 @@ local function local_dispatch(msg)
                 ed.netreply.buyVitalityReply = nil
             end
             ed.netdata.buyVitality = nil
+            pcall(function() ed.saveDirty = true end)
         end
     end
 
@@ -3854,6 +3876,7 @@ local function local_dispatch(msg)
                 ed.player:refreshSetNameTime()
             end)
             ed.netdata.setname = nil
+            pcall(function() ed.saveDirty = true end)
         end
         if ed.netreply and ed.netreply.setname then
             ed.netreply.setname(result)

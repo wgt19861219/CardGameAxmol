@@ -1732,6 +1732,7 @@ end
 class.doQuitSocietyTouch = doQuitSocietyTouch
 local function doClickExportSave(self)
   local ok, err = pcall(function()
+    if ed.saveGame then ed.saveGame() end
     local fu = CCFileUtils:sharedFileUtils()
     local writablePath = fu:getWritablePath()
     local srcPath = writablePath .. "cardgame_save.json"
@@ -1742,12 +1743,19 @@ local function doClickExportSave(self)
     end
     local content = f:read("*a")
     f:close()
+    local decodeOk, data = pcall(json.decode, content)
+    if decodeOk and data then
+      data._export_time = os.time()
+      content = json.encode(data)
+    end
     local ud = CCUserDefault:sharedUserDefault()
     ud:setStringForKey("cardgame_save_export", content)
+    local dateStr = os.date("%Y%m%d")
+    local exportName = "cardgame_save_export_" .. dateStr .. ".json"
     local exportPaths = {
-      writablePath .. "cardgame_save_export.json",
-      "/sdcard/Download/cardgame_save_export.json",
-      "/storage/emulated/0/Download/cardgame_save_export.json"
+      writablePath .. exportName,
+      "/sdcard/Download/" .. exportName,
+      "/storage/emulated/0/Download/" .. exportName
     }
     local savedTo = nil
     for _, path in ipairs(exportPaths) do
@@ -1759,7 +1767,11 @@ local function doClickExportSave(self)
         break
       end
     end
-    ed.showAlertDialog({text = "存档导出成功！\n换机时用系统自带的数据迁移\n工具即可将存档带到新设备"})
+    if savedTo then
+      ed.showAlertDialog({text = "存档导出成功！\n文件：" .. savedTo .. "\n换机时用系统自带的数据迁移\n工具即可将存档带到新设备"})
+    else
+      ed.showAlertDialog({text = "存档已保存到应用内部\n换机时用系统数据迁移工具"})
+    end
   end)
   if not ok then
     ed.showAlertDialog({text = "导出失败: " .. tostring(err)})
@@ -1801,10 +1813,14 @@ local function doClickImportSave(self)
       content = saved
     end
     if not content then
+      local dateStr = os.date("%Y%m%d")
       local importPaths = {
+        writablePath .. "cardgame_save_export_" .. dateStr .. ".json",
         writablePath .. "cardgame_save_export.json",
+        "/sdcard/Download/cardgame_save_export_" .. dateStr .. ".json",
         "/sdcard/Download/cardgame_save_export.json",
-        "/storage/emulated/0/Download/cardgame_save_export.json"
+        "/storage/emulated/0/Download/cardgame_save_export_" .. dateStr .. ".json",
+        "/storage/emulated/0/Download/cardgame_save_export.json",
       }
       for _, path in ipairs(importPaths) do
         local f = io.open(path, "r")
@@ -1821,11 +1837,25 @@ local function doClickImportSave(self)
     end
     local decodeOk, data = pcall(json.decode, content)
     if not decodeOk or not data or type(data) ~= "table" then
-      ed.showAlertDialog({text = "存档文件格式无效"})
+      ed.showAlertDialog({text = "存档文件格式无效\n无法解析JSON数据"})
       return
     end
-    local dstPath = writablePath .. "cardgame_save.json"
-    local out = io.open(dstPath, "w")
+    if not data._userid or not data._heroes then
+      ed.showAlertDialog({text = "存档数据不完整\n缺少关键数据字段"})
+      return
+    end
+    -- 导入前备份当前存档
+    local currentSavePath = writablePath .. "cardgame_save.json"
+    pcall(function()
+      local cf = io.open(currentSavePath, "r")
+      if cf then
+        local c = cf:read("*a")
+        cf:close()
+        local bf = io.open(currentSavePath .. ".bak_pre_import", "w")
+        if bf then bf:write(c) bf:close() end
+      end
+    end)
+    local out = io.open(currentSavePath, "w")
     if not out then
       ed.showAlertDialog({text = "无法写入存档"})
       return
@@ -1840,6 +1870,7 @@ local function doClickImportSave(self)
           ed.recalcHeroGs(hero)
         end
       end
+      ed.saveDirty = true
       ed.saveGame()
     end
     ed.showAlertDialog({text = "存档导入成功！"})

@@ -422,6 +422,25 @@ end
 -- 存档系统
 -----------------------------------------------------------------
 local SAVE_FILE_NAME = "cardgame_save.json"
+local SAVE_VERSION = 1
+
+local migrations = {}
+migrations[1] = function(data)
+    if type(data) ~= "table" then return end
+    local function flatten(t)
+        if type(t) ~= "table" then return t end
+        local inner = t[".data"]
+        if inner and type(inner) == "table" and not inner[".data"] then
+            return flatten(inner)
+        end
+        for k, v in pairs(t) do
+            t[k] = flatten(v)
+        end
+        return t
+    end
+    flatten(data)
+    data._save_version = 1
+end
 
 local function getSavePath()
     local fu = CCFileUtils:sharedFileUtils()
@@ -432,11 +451,40 @@ local function getSavePath()
     return SAVE_FILE_NAME
 end
 
-local function deepCopy(obj)
+local MAX_BACKUPS = 5
+
+local function getBackupPath(n)
+    local fu = CCFileUtils:sharedFileUtils()
+    local writablePath = fu:getWritablePath()
+    return writablePath .. SAVE_FILE_NAME .. ".bak" .. n
+end
+
+local function rotateBackups()
+    local savePath = getSavePath()
+    pcall(function() os.remove(getBackupPath(MAX_BACKUPS)) end)
+    for i = MAX_BACKUPS - 1, 1, -1 do
+        pcall(function() os.rename(getBackupPath(i), getBackupPath(i + 1)) end)
+    end
+    pcall(function() os.rename(savePath, getBackupPath(1)) end)
+end
+
+local function toPlainTable(obj)
     if type(obj) ~= "table" then return obj end
+    local mt = getmetatable(obj)
+    if mt then
+        -- protobuf 消息对象：字段在 [".data"] 子表中
+        local innerData = rawget(obj, ".data")
+        if innerData and type(innerData) == "table" then
+            local copy = {}
+            for k, v in pairs(innerData) do
+                copy[k] = toPlainTable(v)
+            end
+            return copy
+        end
+    end
     local copy = {}
     for k, v in pairs(obj) do
-        copy[k] = deepCopy(v)
+        copy[k] = toPlainTable(v)
     end
     return copy
 end
@@ -445,8 +493,8 @@ local function saveGame()
     if not ed.player or not ed.player.data then return false end
     if not json or not json.encode then return false end
     local ok, result = pcall(function()
-        local data = deepCopy(ed.player.data)
-        -- 清理酒馆历史记录（409KB+，占存档99%），只保留最近10条
+        local data = toPlainTable(ed.player.data)
+        -- 裁剪酒馆历史记录（保留最近10条）
         if data._tavern_record and type(data._tavern_record) == "table" then
             local tr = data._tavern_record
             if #tr > 10 then
@@ -455,16 +503,28 @@ local function saveGame()
                 data._tavern_record = recent
             end
         end
+        data._save_version = SAVE_VERSION
         local encoded = json.encode(data)
         local path = getSavePath()
-        local f = io.open(path, "w")
-        if f then
-            f:write(encoded)
-            f:close()
-            print("[SAVE] Saved " .. #encoded .. " bytes")
-            return true
+        -- 先写入临时文件
+        local tmpPath = path .. ".tmp"
+        local f = io.open(tmpPath, "w")
+        if not f then
+            print("[SAVE] Error: cannot write temp file")
+            return false
         end
-        return false
+        f:write(encoded)
+        f:close()
+        -- 写入成功后备份轮转
+        pcall(rotateBackups)
+        -- 将临时文件重命名为正式存档
+        local renameOk, renameErr = os.rename(tmpPath, path)
+        if not renameOk then
+            print("[SAVE] Error: rename failed: " .. tostring(renameErr))
+            return false
+        end
+        print("[SAVE] Saved " .. #encoded .. " bytes (v" .. SAVE_VERSION .. ")")
+        return true
     end)
     if not ok then
         print("[SAVE] Error: " .. tostring(result))
@@ -477,21 +537,42 @@ ed.saveGame = saveGame
 local function loadSaveData()
     if not json or not json.decode then return nil end
     local ok, result = pcall(function()
-        local path = getSavePath()
-        local f = io.open(path, "r")
-        if not f then return nil end
-        local content = f:read("*a")
-        f:close()
-        if not content or #content == 0 then return nil end
-        -- 存档超过 50KB 说明包含了大量酒馆历史记录，json.decode 会极慢
-        -- 直接删掉旧存档，让游戏从默认数据开始（saveGame 会保存精简版）
-        if #content > 50000 then
-            print("[SAVE] Large save file (" .. #content .. " bytes), removing and using defaults")
-            os.remove(path)
-            return nil
+        local function tryLoadFile(path)
+            local f = io.open(path, "r")
+            if not f then return nil end
+            local content = f:read("*a")
+            f:close()
+            if not content or #content == 0 then return nil end
+            local data = json.decode(content)
+            if type(data) ~= "table" then return nil end
+            return data
         end
-        local data = json.decode(content)
-        print("[SAVE] Loaded " .. #content .. " bytes (tavern_record truncated)")
+        local data = tryLoadFile(getSavePath())
+        local loadedFrom = "current"
+        if not data then
+            for i = 1, MAX_BACKUPS do
+                data = tryLoadFile(getBackupPath(i))
+                if data then
+                    loadedFrom = "backup" .. i
+                    break
+                end
+            end
+        end
+        if not data then return nil end
+        -- 版本迁移
+        local ver = data._save_version
+        if not ver then
+            for i = 1, SAVE_VERSION do
+                if migrations[i] then pcall(migrations[i], data) end
+            end
+        elseif ver < SAVE_VERSION then
+            for i = ver + 1, SAVE_VERSION do
+                if migrations[i] then pcall(migrations[i], data) end
+            end
+        elseif ver > SAVE_VERSION then
+            print("[SAVE] Warning: save version " .. ver .. " newer than supported " .. SAVE_VERSION)
+        end
+        print("[SAVE] Loaded from " .. loadedFrom .. " (v" .. (data._save_version or "?") .. ")")
         return data
     end)
     if not ok then
@@ -501,13 +582,17 @@ local function loadSaveData()
     return result
 end
 ed.loadSaveData = loadSaveData
+ed.saveDirty = false
 
--- 定时自动保存（每60秒）
+-- 定时自动保存（每60秒，仅脏时执行）
 local function startAutoSave()
     local scheduler = ax.Director:getInstance():getScheduler()
     if scheduler then
         scheduler:scheduleScriptFunc(function()
-            saveGame()
+            if ed.saveDirty then
+                saveGame()
+                ed.saveDirty = false
+            end
         end, 60, false)
     end
 end

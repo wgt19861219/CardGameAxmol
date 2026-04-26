@@ -15,35 +15,57 @@ local function readSaveIndex()
     f:close()
     if not content or #content == 0 then return {} end
     local ok, data = pcall(json.decode, content)
-    if ok and type(data) == "table" then return data end
+    if ok and type(data) == "table" then
+        return data
+    end
     return {}
 end
 
-local function createSnapshotRow(snapshot, index, container, yPos)
+local function writeSaveIndex(index)
+    local fu = CCFileUtils:sharedFileUtils()
+    local writablePath = fu:getWritablePath()
+    local indexPath = writablePath .. "cardgame_save_index.json"
+    local ok, encoded = pcall(json.encode, index)
+    if ok and encoded then
+        local tmpPath = indexPath .. ".tmp"
+        local out = io.open(tmpPath, "w")
+        if out then
+            out:write(encoded)
+            out:close()
+            os.rename(tmpPath, indexPath)
+        end
+    end
+end
+
+local function createSnapshotRow(snapshot, index, container, yPos, onClick)
     local row = CCSprite:create()
-    row:setContentSize(CCSizeMake(520, 90))
-    row:setPosition(ccp(260, yPos))
+    row:setContentSize(CCSizeMake(430, 72))
+    row:setPosition(ccp(400, yPos))
     row:setAnchorPoint(ccp(0.5, 1))
 
-    local bg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(15, 20, 45, 15))
-    bg:setContentSize(CCSizeMake(520, 85))
-    bg:setPosition(ccp(260, 42))
+    local res = "UI/alpha/HVGA/main_vit_tips.png"
+    local bg = ed.createScale9Sprite(res, CCRectMake(15, 20, 45, 15))
+    bg:setContentSize(CCSizeMake(430, 68))
+    bg:setPosition(ccp(215, 36))
     bg:setAnchorPoint(ccp(0.5, 0.5))
+    if snapshot.type == "manual" then
+        bg:setColor(ccc3(255, 240, 210))
+    end
     row:addChild(bg)
 
     local timeStr = os.date("%m/%d %H:%M", snapshot.time or os.time())
     local typeStr = (snapshot.type == "manual") and "手动" or "自动"
-    local headerText = string.format("#%d %s存档  %s", index, typeStr, timeStr)
-    local headerLabel = ed.createttf(headerText, 16)
+    local headerText = string.format("#%d %s  %s", index, typeStr, timeStr)
+    local headerLabel = ed.createttf(headerText, 13)
     headerLabel:setAnchorPoint(ccp(0, 0.5))
-    headerLabel:setPosition(ccp(10, 68))
+    headerLabel:setPosition(ccp(12, 55))
     ed.setLabelColor(headerLabel, ccc3(220, 200, 160))
     row:addChild(headerLabel)
 
     local levelText = string.format("Lv.%d", snapshot.level or 1)
-    local levelLabel = ed.createttf(levelText, 18)
+    local levelLabel = ed.createttf(levelText, 14)
     levelLabel:setAnchorPoint(ccp(0, 0.5))
-    levelLabel:setPosition(ccp(10, 42))
+    levelLabel:setPosition(ccp(12, 34))
     ed.setLabelColor(levelLabel, ccc3(255, 220, 100))
     row:addChild(levelLabel)
 
@@ -57,34 +79,42 @@ local function createSnapshotRow(snapshot, index, container, yPos)
             stars = heroInfo.stars
         })
         if icon and icon.icon then
-            icon.icon:setScale(0.45)
+            icon.icon:setScale(0.33)
             icon.icon:setAnchorPoint(ccp(0, 0.5))
-            icon.icon:setPosition(ccp(100 + (i - 1) * 55, 42))
+            icon.icon:setPosition(ccp(90 + (i - 1) * 46, 34))
             row:addChild(icon.icon)
         end
     end
 
     if #team == 0 then
-        local emptyLabel = ed.createttf("无配队数据", 14)
+        local emptyLabel = ed.createttf("无配队", 11)
         emptyLabel:setAnchorPoint(ccp(0, 0.5))
-        emptyLabel:setPosition(ccp(100, 42))
+        emptyLabel:setPosition(ccp(90, 34))
         ed.setLabelColor(emptyLabel, ccc3(150, 150, 150))
         row:addChild(emptyLabel)
     end
 
-    container:addChild(row)
+    if onClick then
+        row._snapshotIndex = index
+        row._onClick = onClick
+    end
+
+    container:addChild(row, 20)
     return row
 end
 
 local function doManualSave(self)
     if ed.saveGame then
+        ed._nextSaveType = "manual"
         ed.saveDirty = true
         local ok = ed.saveGame()
         if ok then
             ed.showToast("手动保存成功")
-            self:destroy()
-            local newPopup = ed.ui.savemanager.create()
-            CCDirector:sharedDirector():getRunningScene():addChild(newPopup.mainLayer, 200)
+            local scene = CCDirector:sharedDirector():getRunningScene()
+            self:destroy(function()
+                local newPopup = ed.ui.savemanager.create()
+                scene:addChild(newPopup.mainLayer, 200)
+            end)
         else
             ed.showAlertDialog({text = "保存失败"})
         end
@@ -176,11 +206,11 @@ local function doImportSave(self)
         end
         local decodeOk, data = pcall(json.decode, content)
         if not decodeOk or not data or type(data) ~= "table" then
-            ed.showAlertDialog({text = "存档文件格式无效\n无法解析JSON数据"})
+            ed.showAlertDialog({text = "存档文件格式无效"})
             return
         end
         if not data._userid or not data._heroes then
-            ed.showAlertDialog({text = "存档数据不完整\n缺少关键数据字段"})
+            ed.showAlertDialog({text = "存档数据不完整"})
             return
         end
         local currentSavePath = writablePath .. "cardgame_save.json"
@@ -193,16 +223,24 @@ local function doImportSave(self)
                 if bf then bf:write(c) bf:close() end
             end
         end)
-        local out = io.open(currentSavePath, "w")
+        local tmpPath = currentSavePath .. ".tmp"
+        local out = io.open(tmpPath, "w")
         if not out then
             ed.showAlertDialog({text = "无法写入存档"})
             return
         end
         out:write(content)
         out:close()
+        os.rename(tmpPath, currentSavePath)
         if ed.player and ed.player.setup then
+            local oldHeroes = ed.player.heroes
             ed.player.heroes = {}
-            ed.player:setup(data)
+            local setupOk, setupErr = pcall(ed.player.setup, ed.player, data)
+            if not setupOk then
+                ed.player.heroes = oldHeroes
+                ed.showAlertDialog({text = "数据加载失败"})
+                return
+            end
             if ed.recalcHeroGs and ed.player.heroes then
                 for tid, hero in pairs(ed.player.heroes) do
                     ed.recalcHeroGs(hero)
@@ -219,6 +257,74 @@ local function doImportSave(self)
     end
 end
 class.doImportSave = doImportSave
+
+local function doRestoreSave(self, snapshot)
+    local ok, err = pcall(function()
+        local fu = CCFileUtils:sharedFileUtils()
+        local writablePath = fu:getWritablePath()
+        local snapPath = writablePath .. "cardgame_snapshot_" .. (snapshot.time or "") .. ".json"
+        local f = io.open(snapPath, "r")
+        if not f then
+            ed.showAlertDialog({text = "存档快照文件不存在"})
+            return
+        end
+        local content = f:read("*a")
+        f:close()
+        local decodeOk, data = pcall(json.decode, content)
+        if not decodeOk or not data or type(data) ~= "table" then
+            ed.showAlertDialog({text = "存档快照格式无效"})
+            return
+        end
+        if not data._userid or not data._heroes then
+            ed.showAlertDialog({text = "存档快照数据不完整"})
+            return
+        end
+        local currentSavePath = writablePath .. "cardgame_save.json"
+        pcall(function()
+            local cf = io.open(currentSavePath, "r")
+            if cf then
+                local c = cf:read("*a")
+                cf:close()
+                local bf = io.open(currentSavePath .. ".bak_restore", "w")
+                if bf then bf:write(c) bf:close() end
+            end
+        end)
+        local tmpPath = currentSavePath .. ".tmp"
+        local out = io.open(tmpPath, "w")
+        if not out then
+            ed.showAlertDialog({text = "无法写入存档"})
+            return
+        end
+        out:write(content)
+        out:close()
+        os.rename(tmpPath, currentSavePath)
+        if ed.player and ed.player.setup then
+            local oldHeroes = ed.player.heroes
+            ed.player.heroes = {}
+            local setupOk, setupErr = pcall(ed.player.setup, ed.player, data)
+            if not setupOk then
+                ed.player.heroes = oldHeroes
+                ed.showAlertDialog({text = "数据加载失败"})
+                return
+            end
+            if ed.recalcHeroGs and ed.player.heroes then
+                for tid, hero in pairs(ed.player.heroes) do
+                    ed.recalcHeroGs(hero)
+                end
+            end
+            ed.saveDirty = true
+            ed.saveGame()
+        end
+        local typeStr = (snapshot.type == "manual") and "手动" or "自动"
+        local timeStr = os.date("%m/%d %H:%M", snapshot.time or os.time())
+        ed.showToast("已恢复" .. typeStr .. "存档 (" .. timeStr .. ")")
+        self:destroy()
+    end)
+    if not ok then
+        ed.showAlertDialog({text = "恢复失败: " .. tostring(err)})
+    end
+end
+class.doRestoreSave = doRestoreSave
 
 local function createWindow(self)
     if not tolua.isnull(self.container) then
@@ -244,11 +350,11 @@ local function createWindow(self)
                 capInsets = CCRectMake(15, 20, 45, 15)
             },
             layout = {
-                anchor = ccp(0.5, 0.5),
-                position = ccp(480, 280)
+                anchor = ccp(0.5, 1),
+                position = ccp(400, 380)
             },
             config = {
-                scaleSize = CCSizeMake(560, 430)
+                scaleSize = CCSizeMake(467, 280)
             }
         },
         {
@@ -260,7 +366,7 @@ local function createWindow(self)
                 size = 22
             },
             layout = {
-                position = ccp(480, 480)
+                position = ccp(400, 390)
             },
             config = {
                 color = ccc3(255, 220, 100),
@@ -277,7 +383,7 @@ local function createWindow(self)
                 res = "UI/alpha/HVGA/common/common_tips_button_close_1.png"
             },
             layout = {
-                position = ccp(745, 480)
+                position = ccp(624, 390)
             },
             config = {}
         },
@@ -302,10 +408,10 @@ local function createWindow(self)
                 capInsets = CCRectMake(15, 22, 15, 25)
             },
             layout = {
-                position = ccp(380, 78)
+                position = ccp(270, 120)
             },
             config = {
-                scaleSize = CCSizeMake(130, 45)
+                scaleSize = CCSizeMake(120, 40)
             }
         },
         {
@@ -321,7 +427,7 @@ local function createWindow(self)
                 position = ccp(0, 0)
             },
             config = {
-                scaleSize = CCSizeMake(130, 45),
+                scaleSize = CCSizeMake(120, 40),
                 visible = false
             }
         },
@@ -335,7 +441,7 @@ local function createWindow(self)
                 parent = "save_button"
             },
             layout = {
-                position = ccp(65, 22)
+                position = ccp(60, 20)
             },
             config = {
                 color = ccc3(235, 223, 207),
@@ -353,10 +459,10 @@ local function createWindow(self)
                 capInsets = CCRectMake(15, 22, 15, 25)
             },
             layout = {
-                position = ccp(520, 78)
+                position = ccp(400, 120)
             },
             config = {
-                scaleSize = CCSizeMake(130, 45)
+                scaleSize = CCSizeMake(120, 40)
             }
         },
         {
@@ -372,7 +478,7 @@ local function createWindow(self)
                 position = ccp(0, 0)
             },
             config = {
-                scaleSize = CCSizeMake(130, 45),
+                scaleSize = CCSizeMake(120, 40),
                 visible = false
             }
         },
@@ -386,7 +492,7 @@ local function createWindow(self)
                 parent = "export_button"
             },
             layout = {
-                position = ccp(65, 22)
+                position = ccp(60, 20)
             },
             config = {
                 color = ccc3(235, 223, 207),
@@ -404,10 +510,10 @@ local function createWindow(self)
                 capInsets = CCRectMake(15, 22, 15, 25)
             },
             layout = {
-                position = ccp(660, 78)
+                position = ccp(530, 120)
             },
             config = {
-                scaleSize = CCSizeMake(130, 45)
+                scaleSize = CCSizeMake(120, 40)
             }
         },
         {
@@ -423,7 +529,7 @@ local function createWindow(self)
                 position = ccp(0, 0)
             },
             config = {
-                scaleSize = CCSizeMake(130, 45),
+                scaleSize = CCSizeMake(120, 40),
                 visible = false
             }
         },
@@ -437,7 +543,7 @@ local function createWindow(self)
                 parent = "import_button"
             },
             layout = {
-                position = ccp(65, 22)
+                position = ccp(60, 20)
             },
             config = {
                 color = ccc3(235, 223, 207),
@@ -451,31 +557,33 @@ local function createWindow(self)
     readnode:addNode(ui_info)
 
     local snapshots = readSaveIndex()
-    local listHeight = math.max(#snapshots * 90, 200)
-    local listContainer = CCLayer:create()
-    listContainer:setContentSize(CCSizeMake(520, listHeight))
-    for i, snap in ipairs(snapshots) do
-        createSnapshotRow(snap, i, listContainer, listHeight - (i - 1) * 90)
-    end
-    if #snapshots == 0 then
-        local emptyLabel = ed.createttf("暂无存档记录", 18)
-        emptyLabel:setPosition(ccp(260, 100))
-        ed.setLabelColor(emptyLabel, ccc3(180, 180, 180))
-        listContainer:addChild(emptyLabel)
+    self.rows = {}
+    self._rowAreas = {}
+
+    local rowH = 72
+    local rowW = 430
+    local maxShow = math.min(#snapshots, 3)
+    for i = 1, maxShow do
+        local yPos = 360 - (i - 1) * rowH
+        local row = createSnapshotRow(snapshots[i], i, container, yPos)
+        row._snapshot = snapshots[i]
+        self.rows[i] = row
+        -- 记录行的屏幕坐标范围: anchor(0.5,1) at (400,yPos), size 430x72
+        self._rowAreas[i] = {
+            left = 400 - rowW / 2,
+            right = 400 + rowW / 2,
+            bottom = yPos - rowH,
+            top = yPos
+        }
     end
 
-    local dragInfo = {
-        cliprect = CCRectMake(215, 100, 530, 360),
-        container = container,
-        zorder = 10,
-        priority = -160,
-        bar = {
-            bglen = 340,
-            bgpos = ccp(210, 280)
-        }
-    }
-    self.draglist = ed.draglist.create(dragInfo)
-    self.draglist:addItem(listContainer, CCSizeMake(520, listHeight))
+    if #snapshots == 0 then
+        local emptyLabel = ed.createttf("暂无存档记录", 18)
+        emptyLabel:setPosition(ccp(400, 280))
+        emptyLabel:setAnchorPoint(ccp(0.5, 0.5))
+        ed.setLabelColor(emptyLabel, ccc3(180, 180, 180))
+        container:addChild(emptyLabel, 20)
+    end
 
     self.mainLayer:registerScriptTouchHandler(self:doMainLayerTouch(), false, -155, true)
 end
@@ -502,12 +610,13 @@ local function show(self)
 end
 class.show = show
 
-local function destroy(self)
+local function destroy(self, callback)
     local container = self.container
     local s = CCScaleTo:create(0.2, 0)
     s = CCEaseBackIn:create(s)
     local f = CCCallFunc:create(function()
         xpcall(function()
+            if callback then callback() end
             self.mainLayer:removeFromParentAndCleanup(true)
         end, EDDebug)
     end)
@@ -556,6 +665,24 @@ local function doMainLayerTouch(self)
                 self:doExportSave()
             elseif ui.import_button and ed.containsPoint(ui.import_button, x, y) then
                 self:doImportSave()
+            else
+                local areas = self._rowAreas or {}
+                for i, row in ipairs(self.rows or {}) do
+                    local a = areas[i]
+                    if a and x >= a.left and x <= a.right and y >= a.bottom and y <= a.top then
+                        if row._snapshot then
+                            local typeStr = (row._snapshot.type == "manual") and "手动" or "自动"
+                            local timeStr = os.date("%m/%d %H:%M", row._snapshot.time or os.time())
+                            ed.showConfirmDialog({
+                                text = "确定恢复" .. typeStr .. "存档？\n(" .. timeStr .. ")\n当前进度将被覆盖",
+                                rightHandler = function()
+                                    self:doRestoreSave(row._snapshot)
+                                end
+                            })
+                        end
+                        break
+                    end
+                end
             end
         end
         return true

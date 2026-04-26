@@ -1861,7 +1861,7 @@ local function doClickSaveManager(self)
     return nil
   end)
   if ok and result then
-    self.mainLayer:addChild(result.mainLayer, 220)
+    CCDirector:sharedDirector():getRunningScene():addChild(result.mainLayer, 220)
   end
 end
 class.doClickSaveManager = doClickSaveManager

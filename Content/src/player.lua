@@ -1837,7 +1837,6 @@ local function HeroCreate()
     excavateData = nil,
     crusadeData = nil,
     mercenaryData = nil,
-    _stars = 1,
   }
   setmetatable(self, class.mt)
   return self

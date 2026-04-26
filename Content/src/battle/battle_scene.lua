@@ -44,17 +44,35 @@ local function getCurrentMode(self)
 	return "pve"
 end
 
-local function reset(self, stage_info, battle_info, extraInfo)
+local function reset(self, stage_info, battle_info, extraInfo, skipUI)
 	self.identity = "battle"
-	self.actor_list = {}
-	-- Clear _inScene flags on existing actors so syncActors can reparent them
-	for unit in ed.engine:foreachAliveUnit(ed.emCampBoth) do
-		if unit.actor then unit.actor._inScene = nil end
-	end
 	self.effect_list = {}
 	self.ui_list = {}
 	self.frames = 0
-	self.auto_combat = ed.config and ed.config.localMode
+	if skipUI then
+			-- 恢复已有 hero panel 到 ui_list（保持 update 调用，含死亡变灰逻辑）
+			for _, unit in ipairs(ed.engine.unit_list or {}) do
+				if unit.heroPanel and unit.heroPanel.update then
+					table.insert(self.ui_list, unit.heroPanel)
+				end
+			end
+			-- 波次切换：保留玩家actor在actor_list中，只标记需要重新加入
+		local old_actors = self.actor_list or {}
+		self.actor_list = {}
+		for _, actor in ipairs(old_actors) do
+			-- 保留玩家阵营的actor（enemy会在新波次被替换）
+			if actor.unit and actor.unit.camp == ed.emCampPlayer and actor.node and not tolua.isnull(actor.node) then
+				table.insert(self.actor_list, actor)
+				actor._inScene = true
+			end
+		end
+	else
+		self.actor_list = {}
+		for unit in ed.engine:foreachAliveUnit(ed.emCampBoth) do
+			if unit.actor then unit.actor._inScene = nil end
+		end
+	end
+	self.frames = 0
 	self.pause_locks = {}
 	self.battleModeInfo = extraInfo
 	-- 复用已有场景节点（波次切换），或首次创建
@@ -69,11 +87,16 @@ local function reset(self, stage_info, battle_info, extraInfo)
 		self.node:addChild(self.top_layer, 2)
 		self.node:addChild(self.ui_layer, 3)
 	else
-		-- 波次切换时复用已有 layers，清空子节点
+		-- 波次切换：只换背景和清理特效，保留玩家actor和UI
 		self.background_layer:removeAllChildrenWithCleanup(true)
-		self.main_layer:removeAllChildrenWithCleanup(true)
-		self.top_layer:removeAllChildrenWithCleanup(true)
-		self.ui_layer:removeAllChildrenWithCleanup(true)
+		if skipUI then
+			-- 只移除effect节点（top_layer的子节点），不动main_layer的玩家actor
+			self.top_layer:removeAllChildrenWithCleanup(true)
+		else
+			self.main_layer:removeAllChildrenWithCleanup(true)
+			self.top_layer:removeAllChildrenWithCleanup(true)
+			self.ui_layer:removeAllChildrenWithCleanup(true)
+		end
 	end
 	-- background
 	local ok_bg, err_bg = pcall(function()
@@ -90,14 +113,30 @@ local function reset(self, stage_info, battle_info, extraInfo)
 	if not ok_bg then
 		print("[BATTLE_SCENE] reset bg error: " .. tostring(err_bg))
 	end
-	-- UI
-	local ok_ui, err_ui = pcall(function()
-		self:resetUI(stage_info, battle_info)
+	-- UI：波次切换时跳过重建，复用已有按钮/菜单
+	if not skipUI then
+		self.auto_combat = ed.config and ed.config.localMode
+		local ok_ui, err_ui = pcall(function()
+			self:resetUI(stage_info, battle_info)
+		end)
+		if not ok_ui then
+			print("[BATTLE_SCENE] resetUI error: " .. tostring(err_ui))
+		end
+	end
+	-- 波次切换时更新波次计数器
+	if skipUI and self.wave_mark then
+		pcall(function()
+			self.wave_mark:removeAllChildrenWithCleanup(true)
+			ed.createNumbers(self.wave_mark, battle_info["Wave ID"] .. "/3")
+		end)
+	end
+	-- 切换背景音乐
+	local ok_mu, err_mu = pcall(function()
 		local chapter = stage_info["Chapter ID"]
 		self.delayPlayMusicHandler = self:delayPlayMusic(ed.music["chapter" .. chapter])
 	end)
-	if not ok_ui then
-		print("[BATTLE_SCENE] resetUI error: " .. tostring(err_ui))
+	if not ok_mu then
+		print("[BATTLE_SCENE] music error: " .. tostring(err_mu))
 	end
 	-- Actor creation (critical)
 	self.lastSync = nil
@@ -111,13 +150,16 @@ local function reset(self, stage_info, battle_info, extraInfo)
 			local ok_pre, err_pre = pcall(function() unit:preload() end)
 			if not ok_pre then print("[BATTLE_SCENE] preload err: " .. tostring(err_pre)) end
 		end
-		if unit.camp == viewCamp and unit:isHero() then
-			local ok_hp, err_hp = pcall(function() self:addHeroPanel(unit) end)
-			if not ok_hp then print("[BATTLE_SCENE] addHeroPanel err: " .. tostring(err_hp)) end
-		end
-		if unit.hpLayer and 0 ~= unit.hpLayer then
-			local ok_bb, err_bb = pcall(function() self:addBigBloodPanel(unit) end)
-			if not ok_bb then print("[BATTLE_SCENE] addBigBloodPanel err: " .. tostring(err_bb)) end
+		-- 波次切换时跳过 addHeroPanel（已有面板复用）
+		if not skipUI then
+			if unit.camp == viewCamp and unit:isHero() then
+				local ok_hp, err_hp = pcall(function() self:addHeroPanel(unit) end)
+				if not ok_hp then print("[BATTLE_SCENE] addHeroPanel err: " .. tostring(err_hp)) end
+			end
+			if unit.hpLayer and 0 ~= unit.hpLayer then
+				local ok_bb, err_bb = pcall(function() self:addBigBloodPanel(unit) end)
+				if not ok_bb then print("[BATTLE_SCENE] addBigBloodPanel err: " .. tostring(err_bb)) end
+			end
 		end
 	end
 end
@@ -366,11 +408,9 @@ ed.next_battle_walk_speeder = 1.75
 local function nextBtnTapHandler()
 	xpcall(function()
 		ed.playEffect(ed.sound.battle.goNextBattle)
-            --add by xinghui:send dot info when click next wave btn
-            if --[[ed.tutorial.checkDone("nextWave")== false--]] ed.tutorial.isShowTutorial then
-                ed.sendDotInfoToServer(ed.tutorialres.t_key["nextWave"].id)
-            end
-            --
+		if ed.tutorial.isShowTutorial then
+			ed.sendDotInfoToServer(ed.tutorialres.t_key["nextWave"].id)
+		end
 		ed.endTeach("nextWave")
 		ed.engine:battleSupply()
 		ed.scene.next_btn:setEnabled(false)
@@ -403,6 +443,7 @@ local function nextBtnTapHandler()
 	end, EDDebug)
 end
 
+
 local autoCollectLoots = function(self, delay)
 	delay = delay or 0
 	for _, v in ipairs(self.ui_list) do
@@ -423,14 +464,19 @@ local function nextBattle(self)
 	local auto = self.auto_combat
 	local stage = ed.engine.stage_info
 	local battle = ed.lookupDataTable("Battle", nil, stage["Stage ID"], ed.engine.wave_id + 1)
-	-- 清理旧波次的 actor 节点
-	for _, actor in ipairs(self.actor_list) do
-		if actor.node and not tolua.isnull(actor.node) then
-			pcall(function() actor.node:removeFromParentAndCleanup(true) end)
+	-- 清理旧波次的敌人 actor（保留玩家方）
+	local old_actors = self.actor_list or {}
+	self.actor_list = {}
+	for _, actor in ipairs(old_actors) do
+		if actor.unit and actor.unit.camp == ed.emCampPlayer and actor.node and not tolua.isnull(actor.node) then
+			table.insert(self.actor_list, actor)
+		else
+			if actor.node and not tolua.isnull(actor.node) then
+				pcall(function() actor.node:removeFromParentAndCleanup(true) end)
+			end
 		end
 	end
-	self.actor_list = {}
-	-- 清理旧波次的 effect 节点
+	-- 清理旧波次的 effect
 	for _, effect in ipairs(self.effect_list) do
 		pcall(function()
 			local node = effect.node or effect
@@ -440,13 +486,6 @@ local function nextBattle(self)
 		end)
 	end
 	self.effect_list = {}
-	-- 清理旧波次的 ui 节点
-	for _, ui in ipairs(self.ui_list) do
-		if ui.node and not tolua.isnull(ui.node) then
-			pcall(function() ui.node:removeFromParentAndCleanup(true) end)
-		end
-	end
-	self.ui_list = {}
 	-- 清理旧背景
 	if self.background and not tolua.isnull(self.background) then
 		pcall(function() self.background:removeFromParentAndCleanup(true) end)
@@ -454,8 +493,8 @@ local function nextBattle(self)
 	end
 	-- 引擎层切波
 	ed.engine:nextBattle()
-	-- 复用当前场景（reset 会检测已有 layers 并清空子节点）
-	self:reset(stage, battle, self.battleModeInfo)
+	-- 复用场景（skipUI=true 保留玩家 actor 和 UI 层）
+	self:reset(stage, battle, self.battleModeInfo, true)
 	self.auto_combat = auto
 	self.auto_btn:setSelectedIndex(auto and 1 or 0)
 end

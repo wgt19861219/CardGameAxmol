@@ -423,11 +423,41 @@ local function nextBattle(self)
 	local auto = self.auto_combat
 	local stage = ed.engine.stage_info
 	local battle = ed.lookupDataTable("Battle", nil, stage["Stage ID"], ed.engine.wave_id + 1)
+	-- 清理旧波次的 actor 节点
+	for _, actor in ipairs(self.actor_list) do
+		if actor.node and not tolua.isnull(actor.node) then
+			pcall(function() actor.node:removeFromParentAndCleanup(true) end)
+		end
+	end
+	self.actor_list = {}
+	-- 清理旧波次的 effect 节点
+	for _, effect in ipairs(self.effect_list) do
+		pcall(function()
+			local node = effect.node or effect
+			if not tolua.isnull(node) then
+				node:removeFromParentAndCleanup(true)
+			end
+		end)
+	end
+	self.effect_list = {}
+	-- 清理旧波次的 ui 节点
+	for _, ui in ipairs(self.ui_list) do
+		if ui.node and not tolua.isnull(ui.node) then
+			pcall(function() ui.node:removeFromParentAndCleanup(true) end)
+		end
+	end
+	self.ui_list = {}
+	-- 清理旧背景
+	if self.background and not tolua.isnull(self.background) then
+		pcall(function() self.background:removeFromParentAndCleanup(true) end)
+		self.background = nil
+	end
+	-- 引擎层切波
 	ed.engine:nextBattle()
+	-- 复用当前场景（reset 会检测已有 layers 并清空子节点）
 	self:reset(stage, battle, self.battleModeInfo)
 	self.auto_combat = auto
 	self.auto_btn:setSelectedIndex(auto and 1 or 0)
-	ed.replaceScene(ed.scene)
 end
 class.nextBattle = nextBattle
 

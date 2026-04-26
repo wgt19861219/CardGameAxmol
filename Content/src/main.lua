@@ -489,6 +489,118 @@ local function toPlainTable(obj)
     return copy
 end
 
+local SAVE_INDEX_FILE = "cardgame_save_index.json"
+
+local function updateSaveIndex()
+    if not ed.player then return end
+    local fu = CCFileUtils:sharedFileUtils()
+    local writablePath = fu:getWritablePath()
+    local indexPath = writablePath .. SAVE_INDEX_FILE
+
+    local index = {}
+    local f = io.open(indexPath, "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+        if content and #content > 0 then
+            local ok, data = pcall(json.decode, content)
+            if ok and type(data) == "table" then
+                index = data
+            end
+        end
+    end
+
+    local level = ed.player._level or 1
+    local teamHeroes = {}
+    pcall(function()
+        if ed.getTeamData then
+            local teamData = ed.getTeamData("common") or {}
+            for i = 1, math.min(#teamData, 5) do
+                local tid = tonumber(teamData[i])
+                if tid then
+                    local hero = ed.player.heroes and ed.player.heroes[tid]
+                    table.insert(teamHeroes, {
+                        tid = tid,
+                        stars = hero and hero._stars or 1,
+                        level = hero and hero._level or 1,
+                        rank = hero and hero._rank or 0
+                    })
+                end
+            end
+        end
+    end)
+
+    local saveType = ed._nextSaveType or "auto"
+    ed._nextSaveType = nil
+    local snapshot = {
+        level = level,
+        team = teamHeroes,
+        time = os.time(),
+        type = saveType
+    }
+
+    local autoList = {}
+    local manualList = {}
+    local oldTimes = {}
+    for _, item in ipairs(index) do
+        oldTimes[tostring(item.time)] = true
+        if item.type == "manual" then
+            table.insert(manualList, item)
+        else
+            table.insert(autoList, item)
+        end
+    end
+
+    if saveType == "manual" then
+        table.insert(manualList, 1, snapshot)
+        while #manualList > 1 do table.remove(manualList) end
+    else
+        table.insert(autoList, 1, snapshot)
+        while #autoList > 2 do table.remove(autoList) end
+    end
+
+    index = {}
+    for _, item in ipairs(manualList) do table.insert(index, item) end
+    for _, item in ipairs(autoList) do table.insert(index, item) end
+
+    local ok, encoded = pcall(json.encode, index)
+    if ok and encoded then
+        local tmpPath = indexPath .. ".tmp"
+        local out = io.open(tmpPath, "w")
+        if out then
+            out:write(encoded)
+            out:close()
+            os.rename(tmpPath, indexPath)
+        end
+    end
+
+    -- 保存快照对应的完整存档文件
+    local savePath = writablePath .. "cardgame_save.json"
+    local sf = io.open(savePath, "r")
+    if sf then
+        local saveContent = sf:read("*a")
+        sf:close()
+        local snapPath = writablePath .. "cardgame_snapshot_" .. snapshot.time .. ".json"
+        local snapTmp = snapPath .. ".tmp"
+        local snapOut = io.open(snapTmp, "w")
+        if snapOut then
+            snapOut:write(saveContent)
+            snapOut:close()
+            os.rename(snapTmp, snapPath)
+        end
+        -- 清理旧快照文件
+        local keepTimes = {}
+        for _, item in ipairs(index) do keepTimes[tostring(item.time)] = true end
+        for tStr, _ in pairs(oldTimes) do
+            if not keepTimes[tStr] then
+                os.remove(writablePath .. "cardgame_snapshot_" .. tStr .. ".json")
+            end
+        end
+    else
+        print("[SAVE-INDEX] ERROR: cannot read save file for snapshot: " .. savePath)
+    end
+end
+
 local function saveGame()
     if not ed.player or not ed.player.data then return false end
     if not json or not json.encode then return false end
@@ -524,7 +636,10 @@ local function saveGame()
             return false
         end
         print("[SAVE] Saved " .. #encoded .. " bytes (v" .. SAVE_VERSION .. ")")
-        pcall(updateSaveIndex)
+        local idxOk, idxErr = pcall(updateSaveIndex)
+        if not idxOk then
+            print("[SAVE-INDEX] ERROR: " .. tostring(idxErr))
+        end
         return true
     end)
     if not ok then
@@ -584,70 +699,6 @@ local function loadSaveData()
 end
 ed.loadSaveData = loadSaveData
 ed.saveDirty = false
-
-local SAVE_INDEX_FILE = "cardgame_save_index.json"
-
-local function updateSaveIndex()
-    if not ed.player then return end
-    local fu = CCFileUtils:sharedFileUtils()
-    local writablePath = fu:getWritablePath()
-    local indexPath = writablePath .. SAVE_INDEX_FILE
-
-    -- 读取已有索引
-    local index = {}
-    local f = io.open(indexPath, "r")
-    if f then
-        local content = f:read("*a")
-        f:close()
-        if content and #content > 0 then
-            local ok, data = pcall(json.decode, content)
-            if ok and type(data) == "table" then
-                index = data
-            end
-        end
-    end
-
-    -- 构建新快照
-    local level = ed.player._level or 1
-    local teamHeroes = {}
-    local teamData = ed.getTeamData and ed.getTeamData("common") or {}
-    for i = 1, math.min(#teamData, 5) do
-        local tid = tonumber(teamData[i])
-        if tid then
-            local hero = ed.player.heroes and ed.player.heroes[tid]
-            table.insert(teamHeroes, {
-                tid = tid,
-                stars = hero and hero._stars or 1,
-                level = hero and hero._level or 1,
-                rank = hero and hero._rank or 0
-            })
-        end
-    end
-
-    local snapshot = {
-        level = level,
-        team = teamHeroes,
-        time = os.time(),
-        type = ed.saveDirty and "auto" or "manual"
-    }
-
-    -- 插入到头部
-    table.insert(index, 1, snapshot)
-    -- 保留最多 5 个
-    while #index > 5 do
-        table.remove(index)
-    end
-
-    -- 写回
-    local ok, encoded = pcall(json.encode, index)
-    if ok and encoded then
-        local out = io.open(indexPath, "w")
-        if out then
-            out:write(encoded)
-            out:close()
-        end
-    end
-end
 
 -- 定时自动保存（每60秒，仅脏时执行）
 local function startAutoSave()

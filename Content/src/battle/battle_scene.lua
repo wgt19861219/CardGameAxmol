@@ -293,6 +293,55 @@ local function exit()
 end
 class.exit = exit
 
+	local function OnPopScene(self)
+		-- 停止并释放未完成的波次切换动作
+		if self.nextwaveAction then
+			pcall(function()
+				if self.node and not tolua.isnull(self.node) then
+					self.node:stopAction(self.nextwaveAction)
+				end
+				self.nextwaveAction:release()
+				self.nextwaveAction = nil
+			end)
+		end
+		-- 注销暂停层触摸监听
+		if self.pauseLayer and not tolua.isnull(self.pauseLayer) then
+			pcall(function() self.pauseLayer:unregisterScriptTouchHandler() end)
+		end
+		-- 清理所有 actor 节点引用
+		for _, actor in ipairs(self.actor_list or {}) do
+			if actor.node and not tolua.isnull(actor.node) then
+				pcall(function() actor.node:removeFromParentAndCleanup(true) end)
+			end
+		end
+		self.actor_list = {}
+		-- 清理所有 effect 节点引用
+		for _, effect in ipairs(self.effect_list or {}) do
+			pcall(function()
+				local node = effect.node or effect
+				if not tolua.isnull(node) then
+					node:removeFromParentAndCleanup(true)
+				end
+			end)
+		end
+		self.effect_list = {}
+		-- 清理 ui_list 引用
+		self.ui_list = {}
+		-- 清空引擎中所有 unit 的 actor 引用
+		if ed.engine and ed.engine.unit_list then
+			for _, unit in ipairs(ed.engine.unit_list) do
+				unit.actor = nil
+			end
+		end
+		-- 清空延迟音乐回调
+		self.delayPlayMusicHandler = nil
+		-- 清空暂停层引用
+		self.pauseLayer = nil
+		-- 强制 GC
+		collectgarbage("collect")
+	end
+	class.OnPopScene = OnPopScene
+
 local function returnBtnTapHandler()
 	ed.playSound(ed.sound.battle.clickReturn)
 	ed.scene:createPauseLayer()

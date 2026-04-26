@@ -57,16 +57,24 @@ local function reset(self, stage_info, battle_info, extraInfo)
 	self.auto_combat = ed.config and ed.config.localMode
 	self.pause_locks = {}
 	self.battleModeInfo = extraInfo
-	self.node = CCScene:create()
-	-- ensure layers exist first
-	self.background_layer = CCLayer:create()
-	self.main_layer = CCLayer:create()
-	self.top_layer = CCLayer:create()
-	self.ui_layer = CCLayer:create()
-	self.node:addChild(self.background_layer, 0)
-	self.node:addChild(self.main_layer, 1)
-	self.node:addChild(self.top_layer, 2)
-	self.node:addChild(self.ui_layer, 3)
+	-- 复用已有场景节点（波次切换），或首次创建
+	if not self.node or tolua.isnull(self.node) then
+		self.node = CCScene:create()
+		self.background_layer = CCLayer:create()
+		self.main_layer = CCLayer:create()
+		self.top_layer = CCLayer:create()
+		self.ui_layer = CCLayer:create()
+		self.node:addChild(self.background_layer, 0)
+		self.node:addChild(self.main_layer, 1)
+		self.node:addChild(self.top_layer, 2)
+		self.node:addChild(self.ui_layer, 3)
+	else
+		-- 波次切换时复用已有 layers，清空子节点
+		self.background_layer:removeAllChildrenWithCleanup(true)
+		self.main_layer:removeAllChildrenWithCleanup(true)
+		self.top_layer:removeAllChildrenWithCleanup(true)
+		self.ui_layer:removeAllChildrenWithCleanup(true)
+	end
 	-- background
 	local ok_bg, err_bg = pcall(function()
 		local bg = battle_info["Background Pic"]

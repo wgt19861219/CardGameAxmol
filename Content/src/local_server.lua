@@ -363,7 +363,7 @@ local function findHero(localdata, tid)
     return nil, nil
 end
 
--- 掉落物品生成（从 Stage 配置中读取）
+-- 掉落物品生成（从 Stage 配置中读取，掉落翻倍+扫荡券）
 local function generateLoots(stage_id)
     local loots = {}
     local StageTable = ed.getDataTable("Stage")
@@ -375,20 +375,25 @@ local function generateLoots(stage_id)
         local rewardId = stageCfg["UI reward" .. i]
         local rewardPro = stageCfg["UI reward" .. i .. " Pro"] or 100
         if rewardId and rewardId ~= 0 and math_random(1, 100) <= (rewardPro or 0) then
+            -- 掉落翻倍：每个物品加2个
             local packed = ed.makebits(3, 1, 3, 1, 10, rewardId)
+            table_insert(loots, packed)
             table_insert(loots, packed)
         end
     end
+    -- 必掉扫荡券（物品ID=390）
+    local sweepPacked = ed.makebits(3, 1, 3, 1, 10, 390)
+    table_insert(loots, sweepPacked)
     return loots
 end
 
--- 获取关卡掉落的经验和金币
+-- 获取关卡掉落的经验和金币（10倍）
 local function getStageRewards(stage_id)
     local StageTable = ed.getDataTable("Stage")
     if not StageTable then return 0, 0 end
     local stageCfg = StageTable[stage_id]
     if not stageCfg then return 0, 0 end
-    return stageCfg["Exp Reward"] or 0, stageCfg["Money Reward"] or 0
+    return (stageCfg["Exp Reward"] or 0) * 10, (stageCfg["Money Reward"] or 0) * 10
 end
 
 -- 获取关卡体力消耗

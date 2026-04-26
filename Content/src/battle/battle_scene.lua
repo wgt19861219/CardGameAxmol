@@ -738,9 +738,12 @@ local function update(self, dt)
 		end
 		self.frames = self.frames + 1
 		self:syncActors()
-		local new_list = {}
-		for _, actor in ipairs(self.actor_list) do
+		local n = 0
+		for i = 1, #self.actor_list do
+			local actor = self.actor_list[i]
 			if not actor.model.terminated then
+				n = n + 1
+				self.actor_list[n] = actor
 				if not actor.model.frozen_actor then
 					local ok_upd, err_upd = pcall(function() actor:update(dt) end)
 					if not ok_upd and not actor._updErrShown then
@@ -748,14 +751,16 @@ local function update(self, dt)
 						actor._updErrShown = true
 					end
 				end
-				insert(new_list, actor)
 			else
 				actor.node:removeFromParentAndCleanup(true)
 			end
 		end
-		self.actor_list = new_list
-		local new_list = {}
-		for _, effect in ipairs(self.effect_list) do
+		for i = n + 1, #self.actor_list do
+			self.actor_list[i] = nil
+		end
+		local n = 0
+		for i = 1, #self.effect_list do
+			local effect = self.effect_list[i]
 			if effect.update then
 				effect:update(dt)
 			end
@@ -763,10 +768,13 @@ local function update(self, dt)
 				local node = effect.node or effect
 				node:removeFromParentAndCleanup(true)
 			else
-				insert(new_list, effect)
+				n = n + 1
+				self.effect_list[n] = effect
 			end
 		end
-		self.effect_list = new_list
+		for i = n + 1, #self.effect_list do
+			self.effect_list[i] = nil
+		end
 		if (self.auto_combat or self.battleModeInfo and self.battleModeInfo.guildInstanceInfo) and self.next_btn:isEnabled() then
 			if not self.auto_next_timer then
 				self.auto_next_timer = 1
@@ -780,15 +788,18 @@ local function update(self, dt)
 	if self.delayPlayMusicHandler then
 		self.delayPlayMusicHandler()
 	end
-	local new_list = {}
-	for _, ui in ipairs(self.ui_list) do
+	local n = 0
+	for i = 1, #self.ui_list do
+		local ui = self.ui_list[i]
 		ui:update(dt)
-		if ui.terminated then
-		else
-			insert(new_list, ui)
+		if not ui.terminated then
+			n = n + 1
+			self.ui_list[n] = ui
 		end
 	end
-	self.ui_list = new_list
+	for i = n + 1, #self.ui_list do
+		self.ui_list[i] = nil
+	end
 	self:updateTimer()
 end
 class.update = update

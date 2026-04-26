@@ -1140,7 +1140,11 @@ local function downExit(self, result)
 							excavate_mode = self.excavate_mode,
 							isPveMode = pveMode(self)
 						}
-						xpcall(function() ed.ui.stageaccount.initialize(args) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
+						-- 延迟1秒弹结算窗，让玩家先看到欢呼动画和战利品收集
+						local savedArgs = args
+						ListenTimer(Timer:Once(1), function()
+							xpcall(function() ed.ui.stageaccount.initialize(savedArgs) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
+						end)
 				end
 			elseif result == 1 then
 				self:doFailed({

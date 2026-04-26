@@ -738,12 +738,12 @@ local function update(self, dt)
 		end
 		self.frames = self.frames + 1
 		self:syncActors()
-		local n = 0
+		local nActor = 0
 		for i = 1, #self.actor_list do
 			local actor = self.actor_list[i]
-			if not actor.model.terminated then
-				n = n + 1
-				self.actor_list[n] = actor
+			if actor.model and not actor.model.terminated then
+				nActor = nActor + 1
+				self.actor_list[nActor] = actor
 				if not actor.model.frozen_actor then
 					local ok_upd, err_upd = pcall(function() actor:update(dt) end)
 					if not ok_upd and not actor._updErrShown then
@@ -752,29 +752,35 @@ local function update(self, dt)
 					end
 				end
 			else
-				actor.node:removeFromParentAndCleanup(true)
+				if actor.node and not tolua.isnull(actor.node) then
+					pcall(function() actor.node:removeFromParentAndCleanup(true) end)
+				end
 			end
 		end
-		for i = n + 1, #self.actor_list do
+		for i = nActor + 1, #self.actor_list do
 			self.actor_list[i] = nil
 		end
-		local n = 0
+		local nEffect = 0
 		for i = 1, #self.effect_list do
 			local effect = self.effect_list[i]
+			local ok_eff = true
 			if effect.update then
-				effect:update(dt)
+				ok_eff = pcall(function() effect:update(dt) end)
 			end
-			if effect:isTerminated() then
+			if ok_eff and effect:isTerminated() then
 				local node = effect.node or effect
-				node:removeFromParentAndCleanup(true)
+				if not tolua.isnull(node) then
+					pcall(function() node:removeFromParentAndCleanup(true) end)
+				end
 			else
-				n = n + 1
-				self.effect_list[n] = effect
+				nEffect = nEffect + 1
+				self.effect_list[nEffect] = effect
 			end
 		end
-		for i = n + 1, #self.effect_list do
+		for i = nEffect + 1, #self.effect_list do
 			self.effect_list[i] = nil
 		end
+
 		if (self.auto_combat or self.battleModeInfo and self.battleModeInfo.guildInstanceInfo) and self.next_btn:isEnabled() then
 			if not self.auto_next_timer then
 				self.auto_next_timer = 1
@@ -788,18 +794,18 @@ local function update(self, dt)
 	if self.delayPlayMusicHandler then
 		self.delayPlayMusicHandler()
 	end
-	local n = 0
-	for i = 1, #self.ui_list do
-		local ui = self.ui_list[i]
-		ui:update(dt)
-		if not ui.terminated then
-			n = n + 1
-			self.ui_list[n] = ui
+		local nUi = 0
+		for i = 1, #self.ui_list do
+			local ui = self.ui_list[i]
+			ui:update(dt)
+			if not ui.terminated then
+				nUi = nUi + 1
+				self.ui_list[nUi] = ui
+			end
 		end
-	end
-	for i = n + 1, #self.ui_list do
-		self.ui_list[i] = nil
-	end
+		for i = nUi + 1, #self.ui_list do
+			self.ui_list[i] = nil
+		end
 	self:updateTimer()
 end
 class.update = update

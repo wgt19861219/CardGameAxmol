@@ -61,6 +61,10 @@ protected:
     float _frameDuration = 0;
     bool _isTerminated = false;
     bool _externalTimeCtrl = false;  // true = Lua controls elapsed, update() skips auto-accumulate
+    bool _externalPositioning = false; // true = applyFrame centers children at origin, skips animation transforms
+
+public:
+    void setExternalPositioning(bool val) { _externalPositioning = val; }
 };
 
 // ---- LegendAnimationEffect (Start → Loop auto-switch) ----

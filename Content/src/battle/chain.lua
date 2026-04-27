@@ -27,7 +27,7 @@ local function jump(self)
 	self.jumps_remaining = self.jumps_remaining - 1
 	self.jump_timer = self.jump_timer + self.skill.info["Chain Gap"]
 	self.affect_times[self.target] = (self.affect_times[self.target] or 0) + 1
-	self.skill:takeEffectOn(self.target, source)
+	self.skill:takeEffectOn(self.target, self.source)
 	if ed.run_with_scene and self.skill.info["Chain Effect"] then
 		local effect = ed.ChainEffectCreate(self)
 		if effect then
@@ -90,6 +90,8 @@ local class = {
 ed.ChainEffect = class
 class.mt.__index = class
 local math = math
+local setPosition = CCNode.setPosition
+local setRotation = CCNode.setRotation
 
 function ChainEffectCreate(model)
 	local info = model.skill.info
@@ -98,9 +100,10 @@ function ChainEffectCreate(model)
 	if not content then
 		return nil
 	end
+	content:setExternalPositioning(true)
 	local self = {
 		model = model,
-		node = CCLayer:create(),
+		node = content,
 		content = content,
 		jumps_remaining = info["Chain Jumps"],
 		terminated = false,
@@ -108,7 +111,6 @@ function ChainEffectCreate(model)
 		target = model.target
 	}
 	setmetatable(self, class.mt)
-	self.node:addChild(self.content)
 	if model.jumps_remaining == info["Chain Jumps"] - 1 then
 		local pos, h = model.skill:launchPoint()
 		self.startPos = ed.toViewPosition(pos, h)
@@ -122,16 +124,25 @@ ed.ChainEffectCreate = ChainEffectCreate
 
 local function update(self, dt)
 	local target = self.target
+	if not target then
+		self.terminated = true
+		return
+	end
 	local sx, sy = target:getRuntimeScale()
 	local endPos = ed.toViewPosition(target.position, 48 * target:getUnitScale() * sy)
 	local startPos = self.startPos
-	self.node:setPosition(ed.ccpZero)
-	self.content:setPosition(ccp((startPos.x + endPos.x) / 2, (startPos.y + endPos.y) / 2))
-	local deg = -math.deg(math.atan2(endPos.y - startPos.y, endPos.x - startPos.x))
-	self.content:setRotation(deg)
+	local node = self.node
+	local dx = endPos.x - startPos.x
+	local dy = endPos.y - startPos.y
+	local dist = math.max(math.sqrt(dx * dx + dy * dy), 1)
+	setPosition(node, ccp((startPos.x + endPos.x) / 2, (startPos.y + endPos.y) / 2))
+	local deg = -math.deg(math.atan2(dy, dx))
+	setRotation(node, deg)
+	self.content:setScaleX(dist / 100)
+	self.content:setScaleY(3)
 	self.content:update(dt)
 	self.terminated = self.content:isTerminated()
-end	
+end
 class.update = update
 
 local isTerminated = function(self)

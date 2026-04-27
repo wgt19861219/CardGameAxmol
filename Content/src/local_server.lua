@@ -698,8 +698,90 @@ M.handlers.consume_item = function(data, obj, localdata)
 end
 
 -- ========== equip_synthesis ==========
--- obj: 合成装备请求
+-- obj: 合成装备请求（支持递归合成，自动合成所有前置材料）
+local function collectCraftChain(targetId)
+    local ect = ed.getDataTable("equipcraft")
+    local totalCost = 0
+    local consume = {}
+
+    local function recurse(id)
+        local row = ect[id]
+        if not row or (row.Components or 0) < 1 then return end
+        totalCost = totalCost + (row.Expense or 0)
+        for i = 1, (row.Components or 0) do
+            local cid = row["Component" .. i]
+            local need = math.max(row[string.format("Component%d Count", i)] or 1, 1)
+            local have = ed.player.equip_qunty[cid] or 0
+            local use = math.min(have, need)
+            if use > 0 then
+                consume[cid] = (consume[cid] or 0) + use
+            end
+            if use < need then
+                local craftable = ect[cid] and (ect[cid].Components or 0) > 0
+                if craftable then
+                    recurse(cid)
+                end
+            end
+        end
+    end
+
+    recurse(targetId)
+    return totalCost, consume
+end
+
 M.handlers.equip_synthesis = function(data, obj, localdata)
+    local targetId = obj._equip_id
+    local ect = ed.getDataTable("equipcraft")
+    local row = ect and ect[targetId]
+
+    if not row then
+        data._equip_synthesis_reply = { _result = "fail" }
+        return
+    end
+
+    local totalCost, consume = collectCraftChain(targetId)
+
+    -- 检查金币
+    if totalCost > (ed.player._money or 0) then
+        data._equip_synthesis_reply = { _result = "fail" }
+        return
+    end
+
+    -- 检查基础材料是否足够
+    for cid, amount in pairs(consume) do
+        local have = ed.player.equip_qunty[cid] or 0
+        if have < amount then
+            data._equip_synthesis_reply = { _result = "fail" }
+            return
+        end
+    end
+
+    -- 执行合成：扣除材料、金币，产出目标
+    pcall(function()
+        ed.player:addMoney(-totalCost)
+        for cid, amount in pairs(consume) do
+            ed.player:consumeEquip(cid, amount)
+        end
+        ed.player:addEquip(targetId)
+        ed.saveDirty = true
+    end)
+
+    -- 更新 netdata 让客户端回复处理正确
+    if ed.netdata then
+        ed.netdata.equipCraft = {
+            id = targetId,
+            node = {},
+            consume = {},
+            expense = totalCost,
+        }
+        local i = 1
+        for cid, amount in pairs(consume) do
+            ed.netdata.equipCraft.node[i] = cid
+            ed.netdata.equipCraft.consume[i] = amount
+            i = i + 1
+        end
+    end
+
     data._equip_synthesis_reply = {
         _result = "success",
     }

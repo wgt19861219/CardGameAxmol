@@ -426,14 +426,20 @@ void LegendAnimation::applyFrame(const LegendAnimationFrame& frame)
             needReorder = true;
         child->setLocalZOrder((int)i);
 
-        // Apply full affine transform via setNodeToParentTransform.
-        // This DIRECTLY REPLACES the node's transform matrix,
-        // matching the original CCSprite::setTransform() behavior.
-        // IMPORTANT: Do NOT use setAdditionalTransform — it MULTIPLIES
-        // the node's existing transform, causing garbled rendering.
-        Mat4 transformMat;
-        CGAffineToGL(felem.transform, transformMat.m);
-        child->setNodeToParentTransform(transformMat);
+        if (_externalPositioning) {
+            // External positioning mode: center child sprite at parent origin
+            // so Lua-controlled setPosition/setRotation on parent works correctly
+            auto size = child->getContentSize();
+            Mat4 mat = Mat4::IDENTITY;
+            mat.m[12] = -size.width / 2.0f;
+            mat.m[13] = -size.height / 2.0f;
+            child->setNodeToParentTransform(mat);
+        } else {
+            // Apply full affine transform via setNodeToParentTransform.
+            Mat4 transformMat;
+            CGAffineToGL(felem.transform, transformMat.m);
+            child->setNodeToParentTransform(transformMat);
+        }
     }
 
     // Update batch rendering order if needed

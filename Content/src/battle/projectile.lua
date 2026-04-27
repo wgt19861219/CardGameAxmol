@@ -122,8 +122,8 @@ local function update(self, dt)
 		self.skill:takeEffectAt(self.position)
 		self:terminate()
 	end
-	if not self.terminated and (self:isOutOfStage() or h < 0 or self.distance > self.max_distance) then
-		self:terminate()
+	if not self.terminated and (self:isOutOfStage() or self.height < 0 or self.distance > self.max_distance) then
+			self:terminate()
 	end
 end
 class.update = update
@@ -175,9 +175,20 @@ local function terminate(self)
 		local skill = self.skill
 		local target = self:findNextTaeget()
 		if target then
+			self.position = {
+				self.source.position[1],
+				self.source.position[2]
+			}
 			local d = ed.edpSub(target.position, self.position)
 			local speed = skill.info["Tile XY Speed"]
 			self.velocity = ed.edpMult(ed.edpNormalize(d), speed)
+			self.previous_position = {
+				self.position[1],
+				self.position[2]
+			}
+			self.distance = 0
+			self.height = 0
+			self.zSpeed = 0
 			if self.track then
 				self.track_target = target
 			end
@@ -189,7 +200,24 @@ local function terminate(self)
 end
 class.terminate = terminate
 
-class.findNextTaeget = ed.Chain.findNextTaeget
+local function findNextTaeget(self)
+	local min = math.huge
+	local ret
+	for unit in ed.engine:foreachAliveUnit(self.skill:targetCamp()) do
+		if unit == self.source then
+		elseif unit.buff_effects.untargetable then
+		elseif self.affect_times and self.affect_times[unit] then
+		else
+			local distanceSQ = ed.edpDistanceSQ(unit.position, self.position)
+			if distanceSQ < min then
+				ret = unit
+				min = distanceSQ
+			end
+		end
+	end
+	return ret
+end
+class.findNextTaeget = findNextTaeget
 
 
 local class = {

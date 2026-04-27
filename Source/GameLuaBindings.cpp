@@ -923,6 +923,33 @@ int register_game_bindings(lua_State* L)
     });
     lua_setfield(L, -2, "setActionSpeeder");
 
+    // setExternalPositioning(bool)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        bool val = lua_toboolean(L, 2);
+        if (obj) obj->setExternalPositioning(val);
+        return 0;
+    });
+    lua_setfield(L, -2, "setExternalPositioning");
+
+    // setScaleX(scaleX)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        float val = (float)luaL_checknumber(L, 2);
+        if (obj) obj->setScaleX(val);
+        return 0;
+    });
+    lua_setfield(L, -2, "setScaleX");
+
+    // setScaleY(scaleY)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");
+        float val = (float)luaL_checknumber(L, 2);
+        if (obj) obj->setScaleY(val);
+        return 0;
+    });
+    lua_setfield(L, -2, "setScaleY");
+
     // update(dt)
     lua_pushcfunction(L, [](lua_State* L) -> int {
         auto* obj = *(ax::LegendAnimationEffect**)luaL_checkudata(L, 1, "LegendAnimationEffect_mt");

@@ -1217,9 +1217,13 @@ local function createCraftTree(self, id, skipAnim)
     end
     for i = 1, #cw.nodeAmount do
       if cw.nodeAmount[i] < cw.nodeNeed[i] then
-        self:forbidCraftButton(false)
-        self.lackOfComponent = true
-        break
+        local cid = cw.nodeid[i]
+        local craftable = ed.isEquipCraftable and ed.isEquipCraftable(cid)
+        if not craftable then
+          self:forbidCraftButton(false)
+          self.lackOfComponent = true
+          break
+        end
       end
     end
   end

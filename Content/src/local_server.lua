@@ -718,6 +718,7 @@ local function collectCraftChain(targetId)
     local ect = ed.getDataTable("equipcraft")
     local totalCost = 0
     local consume = {}
+    local allocated = {}
 
     local function recurse(id)
         local row = ect[id]
@@ -726,10 +727,12 @@ local function collectCraftChain(targetId)
         for i = 1, (row.Components or 0) do
             local cid = row["Component" .. i]
             local need = math.max(row[string.format("Component%d Count", i)] or 1, 1)
-            local have = ed.player.equip_qunty[cid] or 0
-            local use = math.min(have, need)
+            local totalHave = ed.player.equip_qunty[cid] or 0
+            local available = math.max(totalHave - (allocated[cid] or 0), 0)
+            local use = math.min(available, need)
             if use > 0 then
                 consume[cid] = (consume[cid] or 0) + use
+                allocated[cid] = (allocated[cid] or 0) + use
             end
             if use < need then
                 local craftable = ect[cid] and (ect[cid].Components or 0) > 0

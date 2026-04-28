@@ -1573,6 +1573,18 @@ local function dispatch(msg)
 			handler(msg._query_ranklist_reply)
 		end
 	end
+	if msg._top_arena_reply then
+		local handler = ed.getNetReply("top_arena")
+		if handler then
+			handler(msg._top_arena_reply)
+		end
+	end
+	if msg._query_pvp_ranklist_reply then
+		local handler = ed.getNetReply("query_pvp_ranklist")
+		if handler then
+			handler(msg._query_pvp_ranklist_reply)
+		end
+	end
     --add by cooper.x
     if msg._activity_info_reply then
         local handler = ed.getNetReply("GotoActivity")

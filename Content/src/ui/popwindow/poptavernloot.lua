@@ -492,9 +492,8 @@ local function createLootAnim(self, index, param)
   local loot = loots[index]
   local type = ed.itemType(loot.id)
   local ih, ihid = isHero(loot)
+  -- 英雄卡牌：当作高品质物品显示（紫色光芒），跳过 popHeroCard 动画
   if not skipCheckHero and ih then
-    -- popHeroCard 弹窗依赖缺失的美术资源（动画、背景图）
-    -- 直接当普通物品显示，    -- TODO: 恢复美术资源后恢复 popHeroCard 流程
     skipCheckHero = true
   end
   local icon, prop = ed.readequip.createIconWithAmount(loot.id, nil, loot.amount)

@@ -114,97 +114,120 @@ local function createMultiSprite(resource)
 	end
 end
 ed.createMultiSprite = createMultiSprite
-local function createStaticSpriteFromSpineAtlas(resource)
-	print('[staticSpine] trying resource=' .. tostring(resource))
-	local atlasPath = 'spine/' .. resource .. '/' .. resource .. '.atlas'
-	local pngPath = 'spine/' .. resource .. '/' .. resource .. '.png'
-	local fu = CCFileUtils:sharedFileUtils()
-	local atlasExist = fu:isFileExist(atlasPath)
-	local pngExist = fu:isFileExist(pngPath)
-	print('[staticSpine] atlas=' .. tostring(atlasExist) .. ' png=' .. tostring(pngExist))
-	if not atlasExist or not pngExist then
-		return nil
-	end
-	local atlasContent = fu:getStringFromFile(atlasPath)
-	if not atlasContent or atlasContent == "" then
-		print('[staticSpine] atlas content empty')
-		return nil
-	end
-	local rx, ry, rw, rh
-	local rotate = false
-	local foundXY = false
-	local foundSize = false
-	local lineSep = string.char(13) .. string.char(10)
-	for line in atlasContent:gmatch('[^' .. lineSep .. ']+') do
-		local l = line:match('^%s*(.-)%s*$')
-		if l:match('^xy:%s*(%d+)%s*,%s*(%d+)') then
-			rx, ry = l:match('xy:%s*(%d+)%s*,%s*(%d+)')
-			rx, ry = tonumber(rx), tonumber(ry)
-			foundXY = true
-		elseif l:match('^size:%s*(%d+)%s*,%s*(%d+)') then
-			rw, rh = l:match('size:%s*(%d+)%s*,%s*(%d+)')
-			rw, rh = tonumber(rw), tonumber(rh)
-			foundSize = true
-		elseif l:match('^rotate:%s*true') then
-			rotate = true
-		elseif foundXY and foundSize and l:match('^index:') then
-			break
-		end
-	end
-	if not foundXY or not foundSize or not rw or not rh or rw == 0 or rh == 0 then
-		print('[staticSpine] parse failed xy=' .. tostring(foundXY) .. ' size=' .. tostring(foundSize))
-		return nil
-	end
-	print('[staticSpine] parsed xy=' .. rx .. ',' .. ry .. ' size=' .. rw .. ',' .. rh .. ' rot=' .. tostring(rotate))
-	local texture = CCTextureCache:sharedTextureCache():addImage(pngPath)
-	if not texture then
-		print('[staticSpine] texture load failed')
-		return nil
-	end
-	local rect
-	if rotate then
-		rect = CCRectMake(rx, ry, rh, rw)
-	else
-		rect = CCRectMake(rx, ry, rw, rh)
-	end
-	local frame = CCSpriteFrame:createWithTexture(texture, rect)
-	if not frame then
-		print('[staticSpine] frame creation failed')
-		return nil
-	end
-	local sprite = CCSprite:createWithSpriteFrame(frame)
-	if sprite and rotate then
-		sprite:setRotation(90)
-	end
-	print('[staticSpine] success!')
-	-- stub方法使静态精灵兼容 SpineContainer/LegendAnimation 接口
-	sprite.setAction = function() end
-	sprite.setNextAction = function() end
-	sprite.setLoop = function() end
-	sprite.runAnimation = function() end
-	sprite.useShader = function() end
-	sprite.useDefaultShader = function() end
-	sprite.setComponent = function() end
-	sprite.registerLuaListener = function() end
-	sprite.unregisterLuaListener = function() end
-	sprite.stopAllAnimations = function() end
-	sprite.addEffect = function() return -1 end
-	sprite.removeEffectWithID = function() end
-	sprite.removeEffectWithName = function() end
-	sprite.tint = function() end
-	sprite.setActionElapsed = function() end
-	sprite.setActionSpeeder = function() end
-	sprite.setStartAction = function() end
-	sprite.setLoopAction = function() end
-	sprite.getAniFileName = function() return "" end
-	sprite.isTerminated = function() return true end
-	-- 添加呼吸动画，让静态 fallback 不完全死板
+local function addStubMethods(node)
+	node.setAction = function() end
+	node.setNextAction = function() end
+	node.setLoop = function() end
+	node.runAnimation = function() end
+	node.useShader = function() end
+	node.useDefaultShader = function() end
+	node.setComponent = function() end
+	node.registerLuaListener = function() end
+	node.unregisterLuaListener = function() end
+	node.stopAllAnimations = function() end
+	node.addEffect = function() return -1 end
+	node.removeEffectWithID = function() end
+	node.removeEffectWithName = function() end
+	node.tint = function() end
+	node.setActionElapsed = function() end
+	node.setActionSpeeder = function() end
+	node.setStartAction = function() end
+	node.setLoopAction = function() end
+	node.getAniFileName = function() return "" end
+	node.isTerminated = function() return true end
 	local breatheScale = CCScaleBy:create(1.2, 0.95)
 	local breatheBack = breatheScale:reverse()
 	local breatheSeq = CCSequence:createWithTwoActions(breatheScale, breatheBack)
 	local breatheForever = CCRepeatForever:create(breatheSeq)
 	breatheForever:setTag(9999)
-	sprite:runAction(breatheForever)
+	node:runAction(breatheForever)
+	return node
+end
+
+local function parseAtlasRegions(atlasContent)
+	local regions = {}
+	local current = nil
+	local lineSep = string.char(13) .. string.char(10)
+	local function saveCurrent()
+		if current and current.name and current.x and current.y and current.width and current.height then
+			table.insert(regions, current)
+		end
+		current = nil
+	end
+	for line in atlasContent:gmatch('[^' .. lineSep .. ']+') do
+		local l = line:match('^%s*(.-)%s*$')
+		if l == '' then
+		elseif l:match('^%s*rotate:') then
+			if current then current.rotate = (l:match('rotate:%s*(%S+)') == 'true') end
+		elseif l:match('^%s*xy:') then
+			if current then
+				local x, y = l:match('xy:%s*(%d+)%s*,%s*(%d+)')
+				current.x, current.y = tonumber(x), tonumber(y)
+			end
+		elseif l:match('^%s*size:') then
+			if current then
+				local w, h = l:match('size:%s*(%d+)%s*,%s*(%d+)')
+				current.width, current.height = tonumber(w), tonumber(h)
+			end
+		elseif l:match('^%s*orig:') then
+		elseif l:match('^%s*offset:') then
+		elseif l:match('^%s*index:') then
+			saveCurrent()
+		elseif l:match('^%s*format:') or l:match('^%s*filter:') or l:match('^%s*repeat:') then
+		else
+			saveCurrent()
+			current = { name = l }
+		end
+	end
+	saveCurrent()
+	return regions
+end
+
+local function createStaticSpriteFromSpineAtlas(resource)
+	print('[staticSpine] trying resource=' .. tostring(resource))
+	local atlasPath = 'spine/' .. resource .. '/' .. resource .. '.atlas'
+	local pngPath = 'spine/' .. resource .. '/' .. resource .. '.png'
+	local fu = CCFileUtils:sharedFileUtils()
+	if not fu:isFileExist(atlasPath) or not fu:isFileExist(pngPath) then
+		return nil
+	end
+	local atlasContent = fu:getStringFromFile(atlasPath)
+	if not atlasContent or atlasContent == "" then
+		return nil
+	end
+
+	local regions = parseAtlasRegions(atlasContent)
+	if #regions == 0 then
+		print('[staticSpine] no regions parsed')
+		return nil
+	end
+	print('[staticSpine] parsed ' .. #regions .. ' regions')
+
+	local texture = CCTextureCache:sharedTextureCache():addImage(pngPath)
+	if not texture then return nil end
+
+	local bestRegion = nil
+	local bestArea = 0
+	for _, r in ipairs(regions) do
+		local w = r.rotate and r.height or r.width
+		local h = r.rotate and r.width or r.height
+		local area = w * h
+		if area > bestArea then
+			bestArea = area
+			bestRegion = r
+		end
+	end
+
+	if not bestRegion then return nil end
+	local rect = CCRectMake(bestRegion.x, bestRegion.y, bestRegion.width, bestRegion.height)
+	local frame = CCSpriteFrame:createWithTexture(texture, rect)
+	if not frame then return nil end
+	local sprite = CCSprite:createWithSpriteFrame(frame)
+	if not sprite then return nil end
+	if bestRegion.rotate then
+		sprite:setRotation(90)
+	end
+	addStubMethods(sprite)
 	return sprite
 end
 ed.createStaticSpriteFromSpineAtlas = createStaticSpriteFromSpineAtlas

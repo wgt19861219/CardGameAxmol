@@ -439,16 +439,8 @@ local function createMainFca(self)
 			if parent == self.ui[k] then
 				local title = self.ui[k .. "_title"]
 				if title and not tolua.isnull(title) then
-					local cs = node:getContentSize()
-					local sc = v.scale or 1
-					-- getContentSize may return Size table or raw value depending on node type
-					local csH = (type(cs) == "table") and cs.height or (tonumber(cs) or 0)
-					local actualH = csH * sc
-					if actualH > 0 and actualH < 220 then
-						local titleX = v.pos.x + (v.titlePos and v.titlePos.x or 0)
-						local titleY = v.pos.y - actualH / 2 - 5
-						title:setPosition(ccp(titleX, titleY))
-					end
+					local offsetX = v.titlePos and v.titlePos.x or 0
+					title:setPosition(ccp(v.pos.x + offsetX, v.pos.y - 25))
 				end
 			end
 			local gmin = v.gap_min or 0

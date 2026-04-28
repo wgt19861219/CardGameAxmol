@@ -48,7 +48,7 @@ class.res_pos = {
     loop_times_max = 0,
     touchCenter = ccp(0, 0),
     touchRadius = 65,
-    titlePos = ccp(0, -60),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 0),
     lightSize = CCSizeMake(100, 100)
   },
@@ -77,7 +77,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.TimeRift"),
-    titlePos = ccp(0, -50),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 40),
     lightSize = CCSizeMake(300, 300)
   },
@@ -95,7 +95,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Arean"),
-    titlePos = ccp(0, -40),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 40),
     lightSize = CCSizeMake(350, 400)
   },
@@ -114,7 +114,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Campaign"),
-    titlePos = ccp(3, -70),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 19),
     lightSize = CCSizeMake(230, 350)
   },
@@ -132,7 +132,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Chests"),
-    titlePos = ccp(0, -40),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 30),
     lightSize = CCSizeMake(300, 200)
   },
@@ -150,7 +150,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Trials"),
-    titlePos = ccp(0, -60),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 35),
     lightSize = CCSizeMake(200, 250)
   },
@@ -168,7 +168,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Enchanting"),
-    titlePos = ccp(-0, -40),
+    titlePos = ccp(0, 0),
     lightPos = ccp(-0, 60),
     lightSize = CCSizeMake(250, 250)
   },
@@ -186,7 +186,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Guild"),
-    titlePos = ccp(0, -60),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 30),
     lightSize = CCSizeMake(500, 500)
   },
@@ -206,7 +206,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Merchant"),
-    titlePos = ccp(0, -30),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 50),
     lightSize = CCSizeMake(300, 300)
   },
@@ -226,7 +226,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.GoblinMerchant"),
-    titlePos = ccp(5, -30),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 25),
     lightSize = CCSizeMake(317, 300),
     summonTitleres = "UI/alpha/HVGA/main_title_summonsshop_a.png",
@@ -250,7 +250,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Godfather"),
-    titlePos = ccp(5, -45),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 45),
     lightSize = CCSizeMake(307, 200),
     summonTitleres = "UI/alpha/HVGA/main_title_summonsshop_a.png",
@@ -275,7 +275,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Mailbox"),
-    titlePos = ccp(5, -25),
+    titlePos = ccp(0, 0),
     lightPos = ccp(8, 45),
     lightSize = CCSizeMake(200, 200)
   },
@@ -294,7 +294,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Crusade"),
-    titlePos = ccp(0, -40),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 40),
     lightSize = CCSizeMake(250, 250)
   },
@@ -313,7 +313,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.StarShop"),
-    titlePos = ccp(-5, -48),
+    titlePos = ccp(0, 0),
     lightPos = ccp(-6, 30),
     lightSize = CCSizeMake(150, 180)
   },
@@ -331,7 +331,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Excavate"),
-    titlePos = ccp(0, -125),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 75),
     lightSize = CCSizeMake(600, 400)
   },
@@ -349,7 +349,7 @@ class.res_pos = {
     titlePressres = "UI/alpha/HVGA/main_title_b.png",
     titlenotopenres = "UI/alpha/HVGA/main_title_a.png",
     title = LSTR("mainres.Rank"),
-    titlePos = ccp(0, -40),
+    titlePos = ccp(0, 0),
     lightPos = ccp(0, 30),
     lightSize = CCSizeMake(150, 250)
   }

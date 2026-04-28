@@ -1800,22 +1800,121 @@ M.handlers.sdk_login = function(data, obj, localdata)
 end
 
 -----------------------------------------------------------------------
+-- NPC 名称（排行榜/竞技场共用）
+-----------------------------------------------------------------------
+local AI_NAMES = {
+    "暗影猎手","龙骑士","风暴法师","圣光骑士","血魔领主",
+    "冰霜女王","烈焰术士","大地守卫","幽灵刺客","雷霆战神",
+    "月光游侠","黑暗领主","星辰法师","铁甲战士","毒蛇猎手",
+}
+
+-----------------------------------------------------------------------
 -- 排行榜查询
 -----------------------------------------------------------------------
 M.handlers.query_ranklist = function(data, obj, localdata)
     local rankType = obj._rank_type or "top_gs"
-    data._rank_type = rankType
-    data._ranklist_item = {}
-    data._self_ranking = 0
-    data._self_prev_pos = 0
-    data._self_item = {
-        _user_summary = {
-            _avatar = 1,
-            _vip = 0,
-            _name = localdata.player.name or "Player",
-            _level = localdata.player.level or 1,
+    local npcNames = AI_NAMES
+    local guildNames = {"暗影军团","龙骑联盟","风暴之翼","圣光骑士团","血魔殿",
+        "冰霜堡垒","烈焰公会","大地之盾","幽灵暗杀","雷霆战队",
+        "月光森林","黑暗帝国","星辰学院","铁甲军团","毒蛇巢穴"}
+
+    -- 计算玩家自身分数（基于实际英雄数据）
+    local playerLevel = localdata.player.level or 1
+    local totalGs = 0
+    local heroCount = 0
+    local topHeroGs = {}
+    local totalStars = 0
+    local totalArousal = 0
+    pcall(function()
+        for tid, hero in pairs(ed.player.heroes or {}) do
+            local gs = hero._gs or 0
+            totalGs = totalGs + gs
+            heroCount = heroCount + 1
+            table.insert(topHeroGs, gs)
+            totalStars = totalStars + (hero._stars or 0)
+            totalArousal = totalArousal + (hero._rank or 0)
+        end
+    end)
+    table.sort(topHeroGs, function(a, b) return a > b end)
+    local top5Gs = 0
+    local top15Gs = 0
+    for i, gs in ipairs(topHeroGs) do
+        if i <= 5 then top5Gs = top5Gs + gs end
+        if i <= 15 then top15Gs = top15Gs + gs end
+    end
+
+    local selfParam = 0
+    if rankType == "top_gs" then
+        selfParam = top15Gs
+    elseif rankType == "full_hero_gs" then
+        selfParam = totalGs
+    elseif rankType == "hero_team_gs" then
+        selfParam = top5Gs
+    elseif rankType == "hero_evo_star" then
+        selfParam = totalStars
+    elseif rankType == "hero_arousal" then
+        selfParam = totalArousal
+    else
+        selfParam = math.floor(totalGs * 0.1)
+    end
+
+    -- 根据玩家实际战力范围生成NPC数据
+    local baseScale = math.max(selfParam, 100)
+    local items = {}
+    for i = 1, 20 do
+        local ni = ((i - 1) % #npcNames) + 1
+        local lvl = math.max(playerLevel + 5 - i, 5)
+        local param = math.floor(baseScale * (1.5 - i * 0.06))
+        if param < 10 then param = 10 end
+
+        local item
+        if rankType == "guildliveness" then
+            item = {
+                _guild_summary = {
+                    _avatar = ((i - 1) % 5) + 1,
+                    _name = guildNames[ni],
+                    _president = { _name = npcNames[ni] },
+                },
+                _param1 = math.max(3000 - i * 120, 100),
+            }
+        else
+            item = {
+                _user_summary = {
+                    _avatar = (i % 10) + 1,
+                    _vip = 0,
+                    _name = npcNames[ni],
+                    _level = lvl,
+                },
+                _param1 = param,
+            }
+        end
+        table_insert(items, item)
+    end
+
+    -- 计算玩家排名
+    local selfRank = 0
+    for i, item in ipairs(items) do
+        if selfParam >= item._param1 then
+            selfRank = i
+            break
+        end
+    end
+    if selfRank == 0 then selfRank = #items + 1 end
+
+    data._query_ranklist_reply = {
+        _rank_type = rankType,
+        _ranklist_item = items,
+        _self_ranking = selfRank,
+        _self_prev_pos = selfRank,
+        _self_item = {
+            _user_summary = {
+                _avatar = localdata.player.avatar or 1,
+                _vip = 0,
+                _name = localdata.player.name or "Player",
+                _level = playerLevel,
+            },
+            _param1 = selfParam,
         },
-        _param1 = 0,
     }
 end
 
@@ -1823,15 +1922,34 @@ end
 -- 竞技场排行榜 (top_arena)
 -----------------------------------------------------------------------
 M.handlers.top_arena = function(data, obj, localdata)
-    data._rank_list = {}
-    data._pos = 0
-    data._prev_pos = 0
-    data._self_rank = {
-        _summary = {
-            _avatar = 1,
-            _vip = 0,
-            _name = localdata.player.name or "Player",
-            _level = localdata.player.level or 1,
+    local npcNames = AI_NAMES
+    local rankList = {}
+    for i = 1, 20 do
+        local ni = ((i - 1) % #npcNames) + 1
+        table_insert(rankList, {
+            _summary = {
+                _avatar = (i % 10) + 1,
+                _vip = 0,
+                _name = npcNames[ni],
+                _level = math.max(60 - i * 2, 10),
+            },
+        })
+    end
+
+    local playerLevel = localdata.player.level or 1
+    local pvp = localdata.player._pvp
+    local pvpRank = (pvp and pvp.rank) or 1001
+    data._top_arena_reply = {
+        _rank_list = rankList,
+        _pos = pvpRank,
+        _prev_pos = pvpRank,
+        _self_rank = {
+            _summary = {
+                _avatar = localdata.player.avatar or 1,
+                _vip = 0,
+                _name = localdata.player.name or "Player",
+                _level = playerLevel,
+            },
         },
     }
 end
@@ -1844,12 +1962,6 @@ local CRUSADE_MAX_STAGE = 15
 -- 可用英雄ID池（从 hero_equip 表提取）
 local CRUSADE_HERO_POOL = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,
     21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40}
-
-local AI_NAMES = {
-    "暗影猎手","龙骑士","风暴法师","圣光骑士","血魔领主",
-    "冰霜女王","烈焰术士","大地守卫","幽灵刺客","雷霆战神",
-    "月光游侠","黑暗领主","星辰法师","铁甲战士","毒蛇猎手",
-}
 
 local function initCrusade(localdata)
     local cd = localdata.crusade
@@ -2405,6 +2517,46 @@ end
 
 -- ladder: 天梯/PVP 系统
 M.handlers.ladder = function(data, obj, localdata)
+    -- 排行榜查询（tab1 竞技场每日排名）
+    if obj._query_rankboard then
+        local npcNames = AI_NAMES
+        local rankList = {}
+        for i = 1, 20 do
+            local ni = ((i - 1) % #npcNames) + 1
+            table_insert(rankList, {
+                _summary = {
+                    _avatar = (i % 10) + 1,
+                    _vip = 0,
+                    _name = npcNames[ni],
+                    _level = math.max(60 - i * 2, 10),
+                },
+            })
+        end
+        local playerLevel = localdata.player.level or 1
+        local pvp = localdata.player._pvp
+        local pvpRank = (pvp and pvp.rank) or 1001
+        local pvpGs = 0
+        pcall(function()
+            for tid, hero in pairs(ed.player.heroes or {}) do
+                pvpGs = pvpGs + (hero._gs or 0)
+            end
+        end)
+        data._query_pvp_ranklist_reply = {
+            _rank_list = rankList,
+            _pos = pvpRank,
+            _prev_pos = pvpRank,
+            _self_rank = {
+                _summary = {
+                    _avatar = localdata.player.avatar or 1,
+                    _vip = 0,
+                    _name = localdata.player.name or "Player",
+                    _level = playerLevel,
+                },
+            },
+        }
+        return
+    end
+
     data._ladder_reply = data._ladder_reply or {}
     local reply = data._ladder_reply
     local player = localdata.player
@@ -3641,6 +3793,31 @@ local function local_dispatch(msg)
         pcall(function()
             if FireEvent then FireEvent("pvpRsp", data._ladder_reply) end
         end)
+    end
+
+    -- query_ranklist_reply: 通用排行榜回复
+    if data._query_ranklist_reply then
+        local handler = ed.getNetReply("query_ranklist")
+        if handler then
+            local ok, err = pcall(handler, data._query_ranklist_reply)
+            if not ok then LegendLog("[local_dispatch] query_ranklist callback ERROR: " .. tostring(err)) end
+        end
+    end
+
+    -- top_arena_reply: 巅峰竞技场排行榜回复
+    if data._top_arena_reply then
+        local handler = ed.getNetReply("top_arena")
+        if handler then
+            pcall(handler, data._top_arena_reply)
+        end
+    end
+
+    -- query_pvp_ranklist_reply: PVP竞技场排行榜回复
+    if data._query_pvp_ranklist_reply then
+        local handler = ed.getNetReply("query_pvp_ranklist")
+        if handler then
+            pcall(handler, data._query_pvp_ranklist_reply)
+        end
     end
 
     -- ask_magicsoul_reply：魂匣英雄列表

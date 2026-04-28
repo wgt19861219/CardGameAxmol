@@ -2542,6 +2542,12 @@ local function ensureStubsAfterTools()
                     end)
                     local cb3 = ed.netreply and ed.netreply.eat_exp
                     if cb3 then pcall(cb3); ed.netreply.eat_exp = nil end
+                else
+                    -- 其他消息：走 local_server 处理
+                    local ls = rawget(_G, "local_server")
+                    if ls and ls.handle then
+                        pcall(function() ls.handle(msgType, obj) end)
+                    end
                 end
             end
         end

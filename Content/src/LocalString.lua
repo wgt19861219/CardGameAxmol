@@ -81,12 +81,7 @@ end
 
 
 function getDeviceLanguage()
-	local la = CCApplication:sharedApplication():getCurrentLanguage()
-	local languageType = "zh-CN"
-	if languageEum[la] then
-		languageType = languageEum[la]
-	end
-	return languageType
+	return "zh-CN"
 end
 
 function checkCurrentLanguage()

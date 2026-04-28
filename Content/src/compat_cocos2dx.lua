@@ -836,6 +836,9 @@ kCCTextAlignmentRight  = 2
 CCVerticalTextAlignmentTop      = 0
 CCVerticalTextAlignmentCenter   = 1
 CCVerticalTextAlignmentBottom   = 2
+kCCVerticalTextAlignmentTop     = 0
+kCCVerticalTextAlignmentCenter  = 1
+kCCVerticalTextAlignmentBottom  = 2
 
 -- ��������
 kCCTouchBegan     = 0

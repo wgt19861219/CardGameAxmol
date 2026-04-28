@@ -48,7 +48,10 @@ local magic_loot_pos = {
   ccp(100, -95),
   ccp(-100, -95),
   ccp(-215, 10),
-  ccp(0, 0)
+  ccp(0, 0),
+  ccp(-160, -20),
+  ccp(160, -20),
+  ccp(0, 110)
 }
 local function destroyLootCard(self)
   lsr:report("closeLootCard")
@@ -337,7 +340,7 @@ local function playBoxAnim(self)
 		local func = CCCallFunc:create(function()
 		  xpcall(function()
 			self:createMatrixContainerAnim()
-		  end, EDDeug)
+		  end, EDDebug)
 		end)
 		as = {
 		  t = "seq",

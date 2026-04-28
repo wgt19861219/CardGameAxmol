@@ -1225,11 +1225,49 @@ M.handlers.tavern_draw = function(data, obj, localdata)
     local drawType = obj._draw_type or 0
     local boxType = obj._box_type or 1
     LegendLog("[local_server] tavern_draw: drawType=" .. tostring(drawType) .. " boxType=" .. tostring(boxType))
-    -- drawType: 0=single, 1=combo(10x)
-    -- boxType: 1=green(bronze), 2=blue(silver), 3=purple(gold), 4=magicsoul
     local itemIds = {}
     local newHeroes = {}
 
+    -- starshop 灵魂石购买：drawType="stone", boxType="stone_green"/"stone_blue"/"stone_purple"
+    if drawType == "stone" then
+        local qualityMap = {
+            stone_green = {1, 2, 3},
+            stone_blue = {3, 4, 5},
+            stone_purple = {4, 5, 6},
+        }
+        local qualities = qualityMap[boxType] or {1, 2, 3}
+        local validEquips = {}
+        pcall(function()
+            local equipTable = ed.getDataTable("equip")
+            if equipTable then
+                for k, v in pairs(equipTable) do
+                    if type(k) == "number" and v.Icon then
+                        local q = v.Quality or 1
+                        for _, tq in ipairs(qualities) do
+                            if q == tq then
+                                table_insert(validEquips, k)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        if #validEquips == 0 then validEquips = {101} end
+        for i = 1, 3 do
+            local eid = validEquips[math_random(1, #validEquips)]
+            table_insert(itemIds, ed.makebits(11, math_random(1, 3), 10, eid))
+        end
+        data._tavern_draw_reply = {
+            _item_ids = itemIds,
+            _new_heroes = newHeroes,
+            _smash_idx = {},
+        }
+        return
+    end
+
+    -- drawType: 0=single, 1=combo(10x)
+    -- boxType: 1=green(bronze), 2=blue(silver), 3=purple(gold), 4=magicsoul
     -- 简单掉落模拟：根据箱子品质给不同品质的物品
     local drawCount = 1
     if drawType == 1 then
@@ -3504,7 +3542,16 @@ local function local_dispatch(msg)
         LegendLog("[local_dispatch] tavern_draw_reply, calling netreply.tavern, loot_count=" .. tostring(#loot))
         local handler = ed.netreply and ed.netreply.tavern
         if handler then
-            local ok, err = pcall(handler, loot)
+            local nd = ed.netdata
+            local isStone = nd and nd.tavern and nd.tavern.type == "stone"
+            local ok, err
+            if isStone then
+                -- stone 类型传两个参数，与原版 network.lua:1314-1315 一致
+                local heroes = reply._new_heroes or {}
+                ok, err = pcall(handler, loot, heroes)
+            else
+                ok, err = pcall(handler, loot)
+            end
             if not ok then
                 LegendLog("[local_dispatch] tavern callback ERROR: " .. tostring(err))
             end

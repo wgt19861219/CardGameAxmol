@@ -700,6 +700,57 @@ end
 ed.loadSaveData = loadSaveData
 ed.saveDirty = false
 
+-- 登录后修正任务状态：将进度已满的动态类型任务标记为 finished，合并 _task_finished
+local function fixTaskStateOnLogin()
+    if not ed.player then return end
+    local tt = ed.getDataTable("Task")
+    if not tt then return end
+    local taskList = ed.player:getTaskList()
+    local changed = false
+    for k, v in pairs(taskList) do
+        if v._status == "working" then
+            local row = tt[v._line] and tt[v._line][v._id]
+            if row then
+                local pt = row["Task Progress Type"]
+                local isDynamic = (pt == "CompleteStage" or pt == "PlayerLevel"
+                    or pt == "HeroLevel" or pt == "HeroRank"
+                    or pt == "MultiHeroRank" or pt == "MultiHeroLevel"
+                    or pt == "ItemQuantity")
+                if isDynamic then
+                    local target = row["Task Target"] or 0
+                    local tInfo = { chain = v._line, id = v._id, pid = row["Task Progress ID"], type = pt, count = v._task_target or 0, target = target }
+                    local progress = ed.ui.task and ed.ui.task.getProgress(tInfo) or 0
+                    if progress >= target and target > 0 then
+                        v._status = "finished"
+                        v._task_target = target
+                        changed = true
+                    end
+                end
+            end
+        end
+    end
+    if changed then
+        -- 合并到已有 _task_finished（不覆盖）
+        local tf = {}
+        for _, f in ipairs(ed.player._task_finished or {}) do
+            table.insert(tf, f)
+        end
+        for k, v in pairs(taskList) do
+            if v._status == "finished" then
+                local nextRow = tt[v._line] and tt[v._line][v._id + 1]
+                if not nextRow then
+                    local found = false
+                    for _, f in ipairs(tf) do if f == v._line then found = true; break end end
+                    if not found then table.insert(tf, v._line) end
+                end
+            end
+        end
+        ed.player._task_finished = tf
+        if ed.saveGame then ed.saveGame() end
+    end
+end
+ed.fixTaskStateOnLogin = fixTaskStateOnLogin
+
 -- 定时自动保存（每60秒，仅脏时执行）
 local function startAutoSave()
     local scheduler = ax.Director:getInstance():getScheduler()
@@ -1006,6 +1057,8 @@ for _, mod in ipairs(coreModules) do
                         end
                     end)
                     if not ok_setup then print("[STUB-NET] Player setup error: " .. tostring(err_setup)) end
+                    -- 登录后重建任务状态
+                    pcall(function() ed.fixTaskStateOnLogin() end)
                     -- 登录后重算所有英雄GS（修正旧存档或初始值的GS=0问题）
                     pcall(function()
                         if ed.player and ed.player.heroes and ed.recalcHeroGs then
@@ -2392,6 +2445,8 @@ local function ensureStubsAfterTools()
                         end
                     end)
                     if not ok_s then print("[STUB-NET] player setup err: " .. tostring(err_s)) end
+                    -- 登录后重建任务状态
+                    pcall(function() ed.fixTaskStateOnLogin() end)
                     if ed.setUserid then ed.setUserid(1) end
                     if ed.saveGame then ed.saveGame() end
                     if ed.startAutoSave then ed.startAutoSave() end

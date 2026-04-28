@@ -103,6 +103,8 @@ local DEFAULT_DATA = {
     shop = {
         { id = 1, last_auto_refresh_time = 0, expire_time = 0, last_manual_refresh_time = 0, today_times = 0, goods = {} }
     },
+    task = {},            -- 当前活跃任务 [{chain=N, id=N, status="working"}, ...]
+    task_finished = {},   -- 已完成的任务链ID列表
 }
 
 -----------------------------------------------------------------------
@@ -275,8 +277,21 @@ local function buildUser(localdata)
             for i = 1, 96 do t[i] = 10 end
             return t
         end)(),
-        _task = {},
-        _task_finished = {},
+        _task = (function()
+            local tasks = {}
+            for _, t in ipairs(localdata.task or {}) do
+                if t.status ~= "finished" then
+                    table_insert(tasks, {
+                        _line = t.chain,
+                        _id = t.id,
+                        _status = t.status or "working",
+                        _task_target = t.target or 0,
+                    })
+                end
+            end
+            return tasks
+        end)(),
+        _task_finished = localdata.task_finished or {},
         _last_login = p.last_login or 0,
         _dailyjob = (function()
             local jobs = {}
@@ -1074,6 +1089,23 @@ end
 
 -- ========== trigger_task ==========
 M.handlers.trigger_task = function(data, obj, localdata)
+    -- 解析触发的任务并保存到 localdata
+    if obj and obj._task then
+        local lt = localdata.task or {}
+        for i, packed in ipairs(obj._task) do
+            local chain, id = ed.splitbits(packed, 16, 16)
+            -- 移除该链旧任务
+            for j = #lt, 1, -1 do
+                if lt[j].chain == chain then
+                    table.remove(lt, j)
+                end
+            end
+            -- 添加新任务
+            table_insert(lt, { chain = chain, id = id, status = "working", target = 0 })
+        end
+        localdata.task = lt
+        LocalData.save(localdata)
+    end
     data._trigger_task_reply = {
         _result = { "success" },
     }
@@ -1127,6 +1159,30 @@ M.handlers.require_rewards = function(data, obj, localdata)
             ed.player:addEquip(cId, -cAmount)
         end
     end
+
+    -- 更新 localdata 任务状态
+    local lt = localdata.task or {}
+    for i, t in ipairs(lt) do
+        if t.chain == chain and t.id == id then
+            t.status = "finished"
+            break
+        end
+    end
+    -- 如果是该链最后一个任务，加入 task_finished
+    local taskTable2 = ed.getDataTable("Task")
+    if not taskTable2[chain] or not taskTable2[chain][id + 1] then
+        local tf = localdata.task_finished or {}
+        local alreadyFinished = false
+        for _, v in ipairs(tf) do
+            if v == chain then alreadyFinished = true; break end
+        end
+        if not alreadyFinished then
+            table_insert(tf, chain)
+        end
+        localdata.task_finished = tf
+    end
+    localdata.task = lt
+    LocalData.save(localdata)
 
     data._require_rewards_reply = { _result = "success" }
 end

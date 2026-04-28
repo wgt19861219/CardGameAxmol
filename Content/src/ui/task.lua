@@ -1274,6 +1274,19 @@ local function completeTaskReply(self)
           tl[k]._status = "finished"
         end
       end
+      -- 如果是该链最后一个任务，加入 _task_finished
+      local taskTable = ed.getDataTable("Task")
+      if not taskTable[info.chain] or not taskTable[info.chain][info.id + 1] then
+        local tf = ed.player._task_finished or {}
+        local alreadyAdded = false
+        for _, v in ipairs(tf) do
+          if v == info.chain then alreadyAdded = true; break end
+        end
+        if not alreadyAdded then
+          table.insert(tf, info.chain)
+          ed.player._task_finished = tf
+        end
+      end
       if self.delayTriggerHandler then
         self.delayTriggerHandler()
       end

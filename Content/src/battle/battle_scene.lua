@@ -758,11 +758,11 @@ local insert = table.insert
 local pairs = pairs
 local ipairs = ipairs
 local function update(self, dt)
-	--add by xinghui
-	if class.curSpeedState > 1 then
-		dt = math.min(dt, 0.1) * (class.speedMultiplier[class.curSpeedState] or 1)
-	end
-	--
+		--add by xinghui
+		if class.curSpeedState > 1 then
+			dt = math.min(dt, 0.1) * (class.speedMultiplier[class.curSpeedState] or 1)
+		end
+		--
 	local paused = false
 	for k, v in pairs(self.pause_locks) do
 		paused = paused or v

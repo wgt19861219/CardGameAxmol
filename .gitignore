@@ -3,6 +3,10 @@ build/
 proj.android/app/build/
 proj.android/.gradle/
 proj.android/build/
+proj.android/app/.cxx/
+proj.android/CMakeCache.txt
+proj.android/CMakeFiles/
+proj.android/s
 
 # IDE
 .vs/
@@ -11,6 +15,7 @@ proj.android/build/
 *.suo
 *.sln
 *.vcxproj*
+.claude/
 
 # OS
 .DS_Store
@@ -19,6 +24,11 @@ Thumbs.db
 # Temp
 *.pyc
 __pycache__/
+
+# Signing
+*.jks
+*.keystore
+proj.android/gradle.properties
 ax_debug.txt
 game_stdout.txt
 lua_debug.log
@@ -37,9 +47,22 @@ final_*.png
 # Migration backup
 _migration_backup/
 
-# DLLs and binaries in root
+# Binaries
 *.dll
+*.apk
+*.so
+*.a
 
 # Tools
 tools_external_axslcc/
 axmol/
+
+# Misc temp files
+cardgame_files.txt
+file_type_dist_hc.txt
+hc_file_types.txt
+hc_files.txt
+lua_files_list.txt
+lua_full_paths.txt
+missing_files*.txt
+needload_modules.txt

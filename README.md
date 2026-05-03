@@ -4,7 +4,7 @@
 
 ## 截图
 
-<!-- 截图待添加 -->
+![主界面](docs/screenshots/main_screen.png)
 
 ## 特性
 

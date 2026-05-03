@@ -184,7 +184,6 @@ local function parseAtlasRegions(atlasContent)
 end
 
 local function createStaticSpriteFromSpineAtlas(resource)
-	print('[staticSpine] trying resource=' .. tostring(resource))
 	local atlasPath = 'spine/' .. resource .. '/' .. resource .. '.atlas'
 	local pngPath = 'spine/' .. resource .. '/' .. resource .. '.png'
 	local fu = CCFileUtils:sharedFileUtils()
@@ -198,11 +197,8 @@ local function createStaticSpriteFromSpineAtlas(resource)
 
 	local regions = parseAtlasRegions(atlasContent)
 	if #regions == 0 then
-		print('[staticSpine] no regions parsed')
 		return nil
 	end
-	print('[staticSpine] parsed ' .. #regions .. ' regions')
-
 	local texture = CCTextureCache:sharedTextureCache():addImage(pngPath)
 	if not texture then return nil end
 
@@ -238,7 +234,6 @@ local function createFcaNode(resource, aniType)
 	else
 		LegendSetAniScaleFactor(ed.cha_scale)
 	end
-	print('[resource_manager.lua|createFcaNode] '..resource)
 	local node = nil;
 	if aniType and aniType == Type_Spine then
 		node = ed.createAnimation(resource, 1.0, aniType);

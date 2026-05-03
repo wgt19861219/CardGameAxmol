@@ -251,6 +251,7 @@ local function doImportSave(self)
         end
         ed.showAlertDialog({text = "存档导入成功！"})
         self:destroy()
+        ed.popScene2()
     end)
     if not ok then
         ed.showAlertDialog({text = "导入失败: " .. tostring(err)})

@@ -167,7 +167,7 @@ local function doDragMapTouch(self)
 			gap = 0.6
 			dx = dx + speed * gap / 2
 			self:bgHorizontalScroll(dx, {gap = gap})
-			if ed.debug_mode then
+			if ed.debug_mode and not RELEASE_MODE then
 				if (mapOrix or 0) == map_max_x and dpx and x - dpx > 100 then
 					ed.gggggm()
 				end

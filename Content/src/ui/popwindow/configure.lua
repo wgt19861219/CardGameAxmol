@@ -1823,6 +1823,7 @@ local function doClickImportSave(self)
       ed.saveGame()
     end
     ed.showAlertDialog({text = "存档导入成功！"})
+    ed.popScene2()
   end)
   if not ok then
     ed.showAlertDialog({text = "导入失败: " .. tostring(err)})

@@ -902,7 +902,7 @@ function ed.gggggm()
   require("gmtools/gm")
   ed.pushScene(ed.ui.gm.create())
 end
-if EDFLAGWIN32 then
+if EDFLAGWIN32 and not RELEASE_MODE then
   ed.gm = ed.gggggm
 end
 local function getJson(t, isCheckArray)

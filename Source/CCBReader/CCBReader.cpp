@@ -212,7 +212,8 @@ bool CCBReader::readHeader()
         return false;
 
     // 读取魔术字节 "ccbi"
-    int magicBytes = *((int*)(mBytes + mCurrentByte));
+    int magicBytes;
+    memcpy(&magicBytes, mBytes + mCurrentByte, sizeof(int));
     mCurrentByte += 4;
 
     char magic[5] = {};

@@ -999,23 +999,27 @@ class.onNpcDie = onNpcDie
 
 local function onUnitDie(self, unit, killer_unit)
 	local list = self.alive_units[unit.camp]
-	for i, u in pairs(list) do
-		if u == unit then
+	for i = #list, 1, -1 do
+		if list[i] == unit then
 			table.remove(list, i)
 			break
 		end
 	end
 	list = self.alive_units[ed.emCampBoth]
-	local index
-	for i, u in pairs(list) do
-		if u == unit then
-			index = i
+	local dieHandlers = {}
+	local dieIndex
+	for i = #list, 1, -1 do
+		if list[i] == unit then
+			dieIndex = i
 		else
-			u:handleUnitDieEvent(unit, killer_unit)
+			dieHandlers[#dieHandlers + 1] = list[i]
 		end
 	end
-	if index then
-		table.remove(list, index)
+	if dieIndex then
+		table.remove(list, dieIndex)
+	end
+	for _, u in ipairs(dieHandlers) do
+		u:handleUnitDieEvent(unit, killer_unit)
 	end
 	if killer_unit and killer_unit:isHero() and not unit.config.is_summoned then
 		killer_unit:setMP(killer_unit.mp + 300)
@@ -1088,6 +1092,7 @@ function class:getSelfHeroIdList()
 	if mercenaryInfo then
 		local heros = ed.copyTable(self.hero_id_list)
 		heros[mercenaryInfo.index] = nil
+		return heros
 	else
 		return self.hero_id_list
 	end

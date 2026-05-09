@@ -274,7 +274,7 @@ local function createPauseLayer(self)
 			self.pauseLayerButton[key]:setVisible(true)
 			self.pauseLayerButtonPress[key]:setVisible(false)
 			ed.setString(self.pauseLayerButtonLabel[key], ed.getSoundSwitch() and T(LSTR("BATTLE_SCENE.SOUND__ON")) or T(LSTR("BATTLE_SCENE.SOUND__OFF")))
-			if not ed.getSoundSwitch then
+			if not ed.getSoundSwitch() then
 				ed.stopAllEffects()
 			end
 		end, EDDebug)

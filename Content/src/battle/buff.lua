@@ -36,7 +36,9 @@ local function update(self, dt)
 	if hpr < 0 then
 		local damage = min(-hpr, self.owner.hp)
 		damage = damage * self.owner.dPSStatisticsRatio
-		self.caster.dmg_statistics = self.caster.dmg_statistics + damage
+		if self.caster then
+			self.caster.dmg_statistics = self.caster.dmg_statistics + damage
+		end
 	end
 	if self.timer then
 		self.timer = self.timer - dt

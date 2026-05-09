@@ -1,94 +1,96 @@
 local class = newclass()
 ed.scrollview = class
-local widthOffset, heightOffset, cliprect, shaderect, noshade, container, zorder, priority, direction, useBar, barPosition, barLenOffset, barPosOffset, initHandler, pageSize, rowCount, columnCount, pageCount, pageSequence, oriPosition, itemSize, ox, oy, dx, dy, doPressIn, cancelPressIn, doClickIn, cancelClickIn, xMax, yMax, items
 local function create(param)
   local self = {}
   setmetatable(self, class.mt)
   param = param or {}
-  widthOffset = param.widthOffset or 0
-  heightOffset = param.heightOffset or 0
-  cliprect = param.cliprect
-  noshade = param.noshade
-  shaderect = param.shaderect
-  container = param.container
-  zorder = param.zorder
-  priority = param.priority
-  direction = param.direction or "v"
-  barThick = param.barThick
-  barPosition = param.barPosition
-  barLenOffset = param.barLenOffset or 0
-  barPosOffset = param.barPosOffset or ccp(0, 0)
-  useBar = param.useBar
-  initHandler = param.initHandler
-  pageSize = param.pageSize or CCSizeMake(1, 1)
-  rowCount = pageSize.width
-  rowCount = math.max(rowCount, 1)
-  columnCount = pageSize.height
-  columnCount = math.max(columnCount, 1)
-  pageCount = rowCount * columnCount
-  pageSequence = param.pageSequence
-  oriPosition = param.oriPosition or ccp(0, 0)
-  itemSize = param.itemSize or CCSizeMake(0, 0)
-  ox, oy = oriPosition.x, oriPosition.y
-  dx, dy = itemSize.width, itemSize.height
-  doPressIn = param.doPressIn
-  cancelPressIn = param.cancelPressIn
-  doClickIn = param.doClickIn
-  cancelClickIn = param.cancelClickIn
-  xMax, yMax = 0, 0
-  items = {}
-  self.items = items
+  self._widthOffset = param.widthOffset or 0
+  self._heightOffset = param.heightOffset or 0
+  self._cliprect = param.cliprect
+  self._noshade = param.noshade
+  self._shaderect = param.shaderect
+  self._container = param.container
+  self._zorder = param.zorder
+  self._priority = param.priority
+  self._direction = param.direction or "v"
+  self._barThick = param.barThick
+  self._barPosition = param.barPosition
+  self._barLenOffset = param.barLenOffset or 0
+  self._barPosOffset = param.barPosOffset or ccp(0, 0)
+  self._useBar = param.useBar
+  self._initHandler = param.initHandler
+  self._pageSize = param.pageSize or CCSizeMake(1, 1)
+  self._rowCount = self._pageSize.width
+  self._rowCount = math.max(self._rowCount, 1)
+  self._columnCount = self._pageSize.height
+  self._columnCount = math.max(self._columnCount, 1)
+  self._pageCount = self._rowCount * self._columnCount
+  self._pageSequence = param.pageSequence
+  self._oriPosition = param.oriPosition or ccp(0, 0)
+  self._itemSize = param.itemSize or CCSizeMake(0, 0)
+  self._ox = self._oriPosition.x
+  self._oy = self._oriPosition.y
+  self._dx = self._itemSize.width
+  self._dy = self._itemSize.height
+  self._doPressIn = param.doPressIn
+  self._cancelPressIn = param.cancelPressIn
+  self._doClickIn = param.doClickIn
+  self._cancelClickIn = param.cancelClickIn
+  self._xMax = 0
+  self._yMax = 0
+  self._items = {}
+  self.items = self._items
   local info = {}
-  info.cliprect = cliprect
-  info.rect = shaderect
-  info.noshade = noshade
-  info.zorder = zorder
-  info.container = container
-  info.priority = priority
-  if useBar then
+  info.cliprect = self._cliprect
+  info.rect = self._shaderect
+  info.noshade = self._noshade
+  info.zorder = self._zorder
+  info.container = self._container
+  info.priority = self._priority
+  if self._useBar then
     info.bar = self:initBar()
-    info.bar.barthick = barThick
+    info.bar.barthick = self._barThick
   end
-  info.doPressIn = doPressIn
-  info.cancelPressIn = cancelPressIn
-  info.doClickIn = doClickIn
-  info.cancelClickIn = cancelClickIn
+  info.doPressIn = self._doPressIn
+  info.cancelPressIn = self._cancelPressIn
+  info.doClickIn = self._doClickIn
+  info.cancelClickIn = self._cancelClickIn
   self.draglist = ed.draglist.create(info)
   return self
 end
 class.create = create
 local function initBar(self)
-  local origin = cliprect.origin
-  local size = cliprect.size
+  local origin = self._cliprect.origin
+  local size = self._cliprect.size
   local x, y = origin.x, origin.y
   local w, h = size.width, size.height
   local len, pos
-  if direction == "v" then
-    len = h - 10 + barLenOffset
-    if barPosition == "left" then
-      pos = ccpAdd(barPosOffset, ccp(x, y + h / 2))
+  if self._direction == "v" then
+    len = h - 10 + self._barLenOffset
+    if self._barPosition == "left" then
+      pos = ccpAdd(self._barPosOffset, ccp(x, y + h / 2))
     else
-      pos = ccpAdd(barPosOffset, ccp(x + w, y + h / 2))
+      pos = ccpAdd(self._barPosOffset, ccp(x + w, y + h / 2))
     end
   else
-    len = w - 10 + barLenOffset
-    if barPosition == "top" then
-      pos = ccpAdd(barPosOffset, ccp(x + w / 2, y + h))
+    len = w - 10 + self._barLenOffset
+    if self._barPosition == "top" then
+      pos = ccpAdd(self._barPosOffset, ccp(x + w / 2, y + h))
     else
-      pos = ccpAdd(barPosOffset, ccp(x + w / 2, y))
+      pos = ccpAdd(self._barPosOffset, ccp(x + w / 2, y))
     end
   end
   return {bglen = len, bgpos = pos}
 end
 class.initBar = initBar
 local function getItemXY(self, index)
-  local xc = rowCount
-  local yc = columnCount
-  local tc = pageCount
+  local xc = self._rowCount
+  local yc = self._columnCount
+  local tc = self._pageCount
   local seq
   local x, y = 1, 1
-  if direction == "v" then
-    seq = pageSequence or "hv"
+  if self._direction == "v" then
+    seq = self._pageSequence or "hv"
     if seq == "hv" then
       x = (index - 1) % xc
       x = math.max(x, 0)
@@ -100,7 +102,7 @@ local function getItemXY(self, index)
       y = math.floor((index - 1) / tc) * yc + math.ceil(math.max((index - 1) % tc, 0) % yc)
     end
   else
-    seq = pageSequence or "vh"
+    seq = self._pageSequence or "vh"
     if seq == "vh" then
       x = math.floor((index - 1) / yc)
       x = math.max(x, 0)
@@ -112,21 +114,21 @@ local function getItemXY(self, index)
       y = math.max(y, 0)
     end
   end
-  xMax = math.max(x, xMax)
-  yMax = math.max(y, yMax)
+  self._xMax = math.max(x, self._xMax)
+  self._yMax = math.max(y, self._yMax)
   return x, y
 end
 class.getItemXY = getItemXY
 local function getItemPos(self, index)
   local x, y = self:getItemXY(index)
-  local px = ox + dx * x
-  local py = oy - dy * y
+  local px = self._ox + self._dx * x
+  local py = self._oy - self._dy * y
   return ccp(px, py)
 end
 class.getItemPos = getItemPos
 local function push(self, param)
   param = param or {}
-  local index = #items + 1
+  local index = #self._items + 1
   local container = CCSprite:create()
   container:setCascadeOpacityEnabled(true)
   container:setAnchorPoint(ccp(0, 0))
@@ -135,10 +137,10 @@ local function push(self, param)
   param.container = container
   local item = {
     container = container,
-    ui = initHandler(param),
+    ui = self._initHandler(param),
     param = param
   }
-  table.insert(items, item)
+  table.insert(self._items, item)
   self:refreshSize()
 end
 class.push = push
@@ -159,24 +161,24 @@ local function add(self, param, noRefresh)
   param.container = container
   local item = {
     container = container,
-    ui = initHandler(param),
+    ui = self._initHandler(param),
     param = param
   }
-  table.insert(items, item)
+  table.insert(self._items, item)
   if not noRefresh then
     self:refresh()
   end
 end
 class.add = add
 local function remove(self, index)
-  table.remove(items, index)
+  table.remove(self._items, index)
   self:refresh()
 end
 class.remove = remove
 local function refresh(self)
   self:order()
-  for i = 1, #items do
-    local container = items[i].container
+  for i = 1, #self._items do
+    local container = self._items[i].container
     local pos = self:getItemPos(i)
     container:setPosition(pos)
   end
@@ -184,20 +186,20 @@ local function refresh(self)
 end
 class.refresh = refresh
 local function refreshSize(self)
-  if direction == "v" then
-    self.draglist:initListHeight(dy * (yMax + 1) + heightOffset, false)
-  elseif direction == "h" then
-    self.draglist:initListWidth(dx * (xMax + 1) + widthOffset, false)
+  if self._direction == "v" then
+    self.draglist:initListHeight(self._dy * (self._yMax + 1) + self._heightOffset, false)
+  elseif self._direction == "h" then
+    self.draglist:initListWidth(self._dx * (self._xMax + 1) + self._widthOffset, false)
   end
 end
 class.refreshSize = refreshSize
 local function order(self)
-  for i = 1, #items do
+  for i = 1, #self._items do
     for j = i, 2, -1 do
-      if (items[j].param.index or 0) < (items[i].param.index or 0) then
-        local temp = items[i]
-        items[i] = items[j]
-        items[j] = temp
+      if (self._items[j].param.index or 0) < (self._items[i].param.index or 0) then
+        local temp = self._items[i]
+        self._items[i] = self._items[j]
+        self._items[j] = temp
       end
     end
   end
@@ -211,8 +213,8 @@ local function move2end(self, duration, callback)
     end
     return
   end
-  local ch = cliprect.size.height
-  local lh = dy * (yMax + 1) + heightOffset
+  local ch = self._cliprect.size.height
+  local lh = self._dy * (self._yMax + 1) + self._heightOffset
   if ch < lh then
     self.draglist.listLayer:stopAllActions()
     local pos = ccp(0, lh - ch)

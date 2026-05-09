@@ -125,7 +125,8 @@ static bool extractFromMemoryZip(const unsigned char* zipData, size_t zipSize,
                 const unsigned char* scan = dataStart;
                 while (scan + 4 <= end)
                 {
-                    uint32_t sig = *reinterpret_cast<const uint32_t*>(scan);
+                    uint32_t sig;
+                    memcpy(&sig, scan, sizeof(uint32_t));
                     if (sig == 0x04034b50 || sig == 0x02014b50 || sig == 0x06054b50)
                         break;
                     scan++;
@@ -502,7 +503,9 @@ void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned
             {
                 LegendAnimationFrameElement& felem = frame.elements[k];
                 if (data + 3 > s_pdataEnd) break;
-                felem.index = *(unsigned short*)data;
+                unsigned short idx;
+                memcpy(&idx, data, sizeof(unsigned short));
+                felem.index = idx;
                 data += 2;
                 felem.alpha = *data;
                 data += 1;

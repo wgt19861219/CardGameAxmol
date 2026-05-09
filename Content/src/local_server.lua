@@ -129,6 +129,7 @@ function LocalData.save(data)
     local ok, str = pcall(json.encode, data)
     if ok and str then
         ud:setStringForKey(SAVE_KEY, str)
+        ud:flush()
     end
 end
 
@@ -591,6 +592,12 @@ M.handlers.hero_upgrade = function(data, obj, localdata)
         local newRank = (hero._rank or 1) + 1
         local gs = hero._gs or 0
 
+        -- 同步更新 localdata
+        local lh = findHero(localdata, tid)
+        if lh then
+            lh.rank = newRank
+        end
+
         data._hero_upgrade_reply = {
             _result = "success",
             _hero = {
@@ -623,6 +630,12 @@ M.handlers.hero_evolve = function(data, obj, localdata)
         -- 已有英雄：进化（星星+1）
         local newStars = (hero._stars or 1) + 1
         local gs = hero._gs or 0
+
+        -- 同步更新 localdata
+        local lh = findHero(localdata, tid)
+        if lh then
+            lh.stars = newStars
+        end
 
         data._hero_evolve_reply = {
             _result = "success",
@@ -659,6 +672,22 @@ M.handlers.hero_evolve = function(data, obj, localdata)
                 end
             end
         end)
+
+        -- 添加新英雄到 localdata
+        if localdata.heroes then
+            table.insert(localdata.heroes, {
+                tid = tid,
+                rank = initRank,
+                level = 1,
+                stars = initStars,
+                exp = 0,
+                gs = 5,
+                state = "idle",
+                skill_levels = skill_levels,
+                items = items,
+            })
+        end
+
         data._hero_evolve_reply = {
             _result = "success",
             _hero = {

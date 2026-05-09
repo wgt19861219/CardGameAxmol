@@ -65,10 +65,14 @@ function Event:Fire(...)
   if not self:Check(...) then
     return false
   end
+  local snapshot = {}
   for responser in ilist(self.Responsers) do
     if responser ~= nil then
-      responser.Fire(responser, self.ExtraData, ...)
+      snapshot[#snapshot + 1] = responser
     end
+  end
+  for _, responser in ipairs(snapshot) do
+    responser.Fire(responser, self.ExtraData, ...)
   end
   return true
 end
@@ -96,16 +100,20 @@ function Event:UnbindTrigger(func)
   end
 end
 function Event:Check(...)
+  local snapshot = {}
   for trigger in ilist(self.Triggers) do
     if trigger ~= nil then
-      local bOk, bResult = pcall(trigger.Check, trigger, self, ...)
-      if not bOk then
-        self:Error("Trigger", bResult)
-        return false
-      end
-      if not bResult then
-        return false
-      end
+      snapshot[#snapshot + 1] = trigger
+    end
+  end
+  for _, trigger in ipairs(snapshot) do
+    local bOk, bResult = pcall(trigger.Check, trigger, self, ...)
+    if not bOk then
+      self:Error("Trigger", bResult)
+      return false
+    end
+    if not bResult then
+      return false
     end
   end
   return true

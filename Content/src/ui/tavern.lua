@@ -72,7 +72,7 @@ local function doTavern(self, box, times)
 
   local cost = times == "one" and (isFree and 0 or self:getCost(box, times)) or self:getCost(box, times)
   if box == "magic" then
-      cost = (isFree and 0 or self:getCost(box, times)) or self:getC6ost(box, times)
+      cost = (isFree and 0 or self:getCost(box, times)) or self:getCost(box, times)
   end
   LegendLog("[TAVERN] cost=" .. tostring(cost) .. " type=" .. type(cost))
 

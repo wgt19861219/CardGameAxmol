@@ -92,7 +92,7 @@ function class:registerOnPopSceneHandler(key, handler)
   end, EDDebug)
 end
 function class:clearOnPopSceneHandler()
-  self.onExitHandlerList = nil
+  self.onPopSceneHandlerList = nil
 end
 function class:OnPopScene()
   xpcall(function()

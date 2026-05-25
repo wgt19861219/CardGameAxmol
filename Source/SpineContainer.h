@@ -100,4 +100,5 @@ protected:
     int _curSoundId;
     bool _isSoundPlay;
     int m_iCurrEffectTag;
+    bool _isDestroying = false;
 };

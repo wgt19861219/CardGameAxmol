@@ -12,34 +12,33 @@ std::unordered_map<std::string, LegendAnimationFileInfo*> LegendAnimationFileInf
 float LegendAnimationFileInfo::s_currentScaleFactor = 1.0f;
 
 // ---- Binary reader helpers ----
-static unsigned char* s_pdataEnd = nullptr;
 
-static void readInt(unsigned char*& data, unsigned int& out)
+static void readInt(unsigned char*& data, unsigned char* dataEnd, unsigned int& out)
 {
-    if (data + sizeof(unsigned int) > s_pdataEnd) { out = 0; return; }
+    if (data + sizeof(unsigned int) > dataEnd) { out = 0; return; }
     memcpy(&out, data, sizeof(unsigned int));
     data += sizeof(unsigned int);
 }
 
-static void readFloat(unsigned char*& data, float& out)
+static void readFloat(unsigned char*& data, unsigned char* dataEnd, float& out)
 {
-    if (data + sizeof(float) > s_pdataEnd) { out = 0; return; }
+    if (data + sizeof(float) > dataEnd) { out = 0; return; }
     memcpy(&out, data, sizeof(float));
     data += sizeof(float);
 }
 
-static void readString(unsigned char*& data, std::string& out)
+static void readString(unsigned char*& data, unsigned char* dataEnd, std::string& out)
 {
     unsigned int sz = 0;
-    readInt(data, sz);
-    if (data + sz > s_pdataEnd) { out.clear(); return; }
+    readInt(data, dataEnd, sz);
+    if (data + sz > dataEnd) { out.clear(); return; }
     out.assign((char*)data, sz);
     data += sz;
 }
 
-static void readAffineTransform(unsigned char*& data, AffineTransform& out)
+static void readAffineTransform(unsigned char*& data, unsigned char* dataEnd, AffineTransform& out)
 {
-    if (data + sizeof(AffineTransform) > s_pdataEnd) { out = {1,0,0,1,0,0}; return; }
+    if (data + sizeof(AffineTransform) > dataEnd) { out = {1,0,0,1,0,0}; return; }
     memcpy(&out, data, sizeof(AffineTransform));
     data += sizeof(AffineTransform);
 }
@@ -432,22 +431,22 @@ void LegendAnimationFileInfo::parsePlistAndCreateFrames(const std::vector<unsign
 
 void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned char* data, unsigned long dataSize)
 {
-    s_pdataEnd = data + dataSize;
+    unsigned char* dataEnd = data + dataSize;
     float factor = 1.0f / info->_scalefactor;
 
-    readString(data, info->_name);
+    readString(data, dataEnd, info->_name);
 
     // Read elements
     unsigned int elementCount = 0;
-    readInt(data, elementCount);
+    readInt(data, dataEnd, elementCount);
     info->_elements.resize(elementCount);
 
     for (unsigned int i = 0; i < elementCount; i++)
     {
         LegendAnimationElement& ele = info->_elements[i];
-        readString(data, ele.layerName);
-        readString(data, ele.resouceName);
-        readInt(data, ele.index);
+        readString(data, dataEnd, ele.layerName);
+        readString(data, dataEnd, ele.resouceName);
+        readInt(data, dataEnd, ele.index);
 
         SpriteFrame* frame = info->getSpriteFrame(ele.resouceName.c_str());
         if (frame)
@@ -459,17 +458,17 @@ void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned
 
     // Read actions
     unsigned int actionCount = 0;
-    readInt(data, actionCount);
+    readInt(data, dataEnd, actionCount);
     info->_actions.resize(actionCount);
 
     for (unsigned int i = 0; i < actionCount; i++)
     {
         LegendAnimationAction& action = info->_actions[i];
-        readString(data, action.name);
-        readFloat(data, action.fps);
+        readString(data, dataEnd, action.name);
+        readFloat(data, dataEnd, action.fps);
 
         unsigned int frameCount = 0;
-        readInt(data, frameCount);
+        readInt(data, dataEnd, frameCount);
         action.frames.resize(frameCount);
 
         for (unsigned int j = 0; j < frameCount; j++)
@@ -478,38 +477,38 @@ void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned
 
             // Events
             unsigned int eventCount = 0;
-            readInt(data, eventCount);
+            readInt(data, dataEnd, eventCount);
             frame.events.resize(eventCount);
 
             for (unsigned int k = 0; k < eventCount; k++)
             {
                 LegendAnimationEvent& evt = frame.events[k];
-                readInt(data, evt.type);
-                readString(data, evt.arg);
-                readFloat(data, evt.x1);
-                readFloat(data, evt.x2);
-                readAffineTransform(data, evt.transform);
+                readInt(data, dataEnd, evt.type);
+                readString(data, dataEnd, evt.arg);
+                readFloat(data, dataEnd, evt.x1);
+                readFloat(data, dataEnd, evt.x2);
+                readAffineTransform(data, dataEnd, evt.transform);
                 unsigned int z;
-                readInt(data, z);
+                readInt(data, dataEnd, z);
                 evt.zorder = (int)z;
             }
 
             // Frame elements
             unsigned int felemCount = 0;
-            readInt(data, felemCount);
+            readInt(data, dataEnd, felemCount);
             frame.elements.resize(felemCount);
 
             for (unsigned int k = 0; k < felemCount; k++)
             {
                 LegendAnimationFrameElement& felem = frame.elements[k];
-                if (data + 3 > s_pdataEnd) break;
+                if (data + 3 > dataEnd) break;
                 unsigned short idx;
                 memcpy(&idx, data, sizeof(unsigned short));
                 felem.index = idx;
                 data += 2;
                 felem.alpha = *data;
                 data += 1;
-                readAffineTransform(data, felem.transform);
+                readAffineTransform(data, dataEnd, felem.transform);
 
                 // Transform adjustment (matches original engine)
                 if (felem.index > 0 && felem.index <= info->_elements.size())
@@ -523,23 +522,15 @@ void LegendAnimationFileInfo::readFrames(LegendAnimationFileInfo* info, unsigned
                     float dstTX = (dstC * fheight * 0.5f - dstA * 0.5f * fwidth) + felem.transform.tx;
                     float dstTY = (dstD * -0.5f * fheight + dstB * 0.5f * fwidth) - felem.transform.ty;
                     felem.transform = AffineTransformMake(dstA, -dstB, -dstC, dstD, dstTX, dstTY);
-
-                    // DIAG: 只打印第一个动作前3帧的第一个元素
-                    if (i == 0 && j < 3 && k == 0) {
-                        AXLOGW("DIAG readFrames: ani={} action={} frame={} idx={} factor={:.4f}",
-                               info->_name, action.name, j, felem.index, factor);
-                        AXLOGW("DIAG readFrames: final a={:.4f} b={:.4f} c={:.4f} d={:.4f} tx={:.2f} ty={:.2f} w={:.0f} h={:.0f}",
-                               dstA, -dstB, -dstC, dstD, dstTX, dstTY, fwidth, fheight);
-                    }
                 }
             }
         }
     }
 
-    if (s_pdataEnd != data)
+    if (dataEnd != data)
     {
         AXLOGW("LegendAnimationFileInfo: readFrames size mismatch for {}, remaining {} bytes",
-               info->_name, (int)(s_pdataEnd - data));
+               info->_name, (int)(dataEnd - data));
     }
 }
 

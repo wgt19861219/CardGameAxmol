@@ -20,6 +20,8 @@ SpineContainer::SpineContainer()
 
 SpineContainer::~SpineContainer()
 {
+    _isDestroying = true;
+    clearTracks();
     m_mapTrack.clear();
 }
 
@@ -89,20 +91,25 @@ void SpineContainer::runAnimation(int trackIndex, const char* name, int loopTime
     if (aniEntry)
     {
         // Axmol Spine 使用 std::function 回调，而非 selector
+        // 使用 weak 引用守卫：析构时 clearTracks() 会先清除回调
         setTrackStartListener(aniEntry, [this](spine::TrackEntry* entry) {
+            if (_isDestroying) return;
             onReceiveStartEventListener(entry->getTrackIndex(),
                 entry->getAnimation() ? entry->getAnimation()->getName().buffer() : "");
         });
         setTrackEndListener(aniEntry, [this](spine::TrackEntry* entry) {
+            if (_isDestroying) return;
             onReceiveEndEventListener(entry->getTrackIndex(),
                 entry->getAnimation() ? entry->getAnimation()->getName().buffer() : "");
         });
         setTrackCompleteListener(aniEntry, [this](spine::TrackEntry* entry) {
+            if (_isDestroying) return;
             onReceiveCompleteEventListener(entry->getTrackIndex(),
                 entry->getAnimation() ? entry->getAnimation()->getName().buffer() : "",
                 0);
         });
         setTrackEventListener(aniEntry, [this](spine::TrackEntry* entry, spine::Event* event) {
+            if (_isDestroying) return;
             onReceiveEventListener(entry->getTrackIndex(),
                 entry->getAnimation() ? entry->getAnimation()->getName().buffer() : "",
                 event);

@@ -248,6 +248,3 @@ ed.needLoadFiles = {
 	"ui/uieditor/fbattinfo",
 	"ui/uieditor/appremarkinfo"
 }
-if LegendPlatformFLAG==ed.PlatformCode.CC_PLATFORM_IOS then
-	table.insert(ed.needLoadFiles, "util/smtplog")
-end

@@ -230,10 +230,10 @@ function decode_scanNumber(s,startPos)
 	) do
     endPos = endPos + 1
   end
-  local stringValue = 'return ' .. string.sub(s,startPos, endPos-1)
-  local stringEval = base.loadstring(stringValue)
-  base.assert(stringEval, 'Failed to scan number [ ' .. stringValue .. '] in JSON string at position ' .. startPos .. ' : ' .. endPos)
-  return stringEval(), endPos
+  local numberStr = string.sub(s, startPos, endPos - 1)
+  local numberVal = tonumber(numberStr)
+  base.assert(numberVal, 'Failed to scan number [ ' .. numberStr .. '] in JSON string at position ' .. startPos .. ' : ' .. endPos)
+  return numberVal, endPos
 end
 
 --- Scans a JSON object into a Lua object.
@@ -303,10 +303,21 @@ function decode_scanString(s,startPos)
     endPos = endPos + 1
     base.assert(endPos <= stringLen+1, "String decoding failed: unterminated string at position " .. endPos)
   until bEnded
-  local stringValue = 'return ' .. string.sub(s, startPos, endPos-1)
-  local stringEval = base.loadstring(stringValue)
-  base.assert(stringEval, 'Failed to load string [ ' .. stringValue .. '] in JSON4Lua.decode_scanString at position ' .. startPos .. ' : ' .. endPos)
-  return stringEval(), endPos  
+  local rawStr = string.sub(s, startPos + 1, endPos - 2)
+  local stringValue = rawStr:gsub('\\(.)', function(c)
+    if c == 'n' then return '\n'
+    elseif c == 't' then return '\t'
+    elseif c == 'r' then return '\r'
+    elseif c == '"' then return '"'
+    elseif c == "'" then return "'"
+    elseif c == '\\' then return '\\'
+    elseif c == '/' then return '/'
+    elseif c == 'b' then return '\b'
+    elseif c == 'f' then return '\f'
+    else return '\\' .. c
+    end
+  end)
+  return stringValue, endPos  
 end
 
 --- Scans a JSON string skipping all whitespace from the current start position.

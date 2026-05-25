@@ -5,26 +5,32 @@
 
 require "config"
 
--- 将 Lua print 输出同时写入 ax_debug.txt（与 C++ dbg() 共享日志文件）
-do
-    local _logFile = io.open("lua_debug.log", "w")
-    if _logFile then
-        local _origPrint = print
-        rawset(_G, "print", function(...)
-            if _origPrint then pcall(_origPrint, ...) end
-            local args = { ... }
-            local line = ""
-            for i, v in ipairs(args) do
-                if i > 1 then line = line .. "\t" end
-                line = line .. tostring(v)
-            end
-            _logFile:write("[LUA] " .. line .. "\n")
+-- 将 Lua print 输出同时写入 lua_debug.log
+local _logFile = io.open("lua_debug.log", "w")
+if _logFile then
+    local _origPrint = print
+    local _lastFlush = 0
+    rawset(_G, "print", function(...)
+        if _origPrint then pcall(_origPrint, ...) end
+        local args = { ... }
+        local line = ""
+        for i, v in ipairs(args) do
+            if i > 1 then line = line .. "\t" end
+            line = line .. tostring(v)
+        end
+        _logFile:write("[LUA] " .. line .. "\n")
+        local now = os.clock()
+        if now - _lastFlush > 1.0 then
             _logFile:flush()
-        end)
-        _logFile:write("[LUA] === lua_debug.log opened ===\n")
-        _logFile:flush()
-    end
+            _lastFlush = now
+        end
+    end)
+    _logFile:write("[LUA] === lua_debug.log opened ===\n")
+    _logFile:flush()
 end
+rawset(_G, "_closeLogFile", function()
+    if _logFile then _logFile:close(); _logFile = nil end
+end)
 print("[MAIN] Lua print redirected, loading modules...")
 
 -----------------------------------------------------------------
@@ -1135,168 +1141,12 @@ for _, mod in ipairs(coreModules) do
                     doLoginReply()
                 end
             elseif msgType == "tavern_draw" then
-                LegendLog("[STUB-NET] tavern_draw: handling directly")
-                local drawType = obj._draw_type or 0
-                local boxType = obj._box_type or 1
-                local drawCount = drawType == 1 and 10 or 1
-
-                -- 品质上限: bronze=3, gold/magic=4+
-                local maxQuality = 3
-                if boxType >= 3 then maxQuality = 6 end
-
-                -- 识别灵魂石和装备（只收集英雄碎片，过滤非英雄条目）
-                local soulStoneIds = {}
-                local normalEquips = {}
+                LegendLog("[STUB-NET] tavern_draw: delegating to local_server")
                 pcall(function()
-                    local fragTable = ed.getDataTable("fragment")
-                    local unitTable = ed.getDataTable("Unit")
-                    if fragTable then
-                        for fid, frow in pairs(fragTable) do
-                            if type(fid) == "number" and frow["Fragment ID"] then
-                                -- 只将实际英雄的碎片加入灵魂石池
-                                local isHero = unitTable and unitTable[fid]
-                                    and unitTable[fid]["Unit Type"] == "Hero"
-                                if isHero then
-                                    soulStoneIds[frow["Fragment ID"]] = true
-                                end
-                            end
-                        end
-                    end
-                    local equipTable = ed.getDataTable("equip")
-                    if equipTable then
-                        for eid, row in pairs(equipTable) do
-                            if type(eid) == "number" and eid > 0 and row.Quality then
-                                if not soulStoneIds[eid] and row.Quality <= maxQuality then
-                                    normalEquips[row.Quality] = normalEquips[row.Quality] or {}
-                                    table.insert(normalEquips[row.Quality], eid)
-                                end
-                            end
-                        end
+                    if local_server and local_server.handle then
+                        local_server.handle("tavern_draw", obj)
                     end
                 end)
-
-                -- 收集英雄→灵魂石映射（用于掉落完整英雄）
-                local heroSummonList = {}
-                pcall(function()
-                    local unitTable = ed.getDataTable("Unit")
-                    local fragTable = ed.getDataTable("fragment")
-                    local heroStars = ed.getDataTable("HeroStars")
-                    if not unitTable or not fragTable or not heroStars then return end
-                    for tid, unit in pairs(unitTable) do
-                        if type(tid) == "number" and tid > 0 and tid < 100
-                            and unit["Unit Type"] == "Hero" and unit.Portrait then
-                            local frag = fragTable[tid]
-                            if frag then
-                                local stoneId = frag["Fragment ID"]
-                                local initStars = unit["Initial Stars"] or 1
-                                local convertAmount = (heroStars[initStars] or {})["Convert Fragments"] or 80
-                                if stoneId then
-                                    table.insert(heroSummonList, { stoneId = stoneId, heroId = tid, amount = convertAmount })
-                                end
-                            end
-                        end
-                    end
-                end)
-
-                local soulStoneList = {}
-                for sid, _ in pairs(soulStoneIds) do table.insert(soulStoneList, sid) end
-
-                -- 生成掉落
-                local loot = {}
-                local function pickEquip(maxQ)
-                    for q = maxQ, 1, -1 do
-                        local pool = normalEquips[q]
-                        if pool and #pool > 0 then return pool[math.random(1, #pool)] end
-                    end
-                    return math.random(100, 120)
-                end
-
-                local heroChance = boxType >= 3 and 8 or 0
-                local soulChance = boxType >= 3 and 12 or 10
-
-                for i = 1, drawCount do
-                    local q = 1
-                    local r = math.random(1, 100)
-                    if boxType >= 3 then
-                        if r <= 1 then q = 6
-                        elseif r <= 5 then q = 5
-                        elseif r <= 15 then q = 4
-                        elseif r <= 35 then q = 3
-                        elseif r <= 65 then q = 2
-                        else q = 1 end
-                    else
-                        if r <= 25 then q = 3
-                        elseif r <= 60 then q = 2
-                        else q = 1 end
-                    end
-
-                    local roll = math.random(1, 100)
-                    if roll <= heroChance and #heroSummonList > 0 then
-                        local entry = heroSummonList[math.random(1, #heroSummonList)]
-                        table.insert(loot, ed.makebits(11, entry.amount, 10, entry.stoneId))
-                    elseif roll <= heroChance + soulChance and #soulStoneList > 0 then
-                        local sid = soulStoneList[math.random(1, #soulStoneList)]
-                        table.insert(loot, ed.makebits(11, math.random(1, 3), 10, sid))
-                    else
-                        local equipId = pickEquip(q)
-                        table.insert(loot, ed.makebits(11, math.random(1, 3), 10, equipId))
-                    end
-                end
-
-                -- 处理掉落物品
-                for k, v in pairs(loot) do
-                    pcall(function()
-                        local id = ed.bits(v, 0, 10)
-                        local amount = ed.bits(v, 10, 11)
-                        local it = ed.itemType(id)
-                        if it == "hero" then
-                            LegendLog("[TAVERN] hero direct: id=" .. id .. " amount=" .. amount)
-                            addHeroWithLevel(id)
-                        elseif it == "equip" then
-                            local mhid = ed.readhero and ed.readhero.getMakeid(id)
-                            if mhid and ed.itemType(mhid) == "hero" then
-                                if ed.player and ed.player.heroes and ed.player.heroes[mhid] then
-                                    LegendLog("[TAVERN] fragment→equip: frag=" .. id .. " hero=" .. mhid .. " amount=" .. amount)
-                                    if ed.player.addEquip then ed.player:addEquip(id, amount) end
-                                else
-                                    LegendLog("[TAVERN] fragment→hero: frag=" .. id .. " hero=" .. mhid)
-                                    addHeroWithLevel(mhid)
-                                end
-                            else
-                                LegendLog("[TAVERN] equip: id=" .. id .. " amount=" .. amount)
-                                if ed.player and ed.player.addEquip then ed.player:addEquip(id, amount) end
-                            end
-                        end
-                    end)
-                end
-                -- 扣费
-                pcall(function()
-                    local nd = ed.netdata
-                    if nd and nd.tavern and nd.tavern.type ~= "stone" then
-                        local td = nd.tavern
-                        if not td.isFree then
-                            local pay = td.cost and td.cost.pay
-                            local number = td.cost and td.cost.number or 0
-                            if pay == "Gold" then
-                                ed.player._money = (ed.player._money or 0) - number
-                            elseif pay == "Diamond" then
-                                ed.player._rmb = (ed.player._rmb or 0) - number
-                            end
-                        end
-                        nd.tavern = nil
-                    end
-                end)
-                LegendLog("[STUB-NET] tavern_draw: loot_count=" .. tostring(#loot) .. ", calling netreply.tavern")
-                local handler = ed.netreply and ed.netreply.tavern
-                if handler then
-                    local ok, err = pcall(handler, loot)
-                    if not ok then
-                        LegendLog("[STUB-NET] tavern callback ERROR: " .. tostring(err))
-                    end
-                    ed.netreply.tavern = nil
-                else
-                    LegendLog("[STUB-NET] WARNING: no tavern callback registered!")
-                end
             elseif msgType == "ask_magicsoul" then
                 -- 魂匣英雄列表：返回随机英雄ID
                 LegendLog("[STUB-NET] ask_magicsoul: handling directly")
@@ -2471,42 +2321,13 @@ local function ensureStubsAfterTools()
                     doLoginReply()
                 end
             elseif msgType == "tavern_draw" then
-                LegendLog("[ENSURE-SEND] tavern_draw: handling directly")
-                local drawType = obj._draw_type or 0
-                local drawCount = drawType == 1 and 10 or 1
-                local loot = {}
-                for i = 1, drawCount do
-                    local equipId = math.random(100, 120)
-                    table.insert(loot, ed.makebits(11, 1, 10, equipId))
-                end
-                if math.random(1, 10) <= 3 then
-                    table.insert(loot, ed.makebits(11, math.random(1, 3), 10, math.random(1, 5)))
-                end
-                -- 扣费
+                LegendLog("[ENSURE-SEND] tavern_draw: delegating to local_server")
                 pcall(function()
-                    local nd = ed.netdata
-                    if nd and nd.tavern and nd.tavern.type ~= "stone" then
-                        local td = nd.tavern
-                        if not td.isFree then
-                            local pay = td.cost and td.cost.pay
-                            local number = td.cost and td.cost.number or 0
-                            if pay == "Gold" then
-                                ed.player._money = (ed.player._money or 0) - number
-                            elseif pay == "Diamond" then
-                                ed.player._rmb = (ed.player._rmb or 0) - number
-                            end
-                        end
-                        nd.tavern = nil
+                    local ls = rawget(_G, "local_server")
+                    if ls and ls.handle then
+                        ls.handle("tavern_draw", msg)
                     end
                 end)
-                -- 调用回调
-                local cb = ed.netreply and ed.netreply.tavern
-                if cb then
-                    local ok, err = pcall(cb, loot)
-                    if not ok then LegendLog("[ENSURE-SEND] tavern cb error: " .. tostring(err)) end
-                    ed.netreply.tavern = nil
-                else
-                    LegendLog("[ENSURE-SEND] WARNING: no tavern callback!")
                 end
             elseif msgType == "ask_magicsoul" then
                 LegendLog("[ENSURE-SEND] ask_magicsoul: handling directly")

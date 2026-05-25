@@ -7,7 +7,7 @@ local function skillatk2_start(basefunc, skill, target)
   skill.casting = true
   skill.attack_counter = 0
   local caster = skill.caster
-  local distanceSQ = (skill.target.position[1] - caster.position[1]) ^ 2 + (skill.target.position[2] - skill.target.position[2]) ^ 2
+  local distanceSQ = (skill.target.position[1] - caster.position[1]) ^ 2 + (skill.target.position[2] - caster.position[2]) ^ 2
   if distanceSQ > skillminSQ then
     skill:startPhase(1)
   else

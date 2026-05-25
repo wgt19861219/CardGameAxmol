@@ -529,6 +529,7 @@ int CCBReader::readInt(bool pSigned)
     while (!getBit())
     {
         numBits++;
+        if (numBits > 64) break;
     }
 
     long long current = 0;

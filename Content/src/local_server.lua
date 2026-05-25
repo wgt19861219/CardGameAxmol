@@ -2004,6 +2004,7 @@ local function initCrusade(localdata)
     local enemies = {}
     local playerLevel = localdata.player and localdata.player.level or 1
     local usedHeroes = {}
+    local usedCount = 0
     for stage = 1, CRUSADE_MAX_STAGE do
         local stageEnemies = {}
         -- 难度递增：关卡越高，英雄等级/星级/阶位越高
@@ -2014,8 +2015,9 @@ local function initCrusade(localdata)
             local hid
             repeat
                 hid = CRUSADE_HERO_POOL[math_random(1, #CRUSADE_HERO_POOL)]
-            until not usedHeroes[hid] or #usedHeroes > 30
+            until not usedHeroes[hid] or usedCount > 30
             usedHeroes[hid] = true
+            usedCount = usedCount + 1
             table.insert(stageEnemies, {
                 _tid = hid,
                 _level = baseLevel + math_random(-2, 2),

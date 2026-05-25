@@ -9,8 +9,8 @@ local envFuncs = {
   kCCTextAlignmentCenter = kCCTextAlignmentCenter,
   kCCTextAlignmentRight = kCCTextAlignmentRight,
   kCCVerticalTextAlignmentTop = kCCVerticalTextAlignmentTop,
-  kCCVerticalTextAlignmentTop = kCCVerticalTextAlignmentCenter,
-  kCCVerticalTextAlignmentTop = kCCVerticalTextAlignmentBottom,
+  kCCVerticalTextAlignmentCenter = kCCVerticalTextAlignmentCenter,
+  kCCVerticalTextAlignmentBottom = kCCVerticalTextAlignmentBottom,
   LSTR = LSTR
 }
 local configTableMeta = {}

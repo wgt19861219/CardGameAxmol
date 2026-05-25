@@ -135,10 +135,7 @@ local function getDataTable(table_name)
 
  LegendLog("loading table ".. table_name)
   pcall(function()
-	--add by xinghui:not perfect todo:...	
-	package.loaded[table_name] = false
-	--
-    ret = require(table_name)	
+    ret = require(table_name)
   end)
   if not ret then
     local path = "csv/" .. table_name .. ".csv"

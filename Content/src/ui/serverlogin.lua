@@ -121,7 +121,7 @@ function serverLogin.selectServer()
 end
 function serverLogin.selectUsername()
 	--LegendLog("=========================selelc username")
-  --Ö±½Óµ÷ÓÃµÇÂ¼
+  --Ö±ï¿½Óµï¿½ï¿½Ãµï¿½Â¼
 	--local isLogined=libPlatformManager:getPlatform():getLogined()
 	if isLogined==false then
 		libPlatformManager:getPlatform():login()
@@ -415,7 +415,15 @@ self:initServer()
     local file = LegendFileFromPatchServer("serverlist.txt")
     local bSucess = file and file ~= ""
     if bSucess then
-      serverListData = loadstring(file)()
+      local ok, result = pcall(function()
+        local fn = loadstring(file)
+        if fn then return fn() end
+      end)
+      if ok and type(result) == "table" then
+        serverListData = result
+      else
+        serverListData = {}
+      end
       self:initServer()
     end
   end)
@@ -453,11 +461,11 @@ CCUserDefault:sharedUserDefault():flush()
 	local platformTag=GetPlatformOS()
 	if platformTag==3 then
 		
-		ed.setUserid(1)		--µÇÂ¼»úÖÆÐÞ¸Äºó£¬´ËÊ±²¢²»ÖªµÀÕæÕýµÄuserId,¡¡ÓÃ1´úÌæ
+		ed.setUserid(1)		--ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸Äºó£¬´ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½userId,ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½
 		ed.setPuid(name);
 		ed.setDeviceId('win32_' .. name)
   		ed.setCryptKey(newSessionId)
-		--win32±£´æÓÃ»§Ãû
+		--win32ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½
 		CCUserDefault:sharedUserDefault():setStringForKey("lastloginname", name)
 		CCUserDefault:sharedUserDefault():flush()
 	else
@@ -465,7 +473,7 @@ CCUserDefault:sharedUserDefault():flush()
 		--print("--------------------------zycdebug uin name is enterGame")
 		local name=libPlatformManager:getPlatform():loginUin()
 		ed.setPuid(name);
-		ed.setUserid(1)		--µÇÂ¼»úÖÆÐÞ¸Äºó£¬´ËÊ±²¢²»ÖªµÀÕæÕýµÄuserId,¡¡ÓÃ1´úÌæ
+		ed.setUserid(1)		--ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸Äºó£¬´ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½userId,ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½
 		local deviceId=libOS:getInstance():getDeviceID()
 		ed.setDeviceId(deviceId)
   		ed.setCryptKey(newSessionId)
@@ -635,8 +643,8 @@ function serverLogin:OnSDKLogin()
       ed.setDeviceId(deviceId)
       ed.setUserid(tonumber(userId))
 	  --LegendLog("serverLogin::OnSDKLogin() uin:"..uin..",userId:"..userId);
-	  --by chenpanhua Ë¢ÐÂÇø·þÁÐ±íÐÅÏ¢
-	  local gameId = "legend";  --gameid ÐèÒªÓëÕËºÅÖÐÐÄÒ»ÖÂ
+	  --by chenpanhua Ë¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½Ï¢
+	  local gameId = "legend";  --gameid ï¿½ï¿½Òªï¿½ï¿½ï¿½Ëºï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 	  LegendRefreshServerInfo(1,gameId,userId,1);
     else
       libPlatformManager:getPlatform():login()
@@ -1098,7 +1106,7 @@ serverLogin.scene=scene
   end
 	newSessionId=ed.config.sessionId
 	--[[
-	--Ìí¼Óeditbox£¬µÚÒ»¸ö
+	--ï¿½ï¿½ï¿½ï¿½editboxï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 	local fontColor = ccc3(198, 175, 126)
 	local info = {
 		config = 
@@ -1121,7 +1129,7 @@ serverLogin.scene=scene
 	local platformTag=GetPlatformOS()
 	if platformTag==3 then
 		--3 means win32 see in cpp
-		--Èç¹ûµÚÒ»´ÎµÇÂ¼µÄ»°£¬µ¯¿ò£¬·ñÔòÖ±½Ó°ÑÉÏ´ÎµÄÃû×Ö¸ãÉÏÈ¥
+		--ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Îµï¿½Â¼ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ò£¬·ï¿½ï¿½ï¿½Ö±ï¿½Ó°ï¿½ï¿½Ï´Îµï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½È¥
 		local username = CCUserDefault:sharedUserDefault():getStringForKey("lastusername")
 		if username~="" then
 			serverLogin.edit:setString(username)
@@ -1129,9 +1137,9 @@ serverLogin.scene=scene
 			--serverLogin.edit.edit:openKeyBoard()
 		end		
 	elseif platformTag==2 then
-		--AndroidÊ¹ÓÃÕâÑù»ñµÃ
+		--AndroidÊ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		--local uid =libPlatformManager:getPlatform():loginUin()
-		--µ½ÁËÕâÀï£¬sdkµÇÂ¼³É¹¦ÁË£¬
+		--ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï£¬sdkï¿½ï¿½Â¼ï¿½É¹ï¿½ï¿½Ë£ï¿½
 		bSDKLoginSucess=true;
 		
 	end
@@ -1176,7 +1184,7 @@ serverLogin.scene=scene
       ed.replaceScene(ed.ui.logo.create(sessionId))
     end
   end)
-	--ÔÚÕâÖ®Ç°»ñµÃ·þÎñÆ÷ÁÐ±íserverListData£¬Ð¡ÁùÌá¹©
+	--ï¿½ï¿½ï¿½ï¿½Ö®Ç°ï¿½ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½serverListDataï¿½ï¿½Ð¡ï¿½ï¿½ï¿½á¹©
 	serverLogin:initServerListData()
 	
 serverLogin:doInitServer()
@@ -1216,7 +1224,7 @@ local setUserInfo = function(self)
         return
       end
       if self.scene:isRunning() and id then
-        --ÉèÖÃÖµ
+        --ï¿½ï¿½ï¿½ï¿½Öµ
 		--print("every frame call")
 		local isLogined=libPlatformManager:getPlatform():getLogined()
 		if isLogined==true then
@@ -1227,7 +1235,7 @@ local setUserInfo = function(self)
 				ed.setString(panelui.usernamenick, nickname)			
 			end	
 			if bSDKLoginSucess==true then
-				--µÇÂ¼³É¹¦ºó£¬Èç¹ûÉèÖÃshowAnnounce=falseµÄ»°£¬¸Ä³Étrue
+				--ï¿½ï¿½Â¼ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½showAnnounce=falseï¿½Ä»ï¿½ï¿½ï¿½ï¿½Ä³ï¿½true
 				if showAnnounce==false then
 					showAnnounce=true
 					self.showAnnouncementID = self.mainLayer:getScheduler():scheduleScriptFunc(self:startShowAnnouncement(), 0.5, false)

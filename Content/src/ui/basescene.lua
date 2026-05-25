@@ -208,7 +208,7 @@ local createSDKAddition = function(self)
 												if ed.getchatTune()==true then
 													ed.endChat()
 												else
-													for i=1,ed.getSceneCount() do
+													while ed.getSceneCount() > 0 do
                      	 			ed.popScene()    	
                      	 		end	
                      	 	end              

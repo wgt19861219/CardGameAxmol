@@ -509,6 +509,10 @@ local addActor = function(self, actor)
 	if actor.node then
 		table.insert(self.actor_list, actor)
 		self.main_layer:addChild(actor.node)
+		-- 新 actor 同步当前战斗倍速到动画
+		if class.curSpeedState > 1 and actor.puppet and actor.puppet.setActionSpeeder then
+			pcall(function() actor.puppet:setActionSpeeder(class.speedMultiplier[class.curSpeedState] or 1) end)
+		end
 	end
 end
 class.addActor = addActor
@@ -760,7 +764,13 @@ local ipairs = ipairs
 local function update(self, dt)
 		--add by xinghui
 		if class.curSpeedState > 1 then
-			dt = math.min(dt, 0.1) * (class.speedMultiplier[class.curSpeedState] or 1)
+			local speed = class.speedMultiplier[class.curSpeedState] or 1
+			local raw_speed_dt = math.min(dt, 0.1) * speed
+			-- Quantize to whole tick multiples for uniform per-frame movement
+			-- Without this, 4x speed gets alternating 1-tick/2-tick frames (stuttering)
+			local num_ticks = math.floor(raw_speed_dt / ed.tick_interval + 0.5)
+			if num_ticks < 1 then num_ticks = 1 end
+			dt = num_ticks * ed.tick_interval
 		end
 		--
 	local paused = false
@@ -806,7 +816,7 @@ local function update(self, dt)
 			if effect.update then
 				ok_eff = pcall(function() effect:update(dt) end)
 			end
-			if ok_eff and effect:isTerminated() then
+			if effect:isTerminated() then
 				local node = effect.node or effect
 				if not tolua.isnull(node) then
 					pcall(function() node:removeFromParentAndCleanup(true) end)
@@ -1038,6 +1048,15 @@ local function speedBtnHandler()
 	CCUserDefault:sharedUserDefault():setIntegerForKey("battle_speed_state", class.curSpeedState)
 	CCUserDefault:sharedUserDefault():flush()
 	updateSpeedBtnLabel()
+	-- 同步所有 actor 的动画速度到战斗倍速
+	local spd = class.speedMultiplier[class.curSpeedState] or 1
+	if ed.scene and ed.scene.actor_list then
+		for _, actor in ipairs(ed.scene.actor_list) do
+			if actor.puppet and actor.puppet.setActionSpeeder then
+				pcall(function() actor.puppet:setActionSpeeder(spd) end)
+			end
+		end
+	end
 end
 local function speedUnableBtnHandler()
 	--todo:弹出提示框

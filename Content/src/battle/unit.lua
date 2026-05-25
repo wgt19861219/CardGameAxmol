@@ -1613,6 +1613,8 @@ local function usePuppet(self)
 		self.puppet:addEffect("eff_buff_boss", -1)
 	end
 	self.node:addChild(self.puppet, 0)
+	-- Stop scheduleUpdate to prevent double-update (scheduleUpdate + manual puppet:update)
+	pcall(function() self.puppet:unscheduleUpdate() end)
 	if old then
 		self.shader_stack = {}
 		old:removeFromParentAndCleanup(true)
@@ -1717,7 +1719,6 @@ local setScaleX = CCNode.setScaleX
 local setScaleY = CCNode.setScaleY
 local setPosition = CCNode.setPosition
 local setZOrder = CCNode.setZOrder
-local hp_update = ed.HpBar.update
 local gravity = -1800
 
 local function update(self, dt)
@@ -1762,7 +1763,9 @@ local function update(self, dt)
 		pos[2] = pos[2] + v[2] * dt
 	end
 	if not tolua.isnull(self.puppet) then
-		pcall(function() self.puppet:update(dt, false) end)
+		-- Pass 2x dt: scheduleUpdate removed, this is the only update call now
+		-- 2*dt preserves original animation rate at 1x, gives correct 4x sync
+		pcall(function() self.puppet:update(dt * 2, false) end)
 	end
 	local h = 0
 	if self.zSpeed then

@@ -699,34 +699,57 @@ local function canHeroUpgrade(self)
 end
 class.canHeroUpgrade = canHeroUpgrade
 local function doClickUpgrade(self)
-  local text
-  local canUpgrade = true
-  for i = 1, 6 do
-    if herodetail.getHeroEquipid(self.hid, i) == 0 then
-      canUpgrade = false
-      text = T(LSTR("HERODETAIL.HERO_NEEDS_TO_WEAR_COMPLETE_EQUIPMENTS_FOR_ADVANCE"))
-      break
-    end
-  end
   if self.hero._rank >= (ed.parameter and ed.parameter.unit_max_rank or 10) then
-    canUpgrade = false
-    text = T(LSTR("HERODETAIL.THIS_HER_HAS_ENHANCED_TO_THE_TOP_LEVEL"))
-  end
-  if not canUpgrade then
     lsr:report("clickDisabledUpgrade")
-    ed.showToast(text)
-  else
-    lsr:report("clickUpgrade")
-    if not tolua.isnull(self.ui.upgrade_button_light) then
-      self.ui.upgrade_button_light:removeFromParentAndCleanup(true)
-    end
-    ed.endTeach("heroUpgrade")
-    ed.netreply.heroUpgradeReply = self:upgradeReply()
-    self.heroBeforeUpgrade = ed.readhero.getHeroUpgradeInfo(self.hid)
-    local msg = ed.upmsg.hero_upgrade()
-    msg._hero_id = self.hid
-    ed.send(msg, "hero_upgrade")
+    ed.showToast(T(LSTR("HERODETAIL.THIS_HER_HAS_ENHANCED_TO_THE_TOP_LEVEL")))
+    return
   end
+  local needWear = {}
+  for i = 1, 6 do
+    local ett = herodetail.getHeroEquipState(self.hid, i)
+    if ett == "isEquiped" then
+      -- skip
+    elseif ett == "canWear" then
+      table.insert(needWear, i)
+    else
+      ed.showToast(T(LSTR("HERODETAIL.HERO_NEEDS_TO_WEAR_COMPLETE_EQUIPMENTS_FOR_ADVANCE")))
+      return
+    end
+  end
+  if #needWear > 0 then
+    local equipDataTable = ed.getDataTable("equip")
+    local heroEquipTable = ed.getDataTable("hero_equip")
+    local rank = self.hero._rank or 1
+    local equipLevel = 1
+    local rankEquip = heroEquipTable and heroEquipTable[self.hero._tid]
+      and heroEquipTable[self.hero._tid][rank]
+    if rankEquip then
+      equipLevel = rankEquip.EquipLevel or 1
+    end
+    local totalDelta = 0
+    for _, slot in ipairs(needWear) do
+      local eid = herodetail.getHerocsvEquipid(self.hid, slot)
+      if eid and eid > 0 then
+        ed.player:consumeEquip(eid, 1)
+        self.hero:equip(slot)
+        local itemGs = tonumber(equipDataTable[eid]["GS"]) or 0
+        totalDelta = totalDelta + itemGs * equipLevel
+      end
+    end
+    self.hero:resetgs(math.max(math.floor((self.hero._gs or 0) + totalDelta), 0))
+    pcall(function() ed.saveGame() end)
+    self:refreshEquipTag()
+  end
+  lsr:report("clickUpgrade")
+  if not tolua.isnull(self.ui.upgrade_button_light) then
+    self.ui.upgrade_button_light:removeFromParentAndCleanup(true)
+  end
+  ed.endTeach("heroUpgrade")
+  ed.netreply.heroUpgradeReply = self:upgradeReply()
+  self.heroBeforeUpgrade = ed.readhero.getHeroUpgradeInfo(self.hid)
+  local msg = ed.upmsg.hero_upgrade()
+  msg._hero_id = self.hid
+  ed.send(msg, "hero_upgrade")
 end
 class.doClickUpgrade = doClickUpgrade
 local doClickClose = function(self)
@@ -806,12 +829,6 @@ local function doClickEvolve(self)
   ed.showConfirmDialog(info)
 end
 class.doClickEvolve = doClickEvolve
---add by xinghui
-local function doClickOneKey(self)
-	lsr:report("clickonekey")
-	
-end
---
 local registerTouchHandler = function(self)
   local ui = self.ui
   self:btRegisterButtonClick({
@@ -958,22 +975,6 @@ local registerTouchHandler = function(self)
     clickInterval = 0.5,
     force = true
   })
---add by xinghui
-  self:btRegisterButtonClick({
-	buttons = {
-		ui.onekey,
-	},
-	presses = {
-		ui.onekey_press,
-	},
-	key = "onekey_button",
-	clickHandler = function()
-		self:doClickOneKey()
-	end,
-	clickInterval = 0.5,
-	force = true
-  })
---
   self:btRegisterRectClick({
     rect = CCRectMake(-240, -10, 270, 50),
     parent = ui.get_stone,
@@ -2332,7 +2333,7 @@ local function createWindow(self, param)
 		  },
 		  config = {
 			 scaleSize = CCSizeMake(100, 42),
-             visible = false
+			 visible = false
 		  }
 	  },
 	  {
@@ -2349,7 +2350,7 @@ local function createWindow(self, param)
 		  },
 		  config = {
 			 scaleSize = CCSizeMake(100, 42),
-			 visible = false
+    visible = false
 		  }
 	  },
   	  {

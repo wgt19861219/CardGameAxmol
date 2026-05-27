@@ -1215,6 +1215,7 @@ local function createStage(self, chapter, mode, skipAnim)
 	stageContainer:setCascadeOpacityEnabled(true)
 	local mapInfo = res.map
 	local info = mapInfo["chapter" .. chapter]
+	if not info then return end
 	if self.currentTag then
 		self.currentTag:removeFromParentAndCleanup(true)
 		self.currentTag = nil
@@ -1368,6 +1369,17 @@ local function createMap(self, chapter, mode, skipAnim)
 	local mapInfo = res.map
 	local ui = {}
 	local info = mapInfo["chapter" .. chapter]
+	if not info then
+		local maxCh = ed.GameConfig.MaxChapter or 14
+		for i = chapter - 1, 1, -1 do
+			if mapInfo["chapter" .. i] then
+				maxCh = i
+				break
+			end
+		end
+		chapter = maxCh
+		info = mapInfo["chapter" .. chapter]
+	end
 	local mapContainer = CCSprite:create()
 	self.mapContainer = mapContainer
 	mapContainer:setCascadeOpacityEnabled(true)

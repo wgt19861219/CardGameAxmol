@@ -1560,6 +1560,26 @@ M.handlers.gm_cmd = function(data, obj, localdata)
     -- 解锁所有关卡
     if obj._unlock_all_stages and obj._unlock_all_stages > 0 then
         localdata.stage.max_normal = 9999
+        local StageTable = ed.getDataTable("Stage")
+        local count = 0
+        if StageTable then
+            for sid, row in pairs(StageTable) do
+                if type(sid) == "number" and sid > 0 then
+                    local ch = row["Chapter ID"]
+                    if type(ch) == "number" and ch >= 1 and ch <= 14 then
+                        local sType = ed.stageType(sid)
+                        if sType == "normal" then
+                            localdata.stage.normal_stars[sid] = 3
+                        elseif sType == "elite" then
+                            localdata.stage.elite_stars[sid] = 3
+                        end
+                        count = count + 1
+                    end
+                end
+            end
+        end
+        localdata.player.level = 80
+        LegendLog("[gm_cmd] unlock_all_stages done, count=" .. count)
     end
 
     -- 获取所有英雄

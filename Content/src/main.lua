@@ -1179,11 +1179,28 @@ for _, mod in ipairs(coreModules) do
 
                     -- 解锁所有关卡
                     if gmObj._unlock_all_stages and gmObj._unlock_all_stages > 0 then
-                        if ed.player and ed.player._userstage then
-                            ed.player._userstage._normal_stage_stars = ed.player._userstage._normal_stage_stars or {}
-                            -- 标记所有关卡为3星
+                        if ed.player then
+                            local st = ed.getDataTable("Stage")
+                            local count = 0
+                            if st then
+                                for sid, row in pairs(st) do
+                                    if type(sid) == "number" and sid > 0 then
+                                        local ch = row["Chapter ID"]
+                                        if type(ch) == "number" and ch >= 1 and ch <= 14 then
+                                            ed.player.stage_stars[sid] = 3
+                                            count = count + 1
+                                        end
+                                    end
+                                end
+                            end
+                            ed.player._level = 80
+                            LegendLog("[STUB-NET] gm_cmd: unlock_all_stages done, count=" .. count
+                                .. " level=" .. tostring(ed.player:getLevel()))
+                            pcall(function()
+                                ed.replaceScene(ed.ui.main.create())
+                            end)
+                            ed.showToast("已解锁所有关卡，等级设为80")
                         end
-                        LegendLog("[STUB-NET] gm_cmd: unlock_all_stages=" .. tostring(gmObj._unlock_all_stages))
                     end
 
                     -- 获取所有英雄（localMode 下自动设置英雄等级=玩家等级、rank>=5 以支持技能升级）

@@ -7,18 +7,21 @@ local star_pos = {
   ccp(378, 410),
   ccp(488, 402)
 }
-local anim_delay = 1.5
-local number_jump_gap = 1
+local speedState = CCUserDefault:sharedUserDefault():getIntegerForKey("battle_speed_state")
+if speedState < 1 or speedState > 4 then speedState = 1 end
+local speedDiv = math.max(speedState, 1)
+local anim_delay = 1.5 / speedDiv
+local number_jump_gap = 1 / speedDiv
 local number_jump_delay = anim_delay
 local loot_ori_x = 200
 local loot_ori_y = 100
 local loot_gap_x = 70
-local loot_show_gap = 0.2
+local loot_show_gap = 0.2 / speedDiv
 local loot_show_delay = anim_delay
 local hero_ori_x = 195
 local hero_ori_y = 243
 local hero_gap_x = 92
-local hero_show_gap = 0.1
+local hero_show_gap = 0.1 / speedDiv
 local hero_show_delay = anim_delay
 local list_rect = CCRectMake(160, 60, 460, 80)
 local doPressInLoot = function(self)
@@ -581,6 +584,7 @@ local playButtonAnim = function(self)
     replay:runAction(action)
   end
   next:runAction(CCFadeIn:create(0.2))
+  self.animPlaying = false
 end
 class.playButtonAnim = playButtonAnim
 local function createListLayer(self)
@@ -807,6 +811,7 @@ local playInstanceProcess = function(self)
   end
 end
 local function playEnterAnim(self)
+  self.animPlaying = true
   self:playLightAnim()
   self:playInfoBgAnim()
 
@@ -861,6 +866,47 @@ local function playEnterAnim(self)
   end
 end
 class.playEnterAnim = playEnterAnim
+local function skipAnim(self)
+  if not self.animPlaying then return end
+  self.animPlaying = false
+  self:removeUpdateHandler("number_jump")
+  if self.ui.exp_label then
+    ed.setString(self.ui.exp_label, "+" .. self.param.exp)
+  end
+  if self.ui.gold_label then
+    ed.setString(self.ui.gold_label, "+" .. self.param.gold)
+  end
+  for i = 1, self.param.stars or 0 do
+    local star = self.ui["star_" .. i]
+    if star then star:setVisible(true) star:setScale(1) star:stopAllActions() end
+  end
+  for i = 1, #(self.heroui or {}) do
+    local ui = self.heroui[i]
+    local hero = self.param.heroes[i]
+    ui.icon.icon:setVisible(true)
+    ui.icon.icon:setOpacity(255)
+    ui.icon.icon:stopAllActions()
+    ui.bar:stopAllActions()
+    ui.bar:setScaleX(hero.tExp / hero.tMaxExp)
+    ui.icon:refreshLevel(hero.tLevel)
+  end
+  for i = 1, #(self.lootui or {}) do
+    local loot = self.lootui[i]
+    loot.icon:setScale(1)
+    loot.icon:stopAllActions()
+  end
+  if self.draglist and self.lootui and #self.lootui > 0 then
+    self.draglist:initListWidth(loot_gap_x * #self.lootui + 20)
+  end
+  if self.levelupEffect then
+    for id, node in pairs(self.levelupEffect) do
+      if not tolua.isnull(node) then node:removeFromParentAndCleanup(true) end
+    end
+    self.levelupEffect = nil
+  end
+  self:playButtonAnim()
+end
+class.skipAnim = skipAnim
 local function onEnterHandler(self)
   local function handler()
     lsr:report("createScene")
@@ -1232,6 +1278,12 @@ end
 class.createPvpRankReward = createPvpRankReward
 local function registerTouchHandler(self)
   local ui = self.ui
+  self.mainLayer:registerScriptTouchHandler(function(event, x, y)
+    if event == "ended" then
+      self:skipAnim()
+    end
+    return false
+  end, false, 0, true)
   self:btRegisterButtonClick({
     button = ui.replay,
     press = ui.replay_press,

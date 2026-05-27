@@ -33,8 +33,8 @@ local function shakeBox()
     local boxNode = panel.dragLayer[box]
     if boxNode then
       boxNode:runAction(CCSequence:createWithTwoActions(
-        CCScaleTo:create(0.2, 1.15),
-        CCScaleTo:create(0.2, 1.0)
+        CCScaleTo:create(0.1, 1.15),
+        CCScaleTo:create(0.1, 1.0)
       ))
     end
   end
@@ -692,10 +692,10 @@ local function getReward(data)
         local boxNode = panel.dragLayer[box]
         if boxNode then
           boxNode:runAction(CCSequence:createWithTwoActions(
-            CCScaleTo:create(0.15, 1.3),
-            CCScaleTo:create(0.15, 1.0)
+            CCScaleTo:create(0.08, 1.3),
+            CCScaleTo:create(0.08, 1.0)
           ))
-          ListenTimer(Timer:Once(0.3), function()
+          ListenTimer(Timer:Once(0.1), function()
             if boxNode.setTexture then boxNode:setTexture(boxImg(data._stage_id, "open")) end
           end, crusadeScope)
         end
@@ -716,7 +716,7 @@ local function getReward(data)
           ed.player:addCrusadeMoney(v._param1)
         end
       end
-      ListenTimer(Timer:Once(0.8), function()
+      ListenTimer(Timer:Once(0.25), function()
         showRewardResult(reward, data._heroes)
       end, crusadeScope)
     end

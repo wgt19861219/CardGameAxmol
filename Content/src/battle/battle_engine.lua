@@ -663,34 +663,13 @@ local update = function(self, dt)
 		return
 	end
 	self.next_tick = self.next_tick - dt
-	if self.next_tick <= 0 then
+	while self.next_tick <= 0 do
 		self:tick()
-		while self.next_tick <= 0 do
-			self.next_tick = self.next_tick + self.tick_interval
-		end
+		self.next_tick = self.next_tick + self.tick_interval
 	end
 end
 class.update = update
-
-local runScriptString = function()
-	if LegendGetScriptString then
-		local temp = LegendGetScriptString()
-		if temp ~= nil then
-			local func = loadstring(temp)
-			if func ~= nil then
-				xpcall(func, EDDebug)
-			end
-		end
-	end
-end
-
-local function tick(self)
-	if ed.enableBotMode then
-		runScriptString()
-	end
-	if not self.running then
-		return
-	end
+	local function tick(self)
 	local tick_interval = self.tick_interval
 	self.time_limit = self.time_limit - tick_interval
 	while self.operation_list[self.next_operation_index] do

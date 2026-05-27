@@ -2475,7 +2475,7 @@ local function generateAiPlayer(rank, playerLevel)
           _tid = heroId,
           _level = heroLevel,
           _stars = math.max(1, math.min(5, math.floor(level / 15) + math.random(0, 1))),
-          _rank = math.max(5, math.min(12, math.floor(level / 10) + 1)),
+          _rank = math.max(5, math.min(22, math.floor(level / 10) + 1)),
         })
       end
     end
@@ -2500,7 +2500,7 @@ local function generateAiPlayer(rank, playerLevel)
           _tid = tid,
           _level = math.max(1, level - math.random(0, 3)),
           _stars = math.random(1, math.min(5, math.floor(level / 15) + 1)),
-          _rank = math.max(5, math.min(12, math.max(1, math.floor(level / 10)))),
+          _rank = math.max(5, math.min(22, math.max(1, math.floor(level / 10)))),
         })
       end
     end

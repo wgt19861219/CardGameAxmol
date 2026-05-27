@@ -51,3 +51,19 @@
 - CCB (.ccbi) 文件不能直接用，需要根据原布局手动重建Godot场景
 - 原项目所有网络请求(ed.send)已被本地GameServer替代，无需网络层
 - 旧 Axmol 代码仍在根目录 (Source/, Content/, proj.android/)，作为参考保留
+
+## 知识库上下文
+
+本项目的知识库位于 `D:\workspace\Obsidian\CardGame\`
+
+### 开发会话启动时必读
+
+1. 读取 `D:\workspace\Obsidian\CardGame\CardGame 首页.md` → 获取当前状态和待办
+2. 读取 `D:\workspace\Obsidian\CardGame\wiki\MOC - 系统索引.md` → 了解所有已记录的系统模块（如有）
+3. 如果涉及特定系统，读取对应 wiki 概念页
+
+### 遇到问题时必查
+
+- 先搜索 `D:\workspace\Obsidian\CardGame\wiki\` 下是否有相关概念页（已有决策/避坑记录）
+- 再搜索 `D:\workspace\Obsidian\跨项目\Axmol-Lua\` 下是否有同类经验（其他项目踩过的坑）
+- 如果找到相关记录，在实现前先参考已有方案，避免重复犯错

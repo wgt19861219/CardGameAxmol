@@ -2328,7 +2328,6 @@ local function ensureStubsAfterTools()
                         ls.handle("tavern_draw", msg)
                     end
                 end)
-                end
             elseif msgType == "ask_magicsoul" then
                 LegendLog("[ENSURE-SEND] ask_magicsoul: handling directly")
                 local ids = {}

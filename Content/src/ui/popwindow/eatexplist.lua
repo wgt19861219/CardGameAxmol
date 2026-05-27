@@ -594,6 +594,14 @@ end
 class.registerKeepeatHandler = registerKeepeatHandler
 local cancelKeepeatHandler = function(self)
   self.baseScene:removeUpdateHandler("keepeat")
+  for _, hero in ipairs(self.heroes or {}) do
+    if hero.eatEffects then
+      for _, ef in ipairs(hero.eatEffects) do
+        if not tolua.isnull(ef) then ef:removeFromParentAndCleanup(true) end
+      end
+      hero.eatEffects = {}
+    end
+  end
 end
 class.cancelKeepeatHandler = cancelKeepeatHandler
 local setpvKeepeatMarking = function(self)

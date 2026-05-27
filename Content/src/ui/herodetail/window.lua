@@ -1223,12 +1223,13 @@ local function createInfoBoard(self)
     return
   end
   local nbx, nby = ui.name_bg:getPosition()
+  local frameRes = ed.Hero.getIconNameFrameByRank(self.hero._rank)
   local ui_info = {
     {
       t = "Sprite",
       base = {
         name = "name_frame",
-        res = ed.Hero.getIconNameFrameByRank(self.hero._rank)
+        res = frameRes
       },
       layout = {
         position = ccp(nbx, nby)
@@ -1311,22 +1312,30 @@ local function createInfoBoard(self)
   end
 end
 class.createInfoBoard = createInfoBoard
+local HERO_NAME_TAG = 99991
 local function createHeroName(self)
   local ui = self.ui
+  -- 用 tag 查找并移除旧的 name 节点，不依赖 ui.name 引用
+  local oldName = ui.bg:getChildByTag(HERO_NAME_TAG)
+  if oldName then
+    oldName:removeFromParentAndCleanup(true)
+  end
   if not tolua.isnull(ui.name) then
     ui.name:removeFromParentAndCleanup(true)
   end
   local nbx, nby = ui.name_bg:getPosition()
+  local rank = self.hero._rank
   local name, w, h = ed.readhero.createHeroNameByInfo({
     name = herodetail.getUnitRow(self.hid)["Display Name"],
-    rank = self.hero._rank
+    rank = rank
   })
+  name:setTag(HERO_NAME_TAG)
   ui.name = name
   if w > 130 then
     name:setScale(130 / w)
   end
   name:setPosition(ccp(nbx - math.min(w, 130) / 2, nby))
-  ui.bg:addChild(name)
+  ui.bg:addChild(name, 6)
 end
 class.createHeroName = createHeroName
 local function createHeroStars(self, isEvolve)

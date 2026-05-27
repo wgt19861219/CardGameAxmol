@@ -183,6 +183,349 @@ local function parseAtlasRegions(atlasContent)
 	return regions
 end
 
+
+local spineDataCache = {}
+
+local function parseSpineJson(resource)
+	local jsonPath = 'spine/' .. resource .. '/' .. resource .. '.json'
+	local fu = CCFileUtils:sharedFileUtils()
+	if not fu:isFileExist(jsonPath) then
+		return nil
+	end
+	local jsonContent = fu:getStringFromFile(jsonPath)
+	if not jsonContent or jsonContent == "" then
+		return nil
+	end
+	local ok, data = pcall(json.decode, jsonContent)
+	if not ok or not data then
+		LegendLog("[spine-composite] json.decode failed for: " .. resource)
+		return nil
+	end
+	local bones = {}
+	if data.bones then
+		for _, b in ipairs(data.bones) do
+			bones[b.name] = {
+				x = b.x or 0,
+				y = b.y or 0,
+				rotation = b.rotation or 0,
+				scaleX = b.scaleX or 1,
+				scaleY = b.scaleY or 1,
+				parent = b.parent
+			}
+		end
+	end
+	local slots = {}
+	if data.slots then
+		for _, s in ipairs(data.slots) do
+			local colorStr = s.color
+			local entry = {
+				name = s.name,
+				bone = s.bone,
+				order = s.order or 0,
+				color = colorStr
+			}
+			if s.attachment then
+				entry.attachment = s.attachment
+			end
+			table.insert(slots, entry)
+		end
+	end
+	local skins = {}
+	if data.skins then
+		for skinName, skinData in pairs(data.skins) do
+			skins[skinName] = skinData
+		end
+	end
+	local colorAnimations = {}
+	if data.animations and data.animations.Loop and data.animations.Loop.slots then
+		for slotName, timelines in pairs(data.animations.Loop.slots) do
+			if timelines.color then
+				local keyframes = {}
+				for _, kf in ipairs(timelines.color) do
+					table.insert(keyframes, {
+						time = kf.time or 0,
+						color = kf.color
+					})
+				end
+				table.sort(keyframes, function(a, b) return a.time < b.time end)
+				colorAnimations[slotName] = keyframes
+			end
+		end
+	end
+	return {
+		bones = bones,
+		slots = slots,
+		skins = skins,
+		colorAnimations = colorAnimations
+	}
+end
+
+local function getOrParseSpineData(resource)
+	if spineDataCache[resource] then
+		return spineDataCache[resource]
+	end
+	local data = parseSpineJson(resource)
+	if data then
+		spineDataCache[resource] = data
+	end
+	return data
+end
+
+local function computeSlotWorldTransform(slotData, bones)
+	local boneName = slotData.bone
+	local chain = {}
+	local cur = bones[boneName]
+	while cur do
+		table.insert(chain, 1, cur)
+		cur = cur.parent and bones[cur.parent]
+	end
+	local transform = {a = 1, b = 0, c = 0, d = 1, tx = 0, ty = 0}
+	for _, bone in ipairs(chain) do
+		local bx, by = bone.x or 0, bone.y or 0
+		local rot = bone.rotation or 0
+		local sx, sy = bone.scaleX or 1, bone.scaleY or 1
+		local rad = math.rad(rot)
+		local cosR, sinR = math.cos(rad), math.sin(rad)
+		local la = cosR * sx
+		local lb = sinR * sx
+		local lc = -sinR * sy
+		local ld = cosR * sy
+		local pa, pb, pc, pd, ptx, pty =
+			transform.a, transform.b, transform.c, transform.d,
+			transform.tx, transform.ty
+		transform.a  = pa * la + pc * lb
+		transform.b  = pb * la + pd * lb
+		transform.c  = pa * lc + pc * ld
+		transform.d  = pb * lc + pd * ld
+		transform.tx = pa * bx + pc * by + ptx
+		transform.ty = pb * bx + pd * by + pty
+	end
+	return transform
+end
+
+local function applySlotColor(sprite, colorStr)
+	if not colorStr or #colorStr ~= 8 then return end
+	local r = tonumber(colorStr:sub(1, 2), 16)
+	local g = tonumber(colorStr:sub(3, 4), 16)
+	local b = tonumber(colorStr:sub(5, 6), 16)
+	local a = tonumber(colorStr:sub(7, 8), 16)
+	if r and g and b then
+		sprite:setColor(ccc3(r, g, b))
+	end
+	if a then
+		sprite:setOpacity(a)
+	end
+end
+
+local function createColorAnimation(colorTimeline)
+	if not colorTimeline or #colorTimeline < 2 then return nil end
+	local actions = {}
+	for i = 1, #colorTimeline - 1 do
+		local cur = colorTimeline[i]
+		local nxt = colorTimeline[i + 1]
+		local dt = nxt.time - cur.time
+		if dt > 0 then
+			local curR = tonumber(cur.color:sub(1, 2), 16)
+			local curG = tonumber(cur.color:sub(3, 4), 16)
+			local curB = tonumber(cur.color:sub(5, 6), 16)
+			local curA = tonumber(cur.color:sub(7, 8), 16)
+			local nxtR = tonumber(nxt.color:sub(1, 2), 16)
+			local nxtG = tonumber(nxt.color:sub(3, 4), 16)
+			local nxtB = tonumber(nxt.color:sub(5, 6), 16)
+			local nxtA = tonumber(nxt.color:sub(7, 8), 16)
+			local hasRGB = (curR ~= nxtR or curG ~= nxtG or curB ~= nxtB)
+			local hasAlpha = (curA ~= nxtA)
+			local action
+			if hasRGB and hasAlpha then
+				action = CCSpawn:createWithTwoActions(
+					CCTintTo:create(dt, nxtR, nxtG, nxtB),
+					CCFadeTo:create(dt, nxtA)
+				)
+			elseif hasRGB then
+				action = CCTintTo:create(dt, nxtR, nxtG, nxtB)
+			elseif hasAlpha then
+				action = CCFadeTo:create(dt, nxtA)
+			end
+			if action then
+				table.insert(actions, action)
+			end
+		end
+	end
+	if #actions == 0 then return nil end
+	if #actions == 1 then return CCRepeatForever:create(actions[1]) end
+	local seq = CCSequence:create(actions)
+	return CCRepeatForever:create(seq)
+end
+
+local function createCompositeFromSpineData(resource)
+	local spineData = getOrParseSpineData(resource)
+	if not spineData then return nil end
+
+	local atlasPath = 'spine/' .. resource .. '/' .. resource .. '.atlas'
+	local pngPath = 'spine/' .. resource .. '/' .. resource .. '.png'
+	local fu = CCFileUtils:sharedFileUtils()
+	local atlasContent = fu:getStringFromFile(atlasPath)
+	if not atlasContent or atlasContent == "" then return nil end
+
+	local regionList = parseAtlasRegions(atlasContent)
+	if #regionList == 0 then return nil end
+	local regionMap = {}
+	for _, r in ipairs(regionList) do
+		regionMap[r.name] = r
+	end
+
+	local texture = CCTextureCache:sharedTextureCache():addImage(pngPath)
+	if not texture then return nil end
+
+	local skinData = nil
+	for _, sd in pairs(spineData.skins) do
+		skinData = sd
+		break
+	end
+	if not skinData then return nil end
+
+	local rootScaleX, rootScaleY = 1, 1
+	for _, bone in pairs(spineData.bones) do
+		if not bone.parent then
+			rootScaleX = bone.scaleX or 1
+			rootScaleY = bone.scaleY or 1
+			break
+		end
+	end
+
+	local container = CCNode:create()
+	container:setAnchorPoint(ccp(0.5, 0.5))
+	container:setCascadeOpacityEnabled(true)
+
+	local spriteInfos = {}
+	for _, slotData in ipairs(spineData.slots) do
+		local attachmentName = slotData.attachment
+		if not attachmentName then
+			local slotSkinData = skinData[slotData.name]
+			if slotSkinData then
+				for attName, _ in pairs(slotSkinData) do
+					attachmentName = attName
+					break
+				end
+			end
+		end
+
+		if attachmentName then
+			local region = regionMap[attachmentName]
+			if not region then
+				local slotSkinData = skinData[slotData.name]
+				if slotSkinData and slotSkinData[attachmentName] then
+					local skinEntry = slotSkinData[attachmentName]
+					if skinEntry.name then
+						region = regionMap[skinEntry.name]
+					end
+				end
+			end
+
+			if region then
+				local rect = CCRectMake(region.x, region.y, region.width, region.height)
+				local frame = CCSpriteFrame:createWithTexture(texture, rect)
+				if not frame then goto continue end
+				local sprite = CCSprite:createWithSpriteFrame(frame)
+				if not sprite then goto continue end
+
+				local transform = computeSlotWorldTransform(slotData, spineData.bones)
+				local attach = nil
+				local slotSkinData = skinData[slotData.name]
+				if slotSkinData then
+					attach = slotSkinData[attachmentName]
+				end
+
+				local ax, ay = 0, 0
+				local aRot = 0
+				local aScaleX, aScaleY = 1, 1
+				if attach then
+					ax = attach.x or 0
+					ay = attach.y or 0
+					aRot = attach.rotation or 0
+					aScaleX = attach.scaleX or 1
+					aScaleY = attach.scaleY or 1
+				end
+
+				local wx = transform.a * ax + transform.c * ay + transform.tx
+				local wy = transform.b * ax + transform.d * ay + transform.ty
+				local wrot = math.deg(math.atan2(transform.b, transform.a)) + aRot
+				local boneScaleX = math.sqrt(transform.a * transform.a + transform.b * transform.b)
+				local boneScaleY = math.sqrt(transform.c * transform.c + transform.d * transform.d)
+
+				applySlotColor(sprite, slotData.color)
+				local colorAnim = createColorAnimation(spineData.colorAnimations[slotData.name])
+
+				spriteInfos[#spriteInfos + 1] = {
+					sprite = sprite,
+					wx = wx,
+					wy = wy,
+					wrot = wrot,
+					scaleX = boneScaleX * aScaleX,
+					scaleY = boneScaleY * aScaleY,
+					regionW = region.width,
+					regionH = region.height,
+					regionRotate = region.rotate,
+					colorAnim = colorAnim
+				}
+			end
+		end
+		::continue::
+	end
+
+	if #spriteInfos == 0 then
+		return nil
+	end
+
+	local mainIdx = 1
+	local mainArea = 0
+	for i, info in ipairs(spriteInfos) do
+		local area = info.regionW * info.regionH
+		if area > mainArea then
+			mainArea = area
+			mainIdx = i
+		end
+	end
+
+	local main = spriteInfos[mainIdx]
+	if main.regionRotate then
+		main.sprite:setRotation(90)
+	end
+	container:addChild(main.sprite)
+
+	local extraCount = 0
+	local mainAreaThreshold = mainArea * 0.3
+	for i, info in ipairs(spriteInfos) do
+		if i ~= mainIdx then
+			local extraArea = info.regionW * info.regionH
+			if extraArea > mainAreaThreshold then
+				-- skip large decorations that look bad as static
+			else
+				local dx = (info.wx - main.wx) / rootScaleX
+				local dy = (info.wy - main.wy) / rootScaleY
+				local sx = info.scaleX / rootScaleX
+				local sy = info.scaleY / rootScaleY
+
+				info.sprite:setPosition(ccp(dx, -dy))
+				info.sprite:setRotation(-info.wrot)
+				info.sprite:setScale(sx, sy)
+				container:addChild(info.sprite)
+				extraCount = extraCount + 1
+
+				if info.colorAnim then
+					info.sprite:runAction(info.colorAnim)
+				end
+			end
+		end
+	end
+
+	container:setContentSize(CCSizeMake(main.regionW, main.regionH))
+
+	LegendLog("[spine-composite] " .. resource .. ": " .. #spriteInfos .. " total, " .. (extraCount + 1) .. " shown, main=" .. main.regionW .. "x" .. main.regionH)
+	addStubMethods(container)
+	return container
+end
+
 local function createStaticSpriteFromSpineAtlas(resource)
 	local atlasPath = 'spine/' .. resource .. '/' .. resource .. '.atlas'
 	local pngPath = 'spine/' .. resource .. '/' .. resource .. '.png'

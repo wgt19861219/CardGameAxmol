@@ -2050,7 +2050,7 @@ local function canUpgrade(self)
       return false
     end
   end
-  return self._rank < 12
+  return self._rank < 22
 end
 class.canUpgrade = canUpgrade
 local function upgrade(self)
@@ -2085,7 +2085,18 @@ local frames = {
   "UI/alpha/HVGA/hero_icon_frame_8.png",
   "UI/alpha/HVGA/hero_icon_frame_9.png",
   "UI/alpha/HVGA/hero_icon_frame_10.png",
+  "UI/alpha/HVGA/hero_icon_frame_10.png",
   "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_11.png",
+  "UI/alpha/HVGA/hero_icon_frame_12.png",
+  "UI/alpha/HVGA/hero_icon_frame_12.png",
   "UI/alpha/HVGA/hero_icon_frame_12.png"
 }
 local function getIconFrame(self)
@@ -2107,7 +2118,17 @@ local name_frames = {
   "UI/alpha/HVGA/herodetail_name_frame_8.png",
   "UI/alpha/HVGA/herodetail_name_frame_9.png",
   "UI/alpha/HVGA/herodetail_name_frame_10.png",
+  "UI/alpha/HVGA/herodetail_name_frame_10.png",
   "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_11.png",
+  "UI/alpha/HVGA/herodetail_name_frame_12.png",
+  "UI/alpha/HVGA/herodetail_name_frame_12.png",
   "UI/alpha/HVGA/herodetail_name_frame_12.png"
 }
 local function getIconNameFrame(self)
@@ -2130,7 +2151,17 @@ local hero_star = {
   2,
   3,
   4,
-  0
+  0,
+  1,
+  2,
+  3,
+  4,
+  0,
+  1,
+  2,
+  3,
+  4,
+  5
 }
 local hero_max_star = {
   0,
@@ -2144,7 +2175,17 @@ local hero_max_star = {
   4,
   4,
   4,
-  0
+  4,
+  4,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  5,
+  5,
+  5
 }
 local function getHeroStarByRank(rank)
   return hero_star[rank], hero_max_star[rank]
@@ -2159,7 +2200,8 @@ local name_color = {
   ccc3(248, 255, 62),
   ccc3(96, 172, 243),
   ccc3(255, 128, 255),
-  ccc3(255, 152, 72)
+  ccc3(255, 152, 72),
+  ccc3(255, 60, 60)
 }
 local function getHeroNameColorByRank(rank)
   if rank == 1 then
@@ -2170,8 +2212,10 @@ local function getHeroNameColorByRank(rank)
     return name_color[3]
   elseif rank >= 7 and rank <= 11 then
     return name_color[4]
-  elseif rank == 12 then
+  elseif rank >= 12 and rank <= 16 then
     return name_color[5]
+  elseif rank >= 17 then
+    return name_color[6]
   else
     return ccc3(255, 255, 255)
   end

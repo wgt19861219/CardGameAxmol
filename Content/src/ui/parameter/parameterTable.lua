@@ -5,7 +5,7 @@ return {
 	["pay_sweep_unit_price"] = 1,
 	["skill_level_up_chance_cd"] = 300,
 	["hero_max_star"] = 5,
-	["hero_max_rank"] = 10,
+	["hero_max_rank"] = 22,
     ["tavern_bronze_chance"] = 5,
     ["tavern_silver_chance"] = 1,
     ["tavern_gold_chance"] = 1,

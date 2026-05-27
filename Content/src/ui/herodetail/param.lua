@@ -36,7 +36,18 @@ card_frame = {
   "UI/alpha/HVGA/card/card_bg_purple.png",
   "UI/alpha/HVGA/card/card_bg_purple.png",
   "UI/alpha/HVGA/card/card_bg_purple.png",
-  "UI/alpha/HVGA/card/card_bg_orange.png"
+  "UI/alpha/HVGA/card/card_bg_orange.png",
+  "UI/alpha/HVGA/card/card_bg_orange.png",
+  "UI/alpha/HVGA/card/card_bg_orange.png",
+  "UI/alpha/HVGA/card/card_bg_orange.png",
+  "UI/alpha/HVGA/card/card_bg_orange.png",
+  "UI/alpha/HVGA/card/card_bg_orange.png",
+  "UI/alpha/HVGA/card/card_bg_red.png",
+  "UI/alpha/HVGA/card/card_bg_red.png",
+  "UI/alpha/HVGA/card/card_bg_red.png",
+  "UI/alpha/HVGA/card/card_bg_red.png",
+  "UI/alpha/HVGA/card/card_bg_red.png",
+  "UI/alpha/HVGA/card/card_bg_red.png"
 }
 card_rotate_amount = 0
 card_rotate_direction = "left"
@@ -52,51 +63,48 @@ skill_unlock_color_text = {
   T(LSTR("HERODETAILRES.PURPLE")),
   T(LSTR("HERODETAILRES.PURPLE")),
   T(LSTR("HERODETAILRES.PURPLE")),
-  T(LSTR("herodetailskill.1.10.1.001"))
+  T(LSTR("HERODETAILRES.ORANGE")),
+  T(LSTR("HERODETAILRES.ORANGE")),
+  T(LSTR("HERODETAILRES.ORANGE")),
+  T(LSTR("HERODETAILRES.ORANGE")),
+  T(LSTR("HERODETAILRES.ORANGE")),
+  T(LSTR("HERODETAILRES.ORANGE")),
+  T(LSTR("HERODETAILRES.RED")),
+  T(LSTR("HERODETAILRES.RED")),
+  T(LSTR("HERODETAILRES.RED")),
+  T(LSTR("HERODETAILRES.RED")),
+  T(LSTR("HERODETAILRES.RED")),
+  T(LSTR("HERODETAILRES.RED"))
 }
 skill_unlock_key_rank = {
   [2] = 2,
   [4] = 3,
-  [7] = 4
+  [7] = 4,
+  [12] = 5,
+  [17] = 6
 }
 equip_rank_info = {
-  {
-    name = "White",
-    font = "equip_white"
-  },
-  {
-    name = "Green",
-    font = "equip_green"
-  },
-  {
-    name = "Green+1",
-    font = "equip_green"
-  },
+  {name = "White", font = "equip_white"},
+  {name = "Green", font = "equip_green"},
+  {name = "Green+1", font = "equip_green"},
   {name = "Blue", font = "equip_blue"},
   {name = "Blue+1", font = "equip_blue"},
   {name = "Blue+2", font = "equip_blue"},
-  {
-    name = "Purple",
-    font = "equip_purple"
-  },
-  {
-    name = "Purple+1",
-    font = "equip_purple"
-  },
-  {
-    name = "Purple+2",
-    font = "equip_purple"
-  },
-  {
-    name = "Purple+3",
-    font = "equip_purple"
-  },
-  {
-    name = "Purple+4",
-    font = "equip_purple"
-  },
-  {
-    name = "Orange",
-    font = "equip_orange"
-  }
+  {name = "Purple", font = "equip_purple"},
+  {name = "Purple+1", font = "equip_purple"},
+  {name = "Purple+2", font = "equip_purple"},
+  {name = "Purple+3", font = "equip_purple"},
+  {name = "Purple+4", font = "equip_purple"},
+  {name = "Orange", font = "equip_orange"},
+  {name = "Orange+1", font = "equip_orange"},
+  {name = "Orange+2", font = "equip_orange"},
+  {name = "Orange+3", font = "equip_orange"},
+  {name = "Orange+4", font = "equip_orange"},
+  {name = "Orange+5", font = "equip_orange"},
+  {name = "Red", font = "equip_red"},
+  {name = "Red+1", font = "equip_red"},
+  {name = "Red+2", font = "equip_red"},
+  {name = "Red+3", font = "equip_red"},
+  {name = "Red+4", font = "equip_red"},
+  {name = "Red+5", font = "equip_red"}
 }

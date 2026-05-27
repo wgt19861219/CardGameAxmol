@@ -40,5 +40,5 @@ stren_health_ratio = 19
 join_excavate_hero_level_limit = 35
 max_item_amount = 999
 max_vitality_stock = 500
-unit_max_rank = 10
+unit_max_rank = 22
 display_equipale_hero_rank = unit_max_rank

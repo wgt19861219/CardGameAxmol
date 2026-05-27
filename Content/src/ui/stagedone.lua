@@ -1278,12 +1278,14 @@ end
 class.createPvpRankReward = createPvpRankReward
 local function registerTouchHandler(self)
   local ui = self.ui
-  self.mainLayer:registerScriptTouchHandler(function(event, x, y)
-    if event == "ended" then
+  self:btRegisterButtonClick({
+    button = ui.shelter,
+    press = ui.shelter,
+    key = "skip_button",
+    clickHandler = function()
       self:skipAnim()
     end
-    return false
-  end, false, 0, true)
+  })
   self:btRegisterButtonClick({
     button = ui.replay,
     press = ui.replay_press,

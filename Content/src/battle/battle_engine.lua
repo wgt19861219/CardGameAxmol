@@ -1029,8 +1029,11 @@ class.onUnitDie = onUnitDie
 local function doFailed(self, param)
 	local id = ed.playEffect(ed.sound.battle.lose)
 	ed.audioParam.effects.battleResult = id
+	local speedState = CCUserDefault:sharedUserDefault():getIntegerForKey("battle_speed_state")
+	if speedState < 1 or speedState > 4 then speedState = 1 end
+	local delay = math.max(0.3, 2.5 / speedState)
 	ed.scene.node:runAction(CCSequence:create(ccArrayMake(unpack({
-		CCDelayTime:create(2.5),
+		CCDelayTime:create(delay),
 		CCCallFunc:create(function()
 			ed.ui.stageaccount.initialize(param)
 		end)
@@ -1124,9 +1127,11 @@ local function downExit(self, result)
 							excavate_mode = self.excavate_mode,
 							isPveMode = pveMode(self)
 						}
-						-- 延迟1秒弹结算窗，让玩家先看到欢呼动画和战利品收集
+						local speedState = CCUserDefault:sharedUserDefault():getIntegerForKey("battle_speed_state")
+						if speedState < 1 or speedState > 4 then speedState = 1 end
+						local delay = math.max(0.3, 1 / speedState)
 						local savedArgs = args
-						ListenTimer(Timer:Once(1), function()
+						ListenTimer(Timer:Once(delay), function()
 							xpcall(function() ed.ui.stageaccount.initialize(savedArgs) end, function(e) print("[downExit] stageaccount ERROR: " .. tostring(e)) end)
 						end)
 				end

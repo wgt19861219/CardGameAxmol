@@ -1,10 +1,10 @@
 """
-gen_hero_equip.py — 为 hero_equip.lua 生成 rank 13-22 装备数据
+gen_hero_equip.py — 为 hero_equip.lua 生成 rank 13-23 装备数据
 
 规则：
-- Rank 13-16（橙色+1~+4）：5个装备槽（Equip1=0）
-- Rank 17-19（红色+1~+3）：4个装备槽（Equip1,2=0）
-- Rank 20-22（红色+3~+5）：3个装备槽（Equip1,2,3=0）
+- Rank 13-16（Orange+1 ~ Orange+4）：5个装备槽（Equip1=0）
+- Rank 17-19（Orange+5 ~ Red+1）：4个装备槽（Equip1,2=0）
+- Rank 20-23（Red+2 ~ Red+5）：3个装备槽（Equip1,2,3=0）
 - 装备ID从 rank 11-12 的装备池中轮换
 - 数值按公式递增
 """
@@ -226,7 +226,7 @@ def main():
     with open(HERO_EQUIP_PATH, 'w', encoding='utf-8') as f:
         f.writelines(output)
 
-    print(f"写入完成！插入了 {len(inserted_heroes)} 个英雄的 rank 13-22 数据")
+    print(f"写入完成！插入了 {len(inserted_heroes)} 个英雄的 rank 13-23 数据")
 
 
 if __name__ == '__main__':

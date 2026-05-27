@@ -13,7 +13,7 @@ local getAllEquip = function(self)
   local heroId = self:getHero()._tid
   local heroRank = self:getHero()._rank
   local heroEquips = ed.getDataTable("hero_equip")
-  for rank = heroRank, 12 do
+  for rank = heroRank, ed.parameter.unit_max_rank do
     local temp = {}
     local rankEquip = heroEquips and heroEquips[heroId] and heroEquips[heroId][rank]
     if not rankEquip then break end
@@ -109,11 +109,7 @@ local function createEquipList(self)
   local equips = self:getAllEquip()
   local heroRank = self:getHero()._rank
   for i, v in ipairs(equips) do
-	--add by xinghui:avoid 'purple+4 and orange' temporary
-	if (heroRank + i - 1) < 11 then
-		self:createEquipInfo(v, heroRank + i - 1)
-	end
-	--	
+    self:createEquipInfo(v, heroRank + i - 1)
   end
   local totoalLayer = #self.draglist.listData
   for i = 1, totoalLayer do

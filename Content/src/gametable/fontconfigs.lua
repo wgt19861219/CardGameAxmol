@@ -350,3 +350,7 @@ equip_orange = {
   size = 18,
   color = ccc3(255, 134, 92)
 }
+equip_red = {
+  size = 18,
+  color = ccc3(255, 60, 60)
+}

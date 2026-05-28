@@ -346,6 +346,17 @@ local function showRewardResult(data, heros)
     return
   end
   panel.rewardLayer:setVisible(true)
+  -- 重新注册触摸：点击任意位置关闭弹窗
+  panel.rewardLayer.mainLayer:registerScriptTouchHandler(function(event, x, y)
+    if panel.rewardLayer:getVisible() then
+      if event == "ended" then
+        panel.rewardLayer:setVisible(false)
+        refreshBattleState()
+      end
+      return true
+    end
+    return false
+  end, false, -200, true)
   local result = ""
   for i, v in ipairs(data) do
     if v._type == "gold" then
@@ -468,7 +479,17 @@ local function dragLayerTouch(event, x, y)
   return true
 end
 function crusade.conformReward()
-  panel.rewardLayer:setVisible(false)
+  if panel and panel.rewardLayer then
+    panel.rewardLayer:setVisible(false)
+    refreshBattleState()
+  end
+end
+function crusade.rewardLayerTouch(event, x, y)
+  if panel and panel.rewardLayer and panel.rewardLayer:isVisible() then
+    crusade.conformReward()
+    return true
+  end
+  return false
 end
 local function refreshLeftTime()
   ed.setString(panel.mainLayer.lefttime, T(LSTR("CRUSADE.THE_REMAINING_TIMES_OF_TODAY___D"), leftTime))

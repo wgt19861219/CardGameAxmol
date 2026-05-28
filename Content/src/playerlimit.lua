@@ -112,7 +112,7 @@ local function unlockRequire(key)
     ["COT"] = "playerlevel",
     ["Enhance"] = "playerlevel",
     ["Exercise"] = "playerlevel",
-    ["shop"] = "stage",
+    ["shop"] = "playerlevel",
     ["sshop"] = "playerlevel",
     ["ssshop"] = "playerlevel",
     ["Crusade"] = "playerlevel",

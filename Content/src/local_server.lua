@@ -2020,37 +2020,70 @@ local function initCrusade(localdata)
     if cd and cd.enemies and #cd.enemies > 0 then
         return cd
     end
-    -- 生成15关的敌人数据
+
+    -- 从 ed.player 获取实时英雄战力
+    local playerHeroes = {}
+    pcall(function()
+        for tid, hero in pairs(ed.player.heroes or {}) do
+            table.insert(playerHeroes, {
+                tid = tid,
+                gs = hero._gs or 0,
+                level = hero._level or 1,
+                stars = hero._stars or 1,
+                rank = hero._rank or 1,
+            })
+        end
+    end)
+    if #playerHeroes == 0 then
+        for _, h in ipairs(localdata.heroes or {}) do
+            table.insert(playerHeroes, {
+                tid = h.tid,
+                gs = (h.level or 1) * 100,
+                level = h.level or 1,
+                stars = h.stars or 1,
+                rank = h.rank or 1,
+            })
+        end
+    end
+    table.sort(playerHeroes, function(a, b) return a.gs > b.gs end)
+
+    -- 玩家前5英雄总战力作为基准
+    local playerTeamGs = 0
+    for i = 1, math.min(5, #playerHeroes) do
+        playerTeamGs = playerTeamGs + playerHeroes[i].gs
+    end
+    if playerTeamGs < 100 then playerTeamGs = 500 end
+
+    -- 难度曲线：第1关60% → 第15关180%
+    local function stageScale(stage)
+        return 0.6 + (stage - 1) * (1.2 / (CRUSADE_MAX_STAGE - 1))
+    end
+
     local enemies = {}
-    local playerLevel = localdata.player and localdata.player.level or 1
-    local usedHeroes = {}
-    local usedCount = 0
     for stage = 1, CRUSADE_MAX_STAGE do
+        local scale = stageScale(stage)
         local stageEnemies = {}
-        -- 难度递增：关卡越高，英雄等级/星级/阶位越高
-        local baseLevel = math.min(playerLevel + stage * 2, 90)
-        local baseStars = math.min(1 + math.floor(stage / 3), 5)
-        local baseRank = math.min(1 + math.floor(stage / 4), 8)
         for i = 1, 5 do
-            local hid
-            repeat
-                hid = CRUSADE_HERO_POOL[math_random(1, #CRUSADE_HERO_POOL)]
-            until not usedHeroes[hid] or usedCount > 30
-            usedHeroes[hid] = true
-            usedCount = usedCount + 1
+            -- 从玩家英雄池轮换选取模板
+            local srcIdx = ((stage - 1 + i - 1) % #playerHeroes) + 1
+            local src = playerHeroes[srcIdx]
+            -- 按战力比例缩放属性
+            local lvl = math.max(1, math.min(math.floor(src.level * scale + 0.5), 90))
+            local stars = math.max(1, math.min(math.floor(src.stars * scale + 0.5), 5))
+            local rank = math.max(1, math.min(math.floor(src.rank * scale + 0.5), 12))
             table.insert(stageEnemies, {
-                _tid = hid,
-                _level = baseLevel + math_random(-2, 2),
-                _stars = baseStars,
-                _rank = baseRank,
+                _tid = src.tid,
+                _level = lvl,
+                _stars = stars,
+                _rank = rank,
             })
         end
         local nameIdx = math_random(1, #AI_NAMES)
         enemies[stage] = {
             heroes = stageEnemies,
             name = AI_NAMES[nameIdx],
-            level = baseLevel,
-            avatar = CRUSADE_HERO_POOL[math_random(1, #CRUSADE_HERO_POOL)],
+            level = stageEnemies[1]._level,
+            avatar = playerHeroes[((stage - 1) % #playerHeroes) + 1].tid,
             vip = math.min(math.floor(stage / 5), 3),
         }
     end
@@ -2150,28 +2183,9 @@ local function getCrusadeReward(stageId, resetTimes)
             if t == "crusadepoint" then
                 table.insert(rewards, { _type = "crusadepoint", _param1 = amount * 10, _param2 = 0 })
             elseif t == "chestbox" then
-                local itemGroups = ed.getDataTable("ItemGroups")
-                local tavernBoxType = ed.getDataTable("TavernBoxType")
-                if itemGroups and tavernBoxType and id > 0 then
-                    local boxInfo = tavernBoxType[id]
-                    if boxInfo then
-                        local boxEntry = boxInfo[0]
-                        if boxEntry then
-                            local groupId = boxEntry["Chest Group ID"]
-                            local group = itemGroups[groupId]
-                            if group then
-                                local items = {}
-                                for _, item in pairs(group) do
-                                    table.insert(items, item)
-                                end
-                                if #items > 0 then
-                                    local picked = items[math.random(1, #items)]
-                                    table.insert(rewards, { _type = "item", _param1 = picked["id"], _param2 = picked["amout"] or 1 })
-                                end
-                            end
-                        end
-                    end
-                end
+                local coinMap = { [1] = 50, [2] = 100, [3] = 200, [4] = 100, [5] = 200, [6] = 400 }
+                local coins = coinMap[id] or 50
+                table.insert(rewards, { _type = "crusadepoint", _param1 = coins * 10, _param2 = 0 })
             elseif t == "item" then
                 table.insert(rewards, { _type = "item", _param1 = id, _param2 = amount })
             end
@@ -2441,8 +2455,160 @@ M.handlers.chat = function(data, obj, localdata)
 end
 
 -- guild: 公会系统，触发 FireEvent("GuildRsp")
+-- 单人版：自动创建公会，模拟NPC成员
+local guild_npc_members = {
+    { _uid = 9001, _name = "亚历山大", _avatar = 10, _level = 90, _vip = 10, _job = "elder" },
+    { _uid = 9002, _name = "贝奥武夫", _avatar = 15, _level = 85, _vip = 8, _job = "member" },
+    { _uid = 9003, _name = "克里斯蒂娜", _avatar = 20, _level = 82, _vip = 7, _job = "member" },
+    { _uid = 9004, _name = "达芙妮", _avatar = 5, _level = 78, _vip = 5, _job = "member" },
+    { _uid = 9005, _name = "埃里克", _avatar = 30, _level = 75, _vip = 3, _job = "member" },
+    { _uid = 9006, _name = "菲奥娜", _avatar = 25, _level = 72, _vip = 2, _job = "member" },
+    { _uid = 9007, _name = "加雷斯", _avatar = 35, _level = 88, _vip = 9, _job = "member" },
+    { _uid = 9008, _name = "海伦娜", _avatar = 40, _level = 80, _vip = 6, _job = "member" },
+}
+local guild_npc_guilds = {
+    { _id = 10001, _name = "英雄殿堂", _avatar = 1, _slogan = "共同战斗，共创辉煌！", _member_cnt = 9, _join_type = "no_verify", _join_limit = 30 },
+    { _id = 10002, _name = "暗影军团", _avatar = 143, _slogan = "黑暗中前行", _member_cnt = 15, _join_type = "no_verify", _join_limit = 32 },
+    { _id = 10003, _name = "龙骑联盟", _avatar = 147, _slogan = "龙之力量", _member_cnt = 22, _join_type = "verify", _join_limit = 35 },
+    { _id = 10004, _name = "风暴之翼", _avatar = 150, _slogan = "自由翱翔", _member_cnt = 18, _join_type = "no_verify", _join_limit = 30 },
+    { _id = 10005, _name = "圣光骑士团", _avatar = 155, _slogan = "光明永存", _member_cnt = 30, _join_type = "verify", _join_limit = 40 },
+}
+
 M.handlers.guild = function(data, obj, localdata)
-    data._guild_reply = data._guild_reply or {}
+    local reply = {}
+    local pName = localdata.player.name or "Player"
+    local pLevel = localdata.player.level or 1
+    local pAvatar = localdata.player.avatar or 1
+    local pVip = localdata.player.vip or 0
+    local pUid = localdata.player.uid or 1
+    local hasGuild = localdata.player._user_guild and localdata.player._user_guild._id and localdata.player._user_guild._id ~= 0
+
+    local function makePlayerMember()
+        return {
+            _uid = pUid,
+            _job = "chairman",
+            _active = 100,
+            _join_instance_time = 0,
+            _last_login = 0,
+            _summary = { _avatar = pAvatar, _level = pLevel, _name = pName, _vip = pVip }
+        }
+    end
+
+    local function makeGuildInfo(guildName, guildAvatar)
+        local members = { makePlayerMember() }
+        for _, npc in ipairs(guild_npc_members) do
+            table.insert(members, {
+                _uid = npc._uid, _job = npc._job, _active = math.random(10, 100),
+                _join_instance_time = math.random(0, 5), _last_login = os.time() - math.random(0, 3600),
+                _summary = { _avatar = npc._avatar, _level = npc._level, _name = npc._name, _vip = npc._vip }
+            })
+        end
+        return {
+            _vitality = 5000, _self_vitality = 100, _left_distribute_time = 0,
+            _summary = {
+                _id = 10001, _name = guildName or "英雄殿堂",
+                _slogan = "共同战斗，共创辉煌！", _avatar = guildAvatar or 1,
+                _join_type = "no_verify", _join_limit = 32
+            },
+            _members = members
+        }
+    end
+
+    if obj._open_pannel then
+        if hasGuild then
+            local gName = localdata.player._user_guild._name or "英雄殿堂"
+            reply._query = { _info = makeGuildInfo(gName), _worship = { _use_times = 0 } }
+        else
+            reply._list = { _guilds = guild_npc_guilds, _create_cost = 500 }
+        end
+    elseif obj._create then
+        local name = (type(obj._create) == "table" and obj._create._name) or "我的公会"
+        local avatar = (type(obj._create) == "table" and obj._create._avatar) or 1
+        reply._create = { _result = "success", _guild_info = makeGuildInfo(name, avatar) }
+        localdata.player._user_guild = { _id = 10001, _name = name }
+    elseif obj._query then
+        if hasGuild then
+            local gName = localdata.player._user_guild._name or "英雄殿堂"
+            reply._query = { _info = makeGuildInfo(gName), _worship = { _use_times = 0 } }
+        else
+            reply._list = { _guilds = guild_npc_guilds, _create_cost = 500 }
+        end
+    elseif obj._search then
+        local gid = obj._search and obj._search._guild_id
+        local found = nil
+        for _, g in ipairs(guild_npc_guilds) do
+            if g._id == gid then found = g break end
+        end
+        reply._search = { _guilds = found }
+    elseif obj._join then
+        local gid = (type(obj._join) == "table" and obj._join._guild_id) or 10001
+        local gName = "英雄殿堂"
+        for _, g in ipairs(guild_npc_guilds) do
+            if g._id == gid then gName = g._name break end
+        end
+        reply._join = { _result = "join_enter", _guild_info = makeGuildInfo(gName) }
+        localdata.player._user_guild = { _id = gid, _name = gName }
+    elseif obj._set then
+        reply._set = { _result = "success" }
+    elseif obj._set_job then
+        reply._set_job = { _result = "success" }
+    elseif obj._kick then
+        reply._kick = { _result = "success" }
+    elseif obj._join_confirm then
+        reply._join_confirm = { _result = "success" }
+    elseif obj._leave then
+        reply._leave = { _result = "success" }
+        localdata.player._user_guild = { _id = 0, _name = "" }
+    elseif obj._dismiss then
+        reply._dismiss = { _result = "success" }
+        localdata.player._user_guild = { _id = 0, _name = "" }
+    elseif obj._query_hires then
+        reply._query_hires = { _users = {} }
+    elseif obj._add_hire then
+        reply._add_hire = { _result = "success", _income = 100 }
+    elseif obj._del_hire then
+        reply._del_hire = {
+            _result = "success", _hire_reward = 50, _stay_reward = 50,
+            _heroid = obj._del_hire and obj._del_hire._heroid or 0
+        }
+    elseif obj._worship_req then
+        reply._worship_req = { _result = "success" }
+    elseif obj._worship_withdraw then
+        reply._worship_withdraw = { _rewards = { { _type = "gold", _param1 = 5000 } } }
+    elseif obj._query_hh_detail then
+        reply._query_hh_detail = { _hero = { _tid = 1, _rank = 1, _level = 1, _stars = 1 } }
+    elseif obj._instance_query then
+        reply._instance_query = { _current_raid_id = 1, _summary = {} }
+    elseif obj._instance_open then
+        reply._instance_open = {
+            _result = "success",
+            _raid_id = obj._instance_open and obj._instance_open._raid_id or 1,
+            _left_time = 604800
+        }
+    elseif obj._drop_info then
+        reply._drop_info = { _items = nil, _members = {} }
+    elseif obj._drop_give then
+        reply._drop_give = { _result = "success" }
+    elseif obj._items_history then
+        reply._items_history = { _item_historys = {} }
+    elseif obj._instance_damage then
+        reply._instance_damage = { _damages = {} }
+    elseif obj._instance_start then
+        reply._instance_start = { _rseed = math.random(1, 999999), _instance_info = {}, _loots = {} }
+    elseif obj._instance_end then
+        reply._instance_end = {
+            _result = "success",
+            _summary = { _id = 1, _stage_id = 1, _stage_progress = 0, _progress = 0, _left_time = 604800, _start_time = os.time() }
+        }
+    elseif obj._instance_detail then
+        reply._instance_detail = { _wave = 1, _hp = 100, _challenger = "", _stage = 1, _challenger_status = "idle" }
+    elseif obj._instance_drop then
+        reply._instance_drop = { _rewards = {} }
+    elseif obj._guild_stage_rank then
+        reply._guild_stage_rank = { _ranks = {} }
+    end
+
+    data._guild_reply = reply
 end
 
 ------------------------------------------------------------------------
@@ -4397,6 +4563,11 @@ end
 -----------------------------------------------------------------------
 function M.init()
     M.data = LocalData.load()
+    -- 清空旧远征数据，强制用新战力逻辑重新生成
+    if M.data and M.data.crusade then
+        M.data.crusade = nil
+        LocalData.save(M.data)
+    end
     -- 确保 down 模块可用（供 M.handle 创建 down_msg 对象）
     if not down then
         -- 方式1: 从 ed.downmsg 获取（main.lua stub 会设置）

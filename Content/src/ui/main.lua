@@ -1416,6 +1416,7 @@ local function getMainButtonHandler(self, key)
 				ed.showToast(ds)
 				return
 			end
+			if ed.ensureSceneModules then ed.ensureSceneModules("guild") end
 			local msg = ed.upmsg.guild()
 			msg._open_pannel = {}
 			ed.send(msg, "guild")
@@ -1500,13 +1501,14 @@ local function getMainButtonHandler(self, key)
 			ed.pushScene(scene)
 		end
 	}
-	local hd = handler[key] or function()
-		print("can not find the function")
-	end
-	if self.isPushScene then
-		function hd()
+		local hd = handler[key] or function()
+			print("can not find the function")
 		end
-	end
-	return hd
+		local asyncKeys = { handbook = true, volcano = true, pvp = true }
+		if self.isPushScene and not asyncKeys[key] then
+			function hd()
+			end
+		end
+		return hd
 end
 class.getMainButtonHandler = getMainButtonHandler

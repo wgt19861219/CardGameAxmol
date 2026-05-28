@@ -2198,6 +2198,14 @@ local function getCrusadeReward(stageId, resetTimes)
     return rewards
 end
 
+-- 副本硬币掉落：普通5-10，英雄15-25
+local function getDungeonCoinReward(difficulty)
+  if difficulty == 2 then
+    return math.random(15, 25)
+  end
+  return math.random(5, 10)
+end
+
 M.handlers.tbc = function(data, obj, localdata)
     local reply = {}
 

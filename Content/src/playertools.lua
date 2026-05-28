@@ -20,7 +20,8 @@ local function addPoint(self, name, amount)
     "diamond",
     "crusadepoint",
     "arenapoint",
-    "guildpoint"
+    "guildpoint",
+    "dungeonpoint"
   }
   if not ed.isElementInTable(name, coin_type) then
     print("Invalid coin type : " .. (name or "nil"))

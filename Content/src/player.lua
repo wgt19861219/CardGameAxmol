@@ -532,6 +532,15 @@ local addGuildMoney = function(self, amount)
   self:addPoint("guildpoint", amount)
 end
 class.addGuildMoney = addGuildMoney
+local addDungeonPoint = function(self, amount)
+  amount = amount or 0
+  self:addPoint("dungeonpoint", amount)
+end
+class.addDungeonPoint = addDungeonPoint
+local getDungeonPoint = function(self)
+  return self:getPoint("dungeonpoint")
+end
+class.getDungeonPoint = getDungeonPoint
 local function addVitality(self, vit, timeAdd)
   vit = vit or 1
   local param = ed.parameter

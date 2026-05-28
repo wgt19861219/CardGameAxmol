@@ -412,6 +412,78 @@ local function getStageRewards(stage_id)
     return (stageCfg["Exp Reward"] or 0) * 10, (stageCfg["Money Reward"] or 0) * 10
 end
 
+-- 副本硬币掉落：普通5-10，英雄15-25
+local function getDungeonCoinReward(difficulty)
+  if difficulty == 2 then
+    return math.random(15, 25)
+  end
+  return math.random(5, 10)
+end
+
+-- 副本Stage->Group映射
+local dungeonStageToGroup = {
+  [40001]=40001,[40002]=40001,[40003]=40001,
+  [40004]=40002,[40005]=40002,[40006]=40002,
+  [40007]=40003,[40008]=40003,[40009]=40003,
+  [40010]=40004,[40011]=40004,[40012]=40004,
+  [40013]=40005,[40014]=40005,[40015]=40005,
+  [40016]=40006,[40017]=40006,[40018]=40006,
+  [40019]=40007,[40020]=40007,[40021]=40007,
+}
+
+local function isDungeonStage(stage_id)
+  return stage_id >= 40001 and stage_id <= 40021
+end
+ed.isDungeonStage = isDungeonStage
+
+-- 副本掉落：概率+保底+优先未拥有
+local function generateDungeonLoots(stage_id)
+  local loots = {}
+  local stageTable = ed.getDataTable("StageDungeon")
+  if not stageTable then return loots end
+  local stage = stageTable[stage_id]
+  if not stage then return loots end
+
+  local difficulty = stage["Difficulty"] or 1
+  local dropRate = difficulty == 2 and 0.2 or 0.3
+
+  for i = 1, 7 do
+    local rewardId = stage["UI reward" .. i]
+    if rewardId and rewardId ~= 0 then
+      if math.random() < dropRate then
+        table_insert(loots, ed.makebits(3, 1, 3, 1, 10, rewardId))
+      end
+    end
+  end
+
+  -- 保底
+  if #loots == 0 then
+    local candidates = {}
+    for i = 1, 7 do
+      local rewardId = stage["UI reward" .. i]
+      if rewardId and rewardId ~= 0 then
+        table_insert(candidates, rewardId)
+      end
+    end
+    if #candidates > 0 then
+      local chosen = nil
+      if ed.player then
+        for _, id in ipairs(candidates) do
+          local owned = false
+          for _, item in pairs(ed.player.items or {}) do
+            if item._id == id then owned = true break end
+          end
+          if not owned then chosen = id break end
+        end
+      end
+      if not chosen then chosen = candidates[math.random(#candidates)] end
+      table_insert(loots, ed.makebits(3, 1, 3, 1, 10, chosen))
+    end
+  end
+
+  return loots
+end
+
 -- 获取关卡体力消耗
 local function getStageVitalityCost(stage_id)
     local StageTable = ed.getDataTable("Stage")
@@ -503,6 +575,82 @@ M.handlers.enter_act_stage = function(data, obj, localdata)
     local stage_id = obj._stage or 0
     local stage_group = obj._stage_group or 0
 
+    -- 副本关卡走 StageDungeon 表
+    if isDungeonStage(stage_id) then
+        local stageTable = ed.getDataTable("StageDungeon")
+        if not stageTable or not stageTable[stage_id] then
+            data._enter_stage_reply = { _error = "invalid_stage" }
+            return
+        end
+        local stageCfg = stageTable[stage_id]
+
+        local expectedGroup = dungeonStageToGroup[stage_id]
+        if expectedGroup ~= stage_group then
+            data._enter_stage_reply = { _error = "group_mismatch" }
+            return
+        end
+
+        local unlockLv = stageCfg["Unlock Level"] or 0
+        local plyLevel = (ed.player and ed.player:getLevel()) or 1
+        if plyLevel < unlockLv then
+            data._enter_stage_reply = { _error = "level_lock" }
+            return
+        end
+
+        -- 次数校验
+        local groupTable = ed.getDataTable("ActStageGroupDungeon")
+        local groupCfg = groupTable and groupTable[expectedGroup]
+        if groupCfg then
+            local dailyLimit = groupCfg["DailyLimit"] or 2
+            local maxBuy = groupCfg["MaxBuyPerDay"] or 3
+            local totalAllowed = dailyLimit + maxBuy
+            local usedTimes = ed.player and ed.player:getActTimes(expectedGroup) or 0
+            if usedTimes >= totalAllowed then
+                data._enter_stage_reply = { _error = "no_attempts" }
+                return
+            end
+            -- 免费次数用完后扣除龙鳞硬币
+            if usedTimes >= dailyLimit then
+                local buyCost = groupCfg["BuyCost"] or 50
+                local coins = ed.player and ed.player:getDungeonPoint() or 0
+                if coins < buyCost then
+                    data._enter_stage_reply = { _error = "not_enough_coins" }
+                    return
+                end
+                ed.player:addDungeonPoint(-buyCost)
+                localdata.player.dungeonpoint = (localdata.player.dungeonpoint or 0) - buyCost
+            end
+            -- 记录次数
+            if ed.player then
+                ed.player:addActTimes(expectedGroup)
+            end
+        end
+
+        local costVit = stageCfg["Vitality Cost"] or 0
+        local returnVit = stageCfg["Vit Return"] or 0
+        local enterCost = math.max(0, costVit - returnVit)
+        if enterCost > 0 and ed.player then
+            ed.player:addVitality(-enterCost)
+        end
+
+        local rseed = makeRandomSeed()
+        local loots = generateDungeonLoots(stage_id)
+
+        localdata.battle = {
+            stage_id = stage_id,
+            stage_group = stage_group,
+            enter_time = getTimestamp(),
+            srand = rseed,
+        }
+        LocalData.save(localdata)
+
+        data._enter_stage_reply = {
+            _rseed = rseed,
+            _loots = loots,
+        }
+        return
+    end
+
     local StageTable = ed.getDataTable("Stage")
     if not StageTable or not StageTable[stage_id] then return end
     local stageCfg = StageTable[stage_id]
@@ -549,11 +697,29 @@ M.handlers.exit_stage = function(data, obj, localdata)
     if stage_id > 0 then
         local battleResult = obj._result
         if battleResult == "victory" then
-            local expReward, moneyReward = getStageRewards(stage_id)
-            localdata.player.exp = localdata.player.exp + expReward
-            localdata.player.gold = localdata.player.gold + moneyReward
+            -- 副本关卡：从 StageDungeon 读奖励
+            if isDungeonStage(stage_id) then
+                local stageTable = ed.getDataTable("StageDungeon")
+                local stageCfg = stageTable and stageTable[stage_id]
+                if stageCfg then
+                    local expReward = (stageCfg["Exp Reward"] or 0) * 10
+                    local goldReward = difficulty == 2 and 5000 or 2000
+                    localdata.player.exp = localdata.player.exp + expReward
+                    localdata.player.gold = localdata.player.gold + goldReward
 
-            if not isEliteStage(stage_id) then
+                    -- 副本硬币
+                    local difficulty = stageCfg["Difficulty"] or 1
+                    local coins = getDungeonCoinReward(difficulty)
+                    if ed.player then ed.player:addDungeonPoint(coins) end
+                    localdata.player.dungeonpoint = (localdata.player.dungeonpoint or 0) + coins
+                end
+            else
+                local expReward, moneyReward = getStageRewards(stage_id)
+                localdata.player.exp = localdata.player.exp + expReward
+                localdata.player.gold = localdata.player.gold + moneyReward
+            end
+
+            if not isEliteStage(stage_id) and not isDungeonStage(stage_id) then
                 if stage_id >= localdata.stage.max_normal then
                     localdata.stage.max_normal = stage_id
                 end
@@ -2196,14 +2362,6 @@ local function getCrusadeReward(stageId, resetTimes)
                     { _type = "crusadepoint", _param1 = stageId * 50, _param2 = 0 } }
     end
     return rewards
-end
-
--- 副本硬币掉落：普通5-10，英雄15-25
-local function getDungeonCoinReward(difficulty)
-  if difficulty == 2 then
-    return math.random(15, 25)
-  end
-  return math.random(5, 10)
 end
 
 M.handlers.tbc = function(data, obj, localdata)

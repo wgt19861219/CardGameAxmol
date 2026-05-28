@@ -1499,6 +1499,18 @@ local function getMainButtonHandler(self, key)
 		--]]
 			local scene = ed.ui.ranklist.create({index = 2})
 			ed.pushScene(scene)
+		end,
+		dungeon = function()
+			local ds = cpl("Exercise")
+			if ds then
+				ed.showToast(ds)
+				return
+			end
+			if not package.loaded["ui/dungeon"] then
+				pcall(require, "ui/dungeon")
+			end
+			ed.pushScene(ed.ui.dungeon.createScene("normal"))
+			self.isPushScene = true
 		end
 	}
 		local hd = handler[key] or function()

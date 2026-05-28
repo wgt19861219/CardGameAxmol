@@ -353,11 +353,16 @@ local function doGo(self)
       ed.delaySend(ed.player:tomd5(), "important_data_md5", true)
       ed.send(msg, "enter_stage")
       LegendLog("[DOGO] enter_stage sent")
-    elseif type == "act" then
+    elseif type == "act" or type == "raid" then
       ed.netreply.enterStage = self:gotoBattle()
       local msg = ed.upmsg.enter_act_stage()
       msg._stage = stageid
-      msg._stage_group = ed.getDataTable("Stage")[stageid]["Stage Group"]
+      -- 副本从 StageDungeon 取 Stage Group，活动从 Stage 取
+      if ed.isDungeonStage and ed.isDungeonStage(stageid) then
+        msg._stage_group = ed.getDataTable("StageDungeon")[stageid]["Stage Group"]
+      else
+        msg._stage_group = ed.getDataTable("Stage")[stageid]["Stage Group"]
+      end
       ed.delaySend(ed.player:tomd5(), "important_data_md5", true)
       ed.send(msg, "enter_act_stage")
     else

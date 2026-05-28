@@ -36,7 +36,7 @@ local function loadTable(self)
     "Unit", "UnitRank", "equip", "VIP", "PlayerLevel", "Privilege",
     "Stage", "Chapter", "Shop", "Recharge", "TavernType", "hero_equip",
     "fragment", "Skill", "SkillLevels", "Task", "GradientPrice", "Levels",
-    "Todolist", "ActStageGroup", "TextureConfig", "GuildAvatar",
+    "Todolist", "ActStageGroup", "ActStageGroupDungeon", "StageDungeon", "TextureConfig", "GuildAvatar",
     "enhancement", "equipcraft", "HeroStars",
   }
   for i = 1, #criticalTables do

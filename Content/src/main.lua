@@ -1140,6 +1140,68 @@ for _, mod in ipairs(coreModules) do
                     print("[STUB-NET] no scheduler, executing synchronously")
                     doLoginReply()
                 end
+            elseif msgType == "hero_equip_upgrade" then
+                -- 装备附魔：100%成功率，直接处理
+                LegendLog("[STUB-NET] hero_equip_upgrade: handling directly (100% success)")
+                pcall(function()
+                    local netdata = ed.netdata.equipUpgrade
+                    local handler = ed.netreply.equipUpgrade
+                    if not netdata then
+                        LegendLog("[STUB-NET] hero_equip_upgrade: WARNING netdata is nil")
+                        if handler then handler(false); ed.netreply.equipUpgrade = nil end
+                        return
+                    end
+                    local hid = netdata.hid
+                    local slot = netdata.slot
+                    local cost = netdata.cost or 0
+                    local mts = netdata.mts or {}
+                    local hero = ed.player and ed.player.heroes and ed.player.heroes[hid]
+                    if not hero then
+                        LegendLog("[STUB-NET] hero_equip_upgrade: hero not found, hid=" .. tostring(hid))
+                        if handler then handler(false); ed.netreply.equipUpgrade = nil end
+                        return
+                    end
+                    -- 扣金币
+                    if cost > 0 then
+                        ed.player._money = (ed.player._money or 0) - cost
+                    end
+                    -- 扣材料
+                    for _, mt in ipairs(mts) do
+                        if mt.id and mt.amount then
+                            pcall(function() ed.player:consumeEquip(mt.id, mt.amount) end)
+                        end
+                    end
+                    -- 增加装备经验
+                    local items = hero._items or hero.data and hero.data._items
+                    if items and items[slot] then
+                        local equipSlot = items[slot]
+                        local curExp = equipSlot._exp or equipSlot.exp or 0
+                        -- 从材料计算实际经验
+                        local materialExp = 0
+                        local equipTable = ed.getDataTable("equip")
+                        for _, mt in ipairs(mts) do
+                            if mt.id and equipTable and equipTable[mt.id] then
+                                materialExp = materialExp + (equipTable[mt.id]["Exp"] or equipTable[mt.id]["Enhance Value"] or 0) * (mt.amount or 1)
+                            end
+                        end
+                        local addExp = materialExp > 0 and materialExp or cost
+                        if equipSlot._exp then
+                            equipSlot._exp = curExp + addExp
+                        else
+                            equipSlot.exp = curExp + addExp
+                        end
+                        LegendLog("[STUB-NET] hero_equip_upgrade: hid=" .. tostring(hid) .. " slot=" .. tostring(slot) .. " exp +" .. tostring(addExp) .. " -> " .. tostring(curExp + addExp))
+                    end
+                    -- 保存
+                    if ed.saveGame then pcall(function() ed.saveGame() end) end
+                    -- 重算GS
+                    pcall(function()
+                        if ed.recalcHeroGs then ed.recalcHeroGs(hero) end
+                    end)
+                    -- 调回调（result = true = 成功）
+                    if handler then handler(true); ed.netreply.equipUpgrade = nil end
+                    ed.netdata.equipUpgrade = nil
+                end)
             elseif msgType == "tavern_draw" then
                 LegendLog("[STUB-NET] tavern_draw: delegating to local_server")
                 pcall(function()
@@ -2337,6 +2399,59 @@ local function ensureStubsAfterTools()
                     print("[STUB-NET] no scheduler, executing synchronously (ensureStubs)")
                     doLoginReply()
                 end
+            elseif msgType == "hero_equip_upgrade" then
+                -- 装备附魔：100%成功率
+                LegendLog("[ENSURE-SEND] hero_equip_upgrade: handling directly (100% success)")
+                pcall(function()
+                    local netdata = ed.netdata and ed.netdata.equipUpgrade
+                    local cb = ed.netreply and ed.netreply.equipUpgrade
+                    if not netdata then
+                        if cb then cb(false); ed.netreply.equipUpgrade = nil end
+                        return
+                    end
+                    local hid = netdata.hid
+                    local slot = netdata.slot
+                    local cost = netdata.cost or 0
+                    local mts = netdata.mts or {}
+                    local hero = ed.player and ed.player.heroes and ed.player.heroes[hid]
+                    if not hero then
+                        if cb then cb(false); ed.netreply.equipUpgrade = nil end
+                        return
+                    end
+                    -- 扣金币
+                    if cost > 0 then
+                        ed.player._money = (ed.player._money or 0) - cost
+                    end
+                    -- 扣材料
+                    for _, mt in ipairs(mts) do
+                        if mt.id and mt.amount then
+                            pcall(function() ed.player:consumeEquip(mt.id, mt.amount) end)
+                        end
+                    end
+                    -- 增加装备经验
+                    local items = hero._items or hero.data and hero.data._items
+                    if items and items[slot] then
+                        local equipSlot = items[slot]
+                        local curExp = equipSlot._exp or equipSlot.exp or 0
+                        local materialExp = 0
+                        local equipTable = ed.getDataTable("equip")
+                        for _, mt in ipairs(mts) do
+                            if mt.id and equipTable and equipTable[mt.id] then
+                                materialExp = materialExp + (equipTable[mt.id]["Exp"] or equipTable[mt.id]["Enhance Value"] or 0) * (mt.amount or 1)
+                            end
+                        end
+                        local addExp = materialExp > 0 and materialExp or cost
+                        if equipSlot._exp then
+                            equipSlot._exp = curExp + addExp
+                        else
+                            equipSlot.exp = curExp + addExp
+                        end
+                    end
+                    if ed.saveGame then pcall(function() ed.saveGame() end) end
+                    pcall(function() if ed.recalcHeroGs then ed.recalcHeroGs(hero) end end)
+                    if cb then cb(true); ed.netreply.equipUpgrade = nil end
+                    ed.netdata.equipUpgrade = nil
+                end)
             elseif msgType == "tavern_draw" then
                 LegendLog("[ENSURE-SEND] tavern_draw: delegating to local_server")
                 pcall(function()

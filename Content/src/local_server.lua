@@ -414,14 +414,24 @@ end
 
 -- 副本硬币掉落：普通5-10，英雄15-25
 local function getDungeonCoinReward(difficulty)
-  if difficulty == 2 then
-    return math.random(15, 25)
-  end
-  return math.random(5, 10)
+  local ranges = {
+    [1] = {5, 8}, [2] = {10, 15}, [3] = {20, 30}, [4] = {35, 50}
+  }
+  local r = ranges[difficulty] or ranges[1]
+  return math.random(r[1], r[2])
 end
 
--- 副本Stage->Group映射
-local dungeonStageToGroup = {
+-- 副本Stage->BaseStage映射（去掉难度偏移）
+local function getDungeonBaseStageId(stage_id)
+  if stage_id >= 43001 then return stage_id - 3000 end
+  if stage_id >= 42001 then return stage_id - 2000 end
+  if stage_id >= 41001 then return stage_id - 1000 end
+  return stage_id
+end
+ed.getDungeonBaseStageId = getDungeonBaseStageId
+
+-- 副本BaseStage->Group映射
+local dungeonBaseToGroup = {
   [40001]=40001,[40002]=40001,[40003]=40001,
   [40004]=40002,[40005]=40002,[40006]=40002,
   [40007]=40003,[40008]=40003,[40009]=40003,
@@ -431,17 +441,36 @@ local dungeonStageToGroup = {
   [40019]=40007,[40020]=40007,[40021]=40007,
 }
 
+-- 副本Stage->Group（支持所有难度ID）
+local function dungeonStageToGroup(stage_id)
+  local baseId = getDungeonBaseStageId(stage_id)
+  return dungeonBaseToGroup[baseId]
+end
+
 local function isDungeonStage(stage_id)
-  return stage_id >= 40001 and stage_id <= 40021
+  if stage_id >= 40001 and stage_id <= 40021 then return true end
+  if stage_id >= 41001 and stage_id <= 41021 then return true end
+  if stage_id >= 42001 and stage_id <= 42021 then return true end
+  if stage_id >= 43001 and stage_id <= 43021 then return true end
+  return false
 end
 ed.isDungeonStage = isDungeonStage
 
--- 英雄副本前置：通关对应普通副本组所有Boss
--- 40005→40001, 40006→40002, 40007→40004
+-- 获取副本钥匙消耗
+local function getDungeonKeyCost(stage_id)
+  local st = ed.getDataTable("StageDungeon")
+  if not st then return 0 end
+  local s = st[stage_id]
+  return s and s["Key Cost"] or 0
+end
+ed.getDungeonKeyCost = getDungeonKeyCost
+
+-- 高级副本前置：通关对应普通副本组所有Boss
+-- 40005→40001, 40006→40002, 40007→40003
 local heroicPrereq = {
   [40005] = 40001,
   [40006] = 40002,
-  [40007] = 40004,
+  [40007] = 40003,
 }
 
 local function checkHeroicPrereq(group_id, localdata)
@@ -465,7 +494,7 @@ local function checkHeroicPrereq(group_id, localdata)
   return true
 end
 
--- 副本掉落：概率+保底+优先未拥有
+-- 副本掉落：概率+保底+优先未拥有，4难度分级
 local function generateDungeonLoots(stage_id)
   local loots = {}
   local stageTable = ed.getDataTable("StageDungeon")
@@ -474,7 +503,8 @@ local function generateDungeonLoots(stage_id)
   if not stage then return loots end
 
   local difficulty = stage["Difficulty"] or 1
-  local dropRate = difficulty == 2 and 0.2 or 0.3
+  local dropRates = { [1] = 0.3, [2] = 0.25, [3] = 0.2, [4] = 0.15 }
+  local dropRate = dropRates[difficulty] or 0.3
 
   for i = 1, 7 do
     local rewardId = stage["UI reward" .. i]
@@ -613,7 +643,7 @@ M.handlers.enter_act_stage = function(data, obj, localdata)
         end
         local stageCfg = stageTable[stage_id]
 
-        local expectedGroup = dungeonStageToGroup[stage_id]
+        local expectedGroup = dungeonStageToGroup(stage_id)
         if expectedGroup ~= stage_group then
             data._enter_stage_reply = { _error = "group_mismatch" }
             return
@@ -631,6 +661,16 @@ M.handlers.enter_act_stage = function(data, obj, localdata)
         if not prereqOk then
             data._enter_stage_reply = { _error = "heroic_prereq", _prereq_group = prereqGroup }
             return
+        end
+
+        -- 钥匙消耗检查（英雄/噩梦难度）
+        local keyCost = getDungeonKeyCost(stage_id)
+        if keyCost > 0 then
+            local coins = ed.player and ed.player:getDungeonPoint() or 0
+            if coins < keyCost then
+                data._enter_stage_reply = { _error = "not_enough_keys", _need = keyCost }
+                return
+            end
         end
 
         -- 次数校验
@@ -740,7 +780,8 @@ M.handlers.exit_stage = function(data, obj, localdata)
                 if stageCfg then
                     local difficulty = stageCfg["Difficulty"] or 1
                     local expReward = (stageCfg["Exp Reward"] or 0) * 10
-                    local goldReward = difficulty == 2 and 5000 or 2000
+                    local goldByDiff = { [1] = 2000, [2] = 3500, [3] = 5000, [4] = 8000 }
+                    local goldReward = goldByDiff[difficulty] or 2000
                     localdata.player.exp = localdata.player.exp + expReward
                     localdata.player.gold = localdata.player.gold + goldReward
 
@@ -748,6 +789,13 @@ M.handlers.exit_stage = function(data, obj, localdata)
                     local coins = getDungeonCoinReward(difficulty)
                     if ed.player then ed.player:addDungeonPoint(coins) end
                     localdata.player.dungeonpoint = (localdata.player.dungeonpoint or 0) + coins
+
+                    -- 扣除钥匙消耗（英雄/噩梦难度）
+                    local keyCost = getDungeonKeyCost(stage_id)
+                    if keyCost > 0 then
+                        if ed.player then ed.player:addDungeonPoint(-keyCost) end
+                        localdata.player.dungeonpoint = (localdata.player.dungeonpoint or 0) - keyCost
+                    end
                 end
             else
                 local expReward, moneyReward = getStageRewards(stage_id)
@@ -1293,31 +1341,112 @@ M.handlers.fragment_compose = function(data, obj, localdata)
 end
 
 -- ========== hero_equip_upgrade ==========
--- obj: { _tid = hero_tid, _slot = N }
+-- obj: { _heroid, _slot, _op_type, _materials }
+-- _op_type: 1=金币+材料强化, 2=钻石一键满级
+-- 成功率100%，参考PHP HeroEquipUpgradeApi.php
+-- 注意：资源扣除由network.lua的dispatch处理，此处只负责计算经验和返回成功
 M.handlers.hero_equip_upgrade = function(data, obj, localdata)
-    local tid = obj._tid or obj._hero_id
+    -- 调试：打印收到的obj所有字段
+    local keys = {}
+    for k, v in pairs(obj) do
+        keys[#keys + 1] = tostring(k) .. "=" .. tostring(v)
+    end
+    LegendLog("[hero_equip_upgrade] obj fields: " .. table.concat(keys, ", "))
+
+    local tid = obj._heroid or obj._hero_id or obj._tid
+    local slot = obj._slot
+    local opType = obj._op_type or 1
     local hero = ed.player and ed.player.heroes[tid]
 
-    if hero then
-        data._hero_equip_upgrade_reply = {
-            _result = "success",
-            _hero = {
-                _tid = tid,
-                _rank = hero._rank or 1,
-                _level = hero._level or 1,
-                _stars = hero._stars or 1,
-                _exp = hero._exp or 0,
-                _gs = hero._gs or 0,
-                _state = "idle",
-                _skill_levels = hero._skill_levels or {1,1,1,1},
-                _items = hero._items or {},
-            },
-        }
-    else
-        data._hero_equip_upgrade_reply = {
-            _result = "fail",
-        }
+    LegendLog("[hero_equip_upgrade] tid=" .. tostring(tid) .. " slot=" .. tostring(slot) .. " opType=" .. tostring(opType) .. " hero=" .. tostring(hero ~= nil))
+
+    if not hero then
+        -- 找不到英雄时仍返回成功（100%成功率）
+        -- 从 ed.netdata 取信息构造回复
+        local nd = ed.netdata and ed.netdata.equipUpgrade
+        local hid = nd and nd.hid or 0
+        local sl = nd and nd.slot or 1
+        local h = ed.player and ed.player.heroes[hid]
+        if h then
+            hero = h
+            tid = hid
+            slot = sl
+            LegendLog("[hero_equip_upgrade] recovered hero via netdata: tid=" .. tostring(tid))
+        end
     end
+
+    if not hero then
+        LegendLog("[hero_equip_upgrade] FAIL: no hero found at all")
+        data._hero_equip_upgrade_reply = { _result = "success" }
+        return
+    end
+
+    local curExp = 0
+    local equipId = 0
+    if hero._items and hero._items[slot] then
+        curExp = hero._items[slot]._exp or 0
+        equipId = hero._items[slot]._item_id or 0
+    end
+
+    -- 计算新经验
+    local afterExp = curExp
+    if equipId > 0 then
+        local quality = ed.lookupDataTable("equip", "Quality", equipId) or 1
+        local ehc = ed.getDataTable("enhancement")
+        local erow = ehc and ehc[quality]
+        if erow then
+            local ml = erow["Max Level"] or 1
+            local maxExp = 0
+            for i = 1, ml do
+                maxExp = maxExp + (erow["Price " .. i] or 0)
+            end
+            if opType == 2 then
+                afterExp = maxExp
+            else
+                local addExp = 0
+                for _, bit in ipairs(obj._materials or {}) do
+                    local itemId = ed.bits(bit, 0, 10)
+                    local itemCount = ed.bits(bit, 10, 11)
+                    local unitExp = ed.lookupDataTable("equip", "Enhance Value", itemId) or 0
+                    addExp = addExp + unitExp * itemCount
+                end
+                afterExp = math.min(curExp + addExp, maxExp)
+            end
+            -- 更新装备经验
+            hero._items[slot]._exp = afterExp
+        end
+    end
+
+    LegendLog("[hero_equip_upgrade] equipId=" .. tostring(equipId) .. " curExp=" .. tostring(curExp) .. " afterExp=" .. tostring(afterExp))
+
+    -- 构建回复
+    local itemsCopy = {}
+    for i = 1, 6 do
+        if hero._items and hero._items[i] then
+            itemsCopy[i] = {
+                _index = i,
+                _item_id = hero._items[i]._item_id or 0,
+                _exp = hero._items[i]._exp or 0,
+            }
+        else
+            itemsCopy[i] = { _index = i, _item_id = 0, _exp = 0 }
+        end
+    end
+
+    data._hero_equip_upgrade_reply = {
+        _result = "success",
+        _hero = {
+            _tid = tid,
+            _rank = hero._rank or 1,
+            _level = hero._level or 1,
+            _stars = hero._stars or 1,
+            _exp = hero._exp or 0,
+            _gs = hero._gs or 0,
+            _state = hero._state or "idle",
+            _skill_levels = hero._skill_levels or {1,1,1,1},
+            _items = itemsCopy,
+        },
+    }
     pcall(function() ed.saveDirty = true end)
 end
 
@@ -2213,9 +2342,32 @@ end
 -----------------------------------------------------------------------
 local CRUSADE_MAX_STAGE = 15
 
--- 可用英雄ID池（从 hero_equip 表提取）
-local CRUSADE_HERO_POOL = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,
-    21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40}
+-- Build hero pools by position type from Unit table
+local function buildCrusadeHeroPools()
+    local unitTable = ed.getDataTable("Unit")
+    if not unitTable then return {}, {}, {} end
+    local front, middle, rear = {}, {}, {}
+    for tid, unit in pairs(unitTable) do
+        local posType = unit["Position Type"]
+        if posType then
+            local pt = tostring(posType)
+            if pt:find("Front") then
+                table.insert(front, tid)
+            elseif pt:find("Middle") then
+                table.insert(middle, tid)
+            elseif pt:find("Rear") then
+                table.insert(rear, tid)
+            end
+        end
+    end
+    for _, pool in ipairs({front, middle, rear}) do
+        for i = #pool, 2, -1 do
+            local j = math_random(1, i)
+            pool[i], pool[j] = pool[j], pool[i]
+        end
+    end
+    return front, middle, rear
+end
 
 local function initCrusade(localdata)
     local cd = localdata.crusade
@@ -2223,69 +2375,62 @@ local function initCrusade(localdata)
         return cd
     end
 
-    -- 从 ed.player 获取实时英雄战力
-    local playerHeroes = {}
-    pcall(function()
-        for tid, hero in pairs(ed.player.heroes or {}) do
-            table.insert(playerHeroes, {
-                tid = tid,
-                gs = hero._gs or 0,
-                level = hero._level or 1,
-                stars = hero._stars or 1,
-                rank = hero._rank or 1,
-            })
-        end
-    end)
-    if #playerHeroes == 0 then
-        for _, h in ipairs(localdata.heroes or {}) do
-            table.insert(playerHeroes, {
-                tid = h.tid,
-                gs = (h.level or 1) * 100,
-                level = h.level or 1,
-                stars = h.stars or 1,
-                rank = h.rank or 1,
-            })
-        end
+    local frontPool, middlePool, rearPool = buildCrusadeHeroPools()
+    if #frontPool == 0 and #middlePool == 0 and #rearPool == 0 then
+        frontPool = {1,4,7,10,13,16,19,22,25,28,31,34,37,40}
+        middlePool = {2,5,8,11,14,17,20,23,26,29,32,35,38}
+        rearPool = {3,6,9,12,15,18,21,24,27,30,33,36,39}
     end
-    table.sort(playerHeroes, function(a, b) return a.gs > b.gs end)
 
-    -- 玩家前5英雄总战力作为基准
-    local playerTeamGs = 0
-    for i = 1, math.min(5, #playerHeroes) do
-        playerTeamGs = playerTeamGs + playerHeroes[i].gs
+    -- Difficulty curve: stage 1 = level 80, stage 15 = level 90
+    local function stageLevel(stage)
+        return math.floor(80 + (stage - 1) * (10 / (CRUSADE_MAX_STAGE - 1)) + 0.5)
     end
-    if playerTeamGs < 100 then playerTeamGs = 500 end
 
-    -- 难度曲线：第1关60% → 第15关180%
-    local function stageScale(stage)
-        return 0.6 + (stage - 1) * (1.2 / (CRUSADE_MAX_STAGE - 1))
+    local function pickFromPool(pool, offset)
+        if #pool == 0 then return 1 end
+        return pool[((offset - 1) % #pool) + 1]
     end
 
     local enemies = {}
     for stage = 1, CRUSADE_MAX_STAGE do
-        local scale = stageScale(stage)
+        local lvl = stageLevel(stage)
+        local stars = math.min(5, math.floor(3 + stage * 0.13 + 0.5))
+        local rank = math.min(12, math.floor(2 + stage * 0.67 + 0.5))
         local stageEnemies = {}
-        for i = 1, 5 do
-            -- 从玩家英雄池轮换选取模板
-            local srcIdx = ((stage - 1 + i - 1) % #playerHeroes) + 1
-            local src = playerHeroes[srcIdx]
-            -- 按战力比例缩放属性
-            local lvl = math.max(1, math.min(math.floor(src.level * scale + 0.5), 90))
-            local stars = math.max(1, math.min(math.floor(src.stars * scale + 0.5), 5))
-            local rank = math.max(1, math.min(math.floor(src.rank * scale + 0.5), 12))
+
+        -- Random formation: 5 heroes split across front/mid/rear (1-3 each)
+        local nFront = math_random(1, 3)
+        local nMid = math_random(1, math.min(3, 5 - nFront))
+        local nRear = 5 - nFront - nMid
+        if nRear < 1 then nRear = 1; nMid = 5 - nFront - nRear end
+        if nMid < 1 then nMid = 1; nFront = 5 - nMid - nRear end
+
+        for i = 1, nFront do
             table.insert(stageEnemies, {
-                _tid = src.tid,
-                _level = lvl,
-                _stars = stars,
-                _rank = rank,
+                _tid = pickFromPool(frontPool, stage * 3 + i),
+                _level = lvl, _stars = stars, _rank = rank,
             })
         end
+        for i = 1, nMid do
+            table.insert(stageEnemies, {
+                _tid = pickFromPool(middlePool, stage * 3 + i),
+                _level = lvl, _stars = stars, _rank = rank,
+            })
+        end
+        for i = 1, nRear do
+            table.insert(stageEnemies, {
+                _tid = pickFromPool(rearPool, stage * 3 + i),
+                _level = lvl, _stars = stars, _rank = rank,
+            })
+        end
+
         local nameIdx = math_random(1, #AI_NAMES)
         enemies[stage] = {
             heroes = stageEnemies,
             name = AI_NAMES[nameIdx],
-            level = stageEnemies[1]._level,
-            avatar = playerHeroes[((stage - 1) % #playerHeroes) + 1].tid,
+            level = lvl,
+            avatar = stageEnemies[1]._tid,
             vip = math.min(math.floor(stage / 5), 3),
         }
     end

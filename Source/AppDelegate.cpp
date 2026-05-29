@@ -105,7 +105,9 @@ bool AppDelegate::applicationDidFinishLaunching()
     // 添加 writable path 到搜索路径最前面，允许 sdcard 上的 hotfix 文件覆盖 APK 内的文件
     std::string writablePath = FileUtils::getInstance()->getWritablePath();
     if (!writablePath.empty()) {
-        FileUtils::getInstance()->addSearchPath(writablePath);
+        auto paths = FileUtils::getInstance()->getSearchPaths();
+        paths.insert(paths.begin(), writablePath);
+        FileUtils::getInstance()->setSearchPaths(paths);
         dbg("[B4a] writable search path: %s", writablePath.c_str());
     }
     stack->addSearchPath("src");

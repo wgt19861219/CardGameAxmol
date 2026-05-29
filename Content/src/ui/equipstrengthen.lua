@@ -592,6 +592,63 @@ local function doClickStren(self)
     table.insert(mt, m)
     table.insert(mts, {id = k, amount = v})
   end
+  -- localMode: 直接处理附魔，100%成功率，不走网络
+  if ed.config and ed.config.localMode then
+    local hero = ed.player.heroes[self.hid]
+    if hero then
+      -- 扣金币
+      ed.player._money = (ed.player._money or 0) - (self.moneyCost or 0)
+      -- 扣材料
+      for _, mt_item in ipairs(mts) do
+        pcall(function() ed.player:consumeEquip(mt_item.id, mt_item.amount) end)
+      end
+      -- 加装备经验
+      local items = hero._items or hero.data and hero.data._items
+      if items and items[self.slot] then
+        local equipSlot = items[self.slot]
+        local curExp = equipSlot._exp or equipSlot.exp or 0
+        local addExp = 0
+        local equipTable = ed.getDataTable("equip")
+        for _, mt_item in ipairs(mts) do
+          if mt_item.id and equipTable and equipTable[mt_item.id] then
+            addExp = addExp + (equipTable[mt_item.id]["Enhance Value"] or equipTable[mt_item.id]["Exp"] or 0) * (mt_item.amount or 1)
+          end
+        end
+        if addExp == 0 then addExp = self.moneyCost or 0 end
+        -- 经验上限保护
+        local maxExp = 999999
+        local enhanceTable = ed.getDataTable("enhancement")
+        if enhanceTable then
+          local equipId = equipSlot._id or equipSlot.id
+          local equipRow = equipTable and equipId and equipTable[equipId]
+          local quality = equipRow and equipRow.Quality or 1
+          local enhanceRow = enhanceTable[quality]
+          if enhanceRow then
+            local maxLv = enhanceRow["Max Level"] or 1
+            local totalMax = 0
+            for i = 1, maxLv do
+              totalMax = totalMax + (enhanceRow["Price " .. i] or 0)
+            end
+            if totalMax > 0 then maxExp = totalMax end
+          end
+        end
+        local newExp = math.min(curExp + addExp, maxExp)
+        if equipSlot._exp then
+          equipSlot._exp = newExp
+        else
+          equipSlot.exp = newExp
+        end
+      end
+      if ed.saveGame then pcall(function() ed.saveGame() end) end
+      pcall(function() if ed.recalcHeroGs then ed.recalcHeroGs(hero) end end)
+    end
+    -- 清材料、调回调
+    self.addmtInfo = {}
+    local replyHandler = self:doStrenReply()
+    replyHandler(hero ~= nil)
+    return
+  end
+  -- 原始网络模式（非localMode）
   ed.netdata.equipUpgrade = {
     type = "money",
     cost = self.moneyCost,

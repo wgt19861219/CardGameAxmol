@@ -34,6 +34,25 @@ local function getDungeonStages(groupId)
   return stages
 end
 
+local heroicPrereq = { [40005]=40001, [40006]=40002, [40007]=40004 }
+
+local function isHeroicUnlocked(groupId)
+  local normalGroup = heroicPrereq[groupId]
+  if not normalGroup then return true end
+  local groupTable = ed.getDataTable("ActStageGroupDungeon")
+  local groupCfg = groupTable and groupTable[normalGroup]
+  if not groupCfg then return true end
+  local stageIds = groupCfg["Stages"]
+  if not stageIds then return true end
+  for _, sid in ipairs(stageIds) do
+    if sid > 0 then
+      local stars = ed.player and ed.player:getStageStar(sid) or 0
+      if stars < 1 then return false end
+    end
+  end
+  return true
+end
+
 local function create(key)
   local self = {}
   setmetatable(self, class.mt)
@@ -118,16 +137,24 @@ local function create(key)
     diffLbl:setColor(difficulty == 2 and ccc3(255, 100, 100) or ccc3(100, 200, 100))
     btnBg:addChild(diffLbl)
 
-    -- 次数显示
-    local dailyLimit = g.data["DailyLimit"] or 2
-    local maxBuy = g.data["MaxBuyPerDay"] or 3
-    local usedTimes = (ed.player and ed.player:getActTimes(g.id)) or 0
-    local leftTimes = math.max(0, dailyLimit + maxBuy - usedTimes)
-    local leftText = T(LSTR("DUNGEON.DAILY_LEFT")) .. tostring(leftTimes)
-    local leftLbl = ed.createttf(leftText, 14)
-    leftLbl:setPosition(ccp(80, 30))
-    leftLbl:setColor(ccc3(200, 200, 200))
-    btnBg:addChild(leftLbl)
+    -- 次数显示 / 锁定提示
+    local locked = difficulty == 2 and not isHeroicUnlocked(g.id)
+    if locked then
+      local lockLbl = ed.createttf(T(LSTR("DUNGEON.HEROIC_PREREQ")), 13)
+      lockLbl:setPosition(ccp(80, 30))
+      lockLbl:setColor(ccc3(255, 80, 80))
+      btnBg:addChild(lockLbl)
+    else
+      local dailyLimit = g.data["DailyLimit"] or 2
+      local maxBuy = g.data["MaxBuyPerDay"] or 3
+      local usedTimes = (ed.player and ed.player:getActTimes(g.id)) or 0
+      local leftTimes = math.max(0, dailyLimit + maxBuy - usedTimes)
+      local leftText = T(LSTR("DUNGEON.DAILY_LEFT")) .. tostring(leftTimes)
+      local leftLbl = ed.createttf(leftText, 14)
+      leftLbl:setPosition(ccp(80, 30))
+      leftLbl:setColor(ccc3(200, 200, 200))
+      btnBg:addChild(leftLbl)
+    end
 
     -- 进入按钮
     local enterBtn = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
@@ -193,15 +220,7 @@ local function create(key)
           end
         elseif type(pressTarget) == "table" and pressTarget.groupId then
           local btn = pressTarget
-          local stages = getDungeonStages(btn.groupId)
-          if #stages > 0 then
-            local stageId = stages[1].id
-            local scene = ed.ui.stagedetail.createForExercise(stageId, {
-              isExercise = true,
-              actType = "dungeon",
-            })
-            ed.pushScene(scene)
-          end
+          self:showBossSelect(btn.groupId, btn.bg)
         end
         closeBtnPress:setVisible(false)
         pressTarget = nil
@@ -225,6 +244,113 @@ local function destroy(self)
   end, EDDebug)
 end
 class.destroy = destroy
+
+local function showBossSelect(self, groupId, parentWidget)
+  if not isHeroicUnlocked(groupId) then
+    ed.showToast(T(LSTR("DUNGEON.HEROIC_PREREQ")))
+    return
+  end
+  if self.bossPanel then
+    self.bossPanel:removeFromParentAndCleanup(true)
+    self.bossPanel = nil
+    return
+  end
+  local stages = getDungeonStages(groupId)
+  if #stages == 0 then return end
+
+  local panel = CCLayerColor:create(ccc4(0, 0, 0, 160))
+  panel:setPosition(ccp(0, 0))
+  panel:setContentSize(CCSizeMake(850, 520))
+  self.ui.frame:addChild(panel, 100)
+  self.bossPanel = panel
+
+  local bg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
+  bg:setPosition(ccp(425, 260))
+  bg:setContentSize(CCSizeMake(500, 320))
+  panel:addChild(bg)
+
+  local title = ed.createttf(T(LSTR("DUNGEON.SELECT_BOSS")), 20)
+  title:setPosition(ccp(250, 295))
+  title:setColor(ccc3(231, 206, 19))
+  bg:addChild(title)
+
+  local bossBtns = {}
+  for i, st in ipairs(stages) do
+    local by = 220 - (i - 1) * 85
+    local row = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
+    row:setPosition(ccp(250, by))
+    row:setContentSize(CCSizeMake(440, 70))
+    bg:addChild(row)
+
+    local nameStr = type(st.name) == "string" and st.name or T(st.name or "")
+    local nameLbl = ed.createttf(nameStr, 18)
+    nameLbl:setPosition(ccp(130, 45))
+    nameLbl:setColor(ccc3(233, 214, 181))
+    row:addChild(nameLbl)
+
+    local vitText = T(LSTR("DUNGEON.VIT_COST")) .. tostring(st.vit)
+    local vitLbl = ed.createttf(vitText, 14)
+    vitLbl:setPosition(ccp(130, 20))
+    vitLbl:setColor(ccc3(180, 180, 180))
+    row:addChild(vitLbl)
+
+    local goBtn = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
+    goBtn:setPosition(ccp(380, 35))
+    goBtn:setContentSize(CCSizeMake(80, 40))
+    row:addChild(goBtn)
+    local goLbl = ed.createttf(T(LSTR("DUNGEON.ENTER")), 16)
+    goLbl:setPosition(ccp(40, 20))
+    goLbl:setColor(ccc3(255, 255, 255))
+    goBtn:addChild(goLbl)
+
+    table.insert(bossBtns, { row = row, stageId = st.id, goBtn = goBtn })
+  end
+
+  panel:setTouchEnabled(true)
+  panel:registerScriptTouchHandler(function(event, x, y)
+    xpcall(function()
+      if event == "began" then
+        for _, b in ipairs(bossBtns) do
+          local bx, by = b.row:getPosition()
+          local px, py = b.row:getParent():convertToWorldSpace(ccp(bx, by))
+          if math.abs(x - px) < 220 and math.abs(y - py) < 35 then
+            return true
+          end
+        end
+        panel._dismiss = true
+        return true
+      elseif event == "ended" then
+        local handled = false
+        for _, b in ipairs(bossBtns) do
+          local bx, by = b.row:getPosition()
+          local px, py = b.row:getParent():convertToWorldSpace(ccp(bx, by))
+          if math.abs(x - px) < 220 and math.abs(y - py) < 35 then
+            panel:removeFromParentAndCleanup(true)
+            self.bossPanel = nil
+            local scene = ed.ui.stagedetail.createForExercise(b.stageId, {
+              isExercise = true,
+              actType = "dungeon",
+            })
+            ed.pushScene(scene)
+            handled = true
+            break
+          end
+        end
+        if not handled and panel._dismiss then
+          panel:removeFromParentAndCleanup(true)
+          self.bossPanel = nil
+        end
+      end
+    end, EDDebug)
+    return true
+  end, false, -145, true)
+
+  panel:setScale(0)
+  local s = CCScaleTo:create(0.15, 1)
+  s = CCEaseBackOut:create(s)
+  panel:runAction(s)
+end
+class.showBossSelect = showBossSelect
 
 ed.ui.dungeon = class
 

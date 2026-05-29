@@ -436,6 +436,35 @@ local function isDungeonStage(stage_id)
 end
 ed.isDungeonStage = isDungeonStage
 
+-- 英雄副本前置：通关对应普通副本组所有Boss
+-- 40005→40001, 40006→40002, 40007→40004
+local heroicPrereq = {
+  [40005] = 40001,
+  [40006] = 40002,
+  [40007] = 40004,
+}
+
+local function checkHeroicPrereq(group_id, localdata)
+  local normalGroup = heroicPrereq[group_id]
+  if not normalGroup then return true end
+  local groupTable = ed.getDataTable("ActStageGroupDungeon")
+  local groupCfg = groupTable and groupTable[normalGroup]
+  if not groupCfg then return true end
+  local stageIds = groupCfg["Stages"]
+  if not stageIds then return true end
+  for _, sid in ipairs(stageIds) do
+    if sid > 0 then
+      local cleared = localdata and localdata.stage
+        and localdata.stage.elite_stars
+        and localdata.stage.elite_stars[sid]
+      if not cleared or cleared < 1 then
+        return false, normalGroup
+      end
+    end
+  end
+  return true
+end
+
 -- 副本掉落：概率+保底+优先未拥有
 local function generateDungeonLoots(stage_id)
   local loots = {}
@@ -597,6 +626,13 @@ M.handlers.enter_act_stage = function(data, obj, localdata)
             return
         end
 
+        -- 英雄副本前置：通关对应普通副本
+        local prereqOk, prereqGroup = checkHeroicPrereq(expectedGroup, localdata)
+        if not prereqOk then
+            data._enter_stage_reply = { _error = "heroic_prereq", _prereq_group = prereqGroup }
+            return
+        end
+
         -- 次数校验
         local groupTable = ed.getDataTable("ActStageGroupDungeon")
         local groupCfg = groupTable and groupTable[expectedGroup]
@@ -702,13 +738,13 @@ M.handlers.exit_stage = function(data, obj, localdata)
                 local stageTable = ed.getDataTable("StageDungeon")
                 local stageCfg = stageTable and stageTable[stage_id]
                 if stageCfg then
+                    local difficulty = stageCfg["Difficulty"] or 1
                     local expReward = (stageCfg["Exp Reward"] or 0) * 10
                     local goldReward = difficulty == 2 and 5000 or 2000
                     localdata.player.exp = localdata.player.exp + expReward
                     localdata.player.gold = localdata.player.gold + goldReward
 
                     -- 副本硬币
-                    local difficulty = stageCfg["Difficulty"] or 1
                     local coins = getDungeonCoinReward(difficulty)
                     if ed.player then ed.player:addDungeonPoint(coins) end
                     localdata.player.dungeonpoint = (localdata.player.dungeonpoint or 0) + coins

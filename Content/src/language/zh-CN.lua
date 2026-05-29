@@ -5064,6 +5064,9 @@
 	["DUNGEON.BUY_EXTRA"] = "购买额外次数",
 	["DUNGEON.COIN"] = "龙鳞硬币",
 	["DUNGEON.ENTER"] = "进入副本",
+	["DUNGEON.SELECT_BOSS"] = "选择Boss",
+	["DUNGEON.VIT_COST"] = "体力消耗：",
+	["DUNGEON.HEROIC_PREREQ"] = "需先通关对应普通副本",
 	["DUNGEON.DUNGEON_POINT"] = "龙鳞硬币",
 
 }

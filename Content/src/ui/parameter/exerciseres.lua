@@ -9,7 +9,11 @@ class.entry_stage = {
   money = 20002,
   int = 20003,
   agi = 20004,
-  str = 20005
+  str = 20005,
+  dg1 = 40001,
+  dg2 = 40002,
+  dg3 = 40003,
+  dg4 = 40004,
 }
 class.em = {
   uires = {
@@ -96,6 +100,42 @@ class.equip = {
       center = ccp(620, 185),
       radius = 85,
       descres = "UI/alpha/HVGA/act/act_popup_title_5_1.png"
-    }
+    },
+    dg1 = {
+      fca = {},
+      pos = {},
+      scale = {},
+      center = ccp(140, 85),
+      radius = 55,
+      descres = "",
+      isDungeon = true,
+    },
+    dg2 = {
+      fca = {},
+      pos = {},
+      scale = {},
+      center = ccp(310, 85),
+      radius = 55,
+      descres = "",
+      isDungeon = true,
+    },
+    dg3 = {
+      fca = {},
+      pos = {},
+      scale = {},
+      center = ccp(480, 85),
+      radius = 55,
+      descres = "",
+      isDungeon = true,
+    },
+    dg4 = {
+      fca = {},
+      pos = {},
+      scale = {},
+      center = ccp(650, 85),
+      radius = 55,
+      descres = "",
+      isDungeon = true,
+    },
   }
 }

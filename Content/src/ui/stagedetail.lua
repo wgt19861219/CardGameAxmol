@@ -601,17 +601,26 @@ class.doUpdateCheckResetHandler = doUpdateCheckResetHandler
 local function getStageInformation(self, stage)
   local info = {}
   info.stage = stage
-  local stageTable = ed.getDataTable("Stage")
-  local row = stageTable[stage]
+  local row
+  if self.actType == "dungeon" then
+    row = ed.getDataTable("StageDungeon")[stage]
+  else
+    row = ed.getDataTable("Stage")[stage]
+  end
   info.chapter = row["Chapter ID"]
   local chapterTable = ed.getDataTable("Chapter")
-  info.chapterName = chapterTable[info.chapter]["Chapter Name"]
+  info.chapterName = chapterTable[info.chapter] and chapterTable[info.chapter]["Chapter Name"] or ""
   info.title = row["Stage Name"]
   info.title = info.title--info.chapterName .. "·" .. info.title
   info.detail = row.description
   info.star = ed.player:getStageStar(stage)
-  info.power = row["Vitality Cost"]
-  info.countLimit = row["Daily Limit"]
+  if self.actType == "dungeon" then
+    info.power = self.dungeonVit or row["Vitality Cost"]
+    info.countLimit = self.dungeonDailyLimit or 2
+  else
+    info.power = row["Vitality Cost"]
+    info.countLimit = row["Daily Limit"]
+  end
   info.isKeyStage = row["Key Stage"]
   if ed.player.stage_limit then
     info.count = ed.player.stage_limit[ed.elite2NormalStage(stage)] or 0
@@ -1519,6 +1528,8 @@ local function create(stage, addition, mode)
   self.mode = mode or "normal"
   self.heroLimit = heroLimit
   self.actType = actType
+  self.dungeonVit = addition.dungeonVit
+  self.dungeonDailyLimit = addition.dungeonDailyLimit
   local st = ed.stageType(self.stage)
   local isNormalMode = ed.stageType(stage) == "normal"
   self.guildInstanceData = addition.guildInstanceData
@@ -1624,7 +1635,7 @@ local function create(stage, addition, mode)
         dimension = CCSizeMake(660, 60),
         horizontalAlignment = kCCTextAlignmentLeft,
         verticalAlignment = kCCVerticalTextAlignmentCenter,
-        visible = info.isKeyStage,
+        visible = info.isKeyStage or (info.detail ~= nil),
         shadow = {
           color = ccc3(0, 0, 0),
           offset = ccp(0, 2)
@@ -1860,12 +1871,13 @@ local function create(stage, addition, mode)
   self:createEnemy()
   self:createReward()
   self:addGuildInstanceUI()
-  -- Fallback: CCDictionary/CCMultiSprite not available in Axmol, use normal sprite
-  local frame1 = ed.createSprite(map_ui.bg.res)
-  frame1:setPosition(map_ui.bg.pos)
-  self.ui.frame1 = frame1
-  stageContainer:addChild(frame1)
-  ed.setSpriteBlur(frame1, 1)
+  if map_ui then
+    local frame1 = ed.createSprite(map_ui.bg.res)
+    frame1:setPosition(map_ui.bg.pos)
+    self.ui.frame1 = frame1
+    stageContainer:addChild(frame1)
+    ed.setSpriteBlur(frame1, 1)
+  end
   if isNormalMode or st == "act" or self.mode == "guild" then
     self.ui.count_title:setVisible(false)
     self.ui.count_number:setVisible(false)

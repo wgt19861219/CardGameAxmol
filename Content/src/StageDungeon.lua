@@ -1,4 +1,4 @@
-return {
+local data = {
   [40001] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
@@ -22,6 +22,7 @@ return {
     ["Stage Group"] = 40001,
     ["Stage ID"] = 40001,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_LAVA_BEAST"),
+    ["description"] = LSTR("DUNGEON.DESC_LAVA_BEAST"),
     ["UI reward1"] = 312, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 351, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -57,6 +58,7 @@ return {
     ["Stage Group"] = 40001,
     ["Stage ID"] = 40002,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_FIRE_CRAFTER"),
+    ["description"] = LSTR("DUNGEON.DESC_FIRE_CRAFTER"),
     ["UI reward1"] = 352, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 305, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -92,6 +94,7 @@ return {
     ["Stage Group"] = 40001,
     ["Stage ID"] = 40003,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_DARK_IRON_LORD"),
+    ["description"] = LSTR("DUNGEON.DESC_DARK_IRON_LORD"),
     ["UI reward1"] = 318, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 308, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -127,6 +130,7 @@ return {
     ["Stage Group"] = 40002,
     ["Stage ID"] = 40004,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_PLAGUE_BRINGER"),
+    ["description"] = LSTR("DUNGEON.DESC_PLAGUE_BRINGER"),
     ["UI reward1"] = 306, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 309, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -162,6 +166,7 @@ return {
     ["Stage Group"] = 40002,
     ["Stage ID"] = 40005,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_FLESH_ABOMINATION"),
+    ["description"] = LSTR("DUNGEON.DESC_FLESH_ABOMINATION"),
     ["UI reward1"] = 311, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 345, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -197,6 +202,7 @@ return {
     ["Stage Group"] = 40002,
     ["Stage ID"] = 40006,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_DEATH_KNIGHT"),
+    ["description"] = LSTR("DUNGEON.DESC_DEATH_KNIGHT"),
     ["UI reward1"] = 348, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 315, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -232,6 +238,7 @@ return {
     ["Stage Group"] = 40003,
     ["Stage ID"] = 40007,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_TWISTED_TREANT"),
+    ["description"] = LSTR("DUNGEON.DESC_TWISTED_TREANT"),
     ["UI reward1"] = 307, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 319, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -267,6 +274,7 @@ return {
     ["Stage Group"] = 40003,
     ["Stage ID"] = 40008,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_DEMON_GUARD"),
+    ["description"] = LSTR("DUNGEON.DESC_DEMON_GUARD"),
     ["UI reward1"] = 310, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 346, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -302,6 +310,7 @@ return {
     ["Stage Group"] = 40003,
     ["Stage ID"] = 40009,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_PRINCE_OF_DOOM"),
+    ["description"] = LSTR("DUNGEON.DESC_PRINCE_OF_DOOM"),
     ["UI reward1"] = 347, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 349, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -337,6 +346,7 @@ return {
     ["Stage Group"] = 40004,
     ["Stage ID"] = 40010,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_FROST_LECTURER"),
+    ["description"] = LSTR("DUNGEON.DESC_FROST_LECTURER"),
     ["UI reward1"] = 315, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 345, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -372,6 +382,7 @@ return {
     ["Stage Group"] = 40004,
     ["Stage ID"] = 40011,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_SHADOW_STUDENT"),
+    ["description"] = LSTR("DUNGEON.DESC_SHADOW_STUDENT"),
     ["UI reward1"] = 310, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 319, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -407,6 +418,7 @@ return {
     ["Stage Group"] = 40004,
     ["Stage ID"] = 40012,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_HEADMASTER_GADING"),
+    ["description"] = LSTR("DUNGEON.DESC_HEADMASTER_GADING"),
     ["UI reward1"] = 306, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 311, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -423,7 +435,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 15,
     ["Fail Exp Reward"] = 7,
     ["Heroexp Reward"] = 500,
@@ -442,6 +454,7 @@ return {
     ["Stage Group"] = 40005,
     ["Stage ID"] = 40013,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_INSTRUCTOR_RAZUVIUS"),
+    ["description"] = LSTR("DUNGEON.DESC_INSTRUCTOR_RAZUVIUS"),
     ["UI reward1"] = 405, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 407, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -458,7 +471,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 15,
     ["Fail Exp Reward"] = 7,
     ["Heroexp Reward"] = 500,
@@ -477,6 +490,7 @@ return {
     ["Stage Group"] = 40005,
     ["Stage ID"] = 40014,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_PLAGUE_NORTH"),
+    ["description"] = LSTR("DUNGEON.DESC_PLAGUE_NORTH"),
     ["UI reward1"] = 406, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 408, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -493,7 +507,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 18,
     ["Fail Exp Reward"] = 9,
     ["Heroexp Reward"] = 600,
@@ -512,6 +526,7 @@ return {
     ["Stage Group"] = 40005,
     ["Stage ID"] = 40015,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_KELTHUZAD"),
+    ["description"] = LSTR("DUNGEON.DESC_KELTHUZAD"),
     ["UI reward1"] = 409, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 420, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -528,7 +543,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 15,
     ["Fail Exp Reward"] = 7,
     ["Heroexp Reward"] = 550,
@@ -547,6 +562,7 @@ return {
     ["Stage Group"] = 40006,
     ["Stage ID"] = 40016,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_RAZORGORE"),
+    ["description"] = LSTR("DUNGEON.DESC_RAZORGORE"),
     ["UI reward1"] = 417, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 418, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -563,7 +579,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 15,
     ["Fail Exp Reward"] = 7,
     ["Heroexp Reward"] = 550,
@@ -582,6 +598,7 @@ return {
     ["Stage Group"] = 40006,
     ["Stage ID"] = 40017,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_VAELASTRAZ"),
+    ["description"] = LSTR("DUNGEON.DESC_VAELASTRAZ"),
     ["UI reward1"] = 419, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 411, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -598,7 +615,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 18,
     ["Fail Exp Reward"] = 9,
     ["Heroexp Reward"] = 650,
@@ -617,6 +634,7 @@ return {
     ["Stage Group"] = 40006,
     ["Stage ID"] = 40018,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_NEFARIAN"),
+    ["description"] = LSTR("DUNGEON.DESC_NEFARIAN"),
     ["UI reward1"] = 412, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 410, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -633,7 +651,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 15,
     ["Fail Exp Reward"] = 7,
     ["Heroexp Reward"] = 600,
@@ -652,6 +670,7 @@ return {
     ["Stage Group"] = 40007,
     ["Stage ID"] = 40019,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_SKERAM"),
+    ["description"] = LSTR("DUNGEON.DESC_SKERAM"),
     ["UI reward1"] = 413, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 421, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -668,7 +687,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 15,
     ["Fail Exp Reward"] = 7,
     ["Heroexp Reward"] = 600,
@@ -687,6 +706,7 @@ return {
     ["Stage Group"] = 40007,
     ["Stage ID"] = 40020,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_SARTURA"),
+    ["description"] = LSTR("DUNGEON.DESC_SARTURA"),
     ["UI reward1"] = 414, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 415, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -703,7 +723,7 @@ return {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
-    ["Difficulty"] = 2,
+    ["Difficulty"] = 1,
     ["Exp Reward"] = 20,
     ["Fail Exp Reward"] = 10,
     ["Heroexp Reward"] = 700,
@@ -722,6 +742,7 @@ return {
     ["Stage Group"] = 40007,
     ["Stage ID"] = 40021,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_CTHUN"),
+    ["description"] = LSTR("DUNGEON.DESC_CTHUN"),
     ["UI reward1"] = 416, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
     ["UI reward2"] = 422, ["UI reward2 Max Amount"] = 1, ["UI reward2 Min Amount"] = 0,
     ["UI reward3"] = 0, ["UI reward3 Max Amount"] = 0, ["UI reward3 Min Amount"] = 0,
@@ -735,3 +756,66 @@ return {
     ["Waves"] = 1,
   },
 }
+
+-- 运行时生成难度变体：精英(Diff=2, +1000), 英雄(Diff=3, +2000), 噩梦(Diff=4, +3000)
+local diffConfig = {
+  [2] = { vitAdd = 4,  mlAdd = 5,  ulAdd = 5,  expAdd = 3,  heroMul = 1.2, keyCost = 0 },
+  [3] = { vitAdd = 8,  mlAdd = 10, ulAdd = 10, expAdd = 6,  heroMul = 1.4, keyCost = 1 },
+  [4] = { vitAdd = 12, mlAdd = 15, ulAdd = 20, expAdd = 10, heroMul = 1.8, keyCost = 2 },
+}
+
+for baseId = 40001, 40021 do
+  local base = data[baseId]
+  if base then
+    for diff = 2, 4 do
+      local cfg = diffConfig[diff]
+      local newId = baseId + (diff - 1) * 1000
+      local entry = {}
+      entry["Chapter ID"] = base["Chapter ID"]
+      entry["Chest For FD"] = false
+      entry["Daily Limit"] = 0
+      entry["Difficulty"] = diff
+      entry["Exp Reward"] = base["Exp Reward"] + cfg.expAdd
+      entry["Fail Exp Reward"] = base["Fail Exp Reward"] + math.floor(cfg.expAdd / 3)
+      entry["Heroexp Reward"] = math.floor(base["Heroexp Reward"] * cfg.heroMul)
+      entry["Key Cost"] = cfg.keyCost
+      entry["Key Stage"] = false
+      for i = 1, 7 do entry["Loot " .. i .. " Name"] = 0 end
+      entry["Monster Level"] = base["Monster Level"] + cfg.mlAdd
+      entry["Raid Bonus Amount 1"] = base["Raid Bonus Amount 1"]
+      entry["Raid Bonus Amount 2"] = base["Raid Bonus Amount 2"]
+      entry["Raid Bonus Amount 3"] = 0
+      entry["Raid Bonus Amount 4"] = 0
+      entry["Raid Bonus ID 1"] = base["Raid Bonus ID 1"]
+      entry["Raid Bonus ID 2"] = base["Raid Bonus ID 2"]
+      entry["Raid Bonus ID 3"] = 0
+      entry["Raid Bonus ID 4"] = 0
+      entry["Raid Bonus Type 1"] = base["Raid Bonus Type 1"]
+      entry["Raid Bonus Type 2"] = base["Raid Bonus Type 2"]
+      entry["Raid Bonus Type 3"] = "Item"
+      entry["Require Stage"] = 0
+      entry["Require Stars"] = 0
+      entry["Stage Group"] = base["Stage Group"]
+      entry["Stage ID"] = newId
+      entry["Stage Name"] = base["Stage Name"]
+      entry["UI reward1"] = base["UI reward1"]
+      entry["UI reward1 Max Amount"] = base["UI reward1 Max Amount"]
+      entry["UI reward1 Min Amount"] = base["UI reward1 Min Amount"]
+      entry["UI reward2"] = base["UI reward2"]
+      entry["UI reward2 Max Amount"] = base["UI reward2 Max Amount"]
+      entry["UI reward2 Min Amount"] = base["UI reward2 Min Amount"]
+      for i = 3, 7 do
+        entry["UI reward" .. i] = 0
+        entry["UI reward" .. i .. " Max Amount"] = 0
+        entry["UI reward" .. i .. " Min Amount"] = 0
+      end
+      entry["Unlock Level"] = base["Unlock Level"] + cfg.ulAdd
+      entry["Vit Return"] = 0
+      entry["Vitality Cost"] = base["Vitality Cost"] + cfg.vitAdd
+      entry["Waves"] = 1
+      data[newId] = entry
+    end
+  end
+end
+
+return data

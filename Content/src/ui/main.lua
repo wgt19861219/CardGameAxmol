@@ -1506,10 +1506,9 @@ local function getMainButtonHandler(self, key)
 				ed.showToast(ds)
 				return
 			end
-			if not package.loaded["ui/dungeon"] then
-				pcall(require, "ui/dungeon")
-			end
-			ed.pushScene(ed.ui.dungeon.createScene("normal"))
+			lsr:report("clickexercise")
+			if ed.ensureSceneModules then ed.ensureSceneModules("exercise") end
+			ed.pushScene(ed.ui.exercise.create("equip"))
 			self.isPushScene = true
 		end
 	}

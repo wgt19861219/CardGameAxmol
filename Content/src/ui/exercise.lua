@@ -66,6 +66,47 @@ local function getStage(self)
 	return stage
 end
 class.getStage = getStage
+
+local function getDungeonStages(self)
+	local entryMap = ed.ui.exerciseres.entry_stage
+	local groupKey = entryMap[self.key]
+	local dgTable = ed.getDataTable("ActStageGroupDungeon")
+	local groupData = dgTable[groupKey]
+	if not groupData then return {} end
+	local stDungeon = ed.getDataTable("StageDungeon")
+	local bosses = {}
+	for _, bossId in ipairs(groupData.Stages) do
+		if bossId > 0 then
+			local baseData = stDungeon[bossId]
+			local bossName = ""
+			if baseData and baseData["Stage Name"] then
+				bossName = T(baseData["Stage Name"])
+			end
+			local boss = {
+				baseId = bossId,
+				name = bossName,
+				difficulties = {}
+			}
+			for diff = 1, 4 do
+				local diffId = bossId + (diff - 1) * 1000
+				local stageData = stDungeon[diffId]
+				if stageData then
+					table.insert(boss.difficulties, {
+						id = diffId,
+						vit = stageData["Vitality Cost"] or 12,
+						keyCost = stageData["Key Cost"] or 0,
+						unlockLevel = stageData["Unlock Level"] or 1,
+						diff = diff
+					})
+				end
+			end
+			table.insert(bosses, boss)
+		end
+	end
+	return bosses
+end
+class.getDungeonStages = getDungeonStages
+
 local function doGotoStage(self, stage)
 	if not self:checkUnlockLevel(stage.id) then
 		ed.showToast(T(LSTR("EXERCISE.YOU_CAN_ACCESS_HERE_ONCE_YOUR_CLAN_LEVEL_REACHES__D"), self:getUnlockLevel(stage.id)))
@@ -90,6 +131,40 @@ local function doGotoStage(self, stage)
 	ed.pushScene(scene)
 end
 class.doGotoStage = doGotoStage
+
+local function doDungeonGotoStage(self, diffData)
+	local stDungeon = ed.getDataTable("StageDungeon")
+	local stageData = stDungeon[diffData.id]
+	if not stageData then return end
+	local ul = diffData.unlockLevel
+	if ul > ed.player:getLevel() then
+		ed.showToast(T(LSTR("EXERCISE.YOU_CAN_ACCESS_HERE_ONCE_YOUR_CLAN_LEVEL_REACHES__D"), ul))
+		return
+	end
+	if ed.player:getVitality() < diffData.vit then
+		ed.showHandyDialog("buyVitality")
+		return
+	end
+	local keyCost = diffData.keyCost
+	if keyCost > 0 then
+		local coins = (ed.player.getDungeonCoin and ed.player:getDungeonCoin()) or 0
+		if coins < keyCost then
+			ed.showToast(T(LSTR("DUNGEON.NOT_ENOUGH_KEYS")) or "not enough keys")
+			return
+		end
+	end
+	local baseId = ed.getDungeonBaseStageId(diffData.id)
+	ed._pendingDungeonDifficulty = diffData.diff
+	local scene = ed.ui.stagedetail.createForExercise(baseId, {
+		heroLimit = nil,
+		actType = "dungeon",
+		dungeonVit = diffData.vit,
+		dungeonDailyLimit = 2
+	})
+	ed.pushScene(scene)
+end
+class.doDungeonGotoStage = doDungeonGotoStage
+
 local function doDegreeTouch(self)
 	local stage = self.stage
 	local degree = self.degree
@@ -481,6 +556,105 @@ local function createDegree(self)
 end
 class.createDegree = createDegree
 
+local function createDungeonDegree(self)
+	local diffLabels = {"Normal", "Elite", "Hero", "Nightmare"}
+	local diffColors = {
+		ccc3(100, 200, 100),
+		ccc3(100, 150, 255),
+		ccc3(200, 100, 255),
+		ccc3(255, 80, 80)
+	}
+	local bosses = self.dungeonBosses
+	self.dungeonButtons = {}
+	local ox = 300
+	local dx = 110
+	local oy = 290
+	local dy = -95
+	local bw, bh = 95, 32
+	for bi, boss in ipairs(bosses) do
+		local rowY = oy + dy * (bi - 1)
+		local nameLabel = ed.createttf(boss.name, 15)
+		nameLabel:setAnchorPoint(ccp(1, 0.5))
+		nameLabel:setPosition(ccp(230, rowY))
+		nameLabel:setColor(ccc3(233, 214, 181))
+		self.ui.frame:addChild(nameLabel)
+		self.dungeonButtons[bi] = {}
+		for di, diff in ipairs(boss.difficulties) do
+			local bx = ox + dx * (di - 1)
+			local isUnlock = diff.unlockLevel <= ed.player:getLevel()
+			local btn = ed.createScale9Sprite(
+				"UI/alpha/HVGA/act/act_select_bg.png",
+				CCRectMake(30, 15, 40, 20)
+			)
+			btn:setContentSize(CCSizeMake(bw, bh))
+			btn:setPosition(ccp(bx, rowY))
+			self.ui.frame:addChild(btn)
+			local btnPress = ed.createScale9Sprite(
+				"UI/alpha/HVGA/act/act_select_bg_chosen.png",
+				CCRectMake(30, 15, 40, 20)
+			)
+			btnPress:setContentSize(CCSizeMake(bw, bh))
+			btnPress:setAnchorPoint(ccp(0, 0))
+			btnPress:setPosition(ccp(0, 0))
+			btnPress:setVisible(false)
+			btn:addChild(btnPress)
+			local diffLabel = ed.createttf(diffLabels[diff.diff] or ("Lv" .. diff.diff), 14)
+			if isUnlock then
+				diffLabel:setColor(diffColors[diff.diff] or ccc3(255, 255, 255))
+			else
+				diffLabel:setColor(ccc3(128, 128, 128))
+			end
+			btn:addChild(diffLabel)
+			if not isUnlock then
+				ed.setSpriteGray(btn)
+			end
+			self.dungeonButtons[bi][di] = {
+				button = btn,
+				press = btnPress,
+				diff = diff,
+				isUnlock = isUnlock
+			}
+		end
+	end
+end
+class.createDungeonDegree = createDungeonDegree
+
+local function doDungeonDegreeTouch(self)
+	local pressBi, pressDi
+	local function handler(event, x, y)
+		if event == "began" then
+			for bi = 1, #(self.dungeonButtons or {}) do
+				local row = self.dungeonButtons[bi]
+				for di = 1, #(row or {}) do
+					local btn = row[di]
+					if btn and btn.isUnlock and ed.containsPoint(btn.button, x, y) then
+						pressBi = bi
+						pressDi = di
+						btn.press:setVisible(true)
+						return
+					end
+				end
+			end
+		elseif event == "ended" then
+			if pressBi and pressDi then
+				local row = self.dungeonButtons[pressBi]
+				if row and row[pressDi] then
+					local btn = row[pressDi]
+					btn.press:setVisible(false)
+					if ed.containsPoint(btn.button, x, y) then
+						self:doDungeonGotoStage(btn.diff)
+					end
+				end
+			end
+			pressBi = nil
+			pressDi = nil
+		end
+	end
+	return handler
+end
+class.doDungeonDegreeTouch = doDungeonDegreeTouch
+
+
 local function create(key)
 	local self = {}
 	setmetatable(self, class.mt)
@@ -575,6 +749,100 @@ local function create(key)
 	return self
 end
 class.create = create
+
+local function createDungeon(key)
+	local self = {}
+	setmetatable(self, class.mt)
+	local mainLayer = CCLayerColor:create(ccc4(0, 0, 0, 150))
+	self.mainLayer = mainLayer
+	self.key = key
+	self.baseScene = ed.getCurrentScene()
+	self.isDungeon = true
+	self.dungeonBosses = self:getDungeonStages()
+	local container = CCLayer:create()
+	container:setAnchorPoint(ccp(0.5, 0.5))
+	self.container = container
+	mainLayer:addChild(container)
+	self.ui = {}
+	local ui_info = {
+		{
+			t = "Scale9Sprite",
+			base = {
+				name = "frame",
+				res = "UI/alpha/HVGA/main_vit_tips.png",
+				capInsets = CCRectMake(10, 10, 58, 26)
+			},
+			layout = {
+				position = ccp(400, 210)
+			},
+			config = {
+				scaleSize = CCSizeMake(705, 350)
+			}
+		},
+		{
+			t = "Sprite",
+			base = {
+				name = "close",
+				res = "UI/alpha/HVGA/herodetail-detail-close.png"
+			},
+			layout = {
+				position = ccp(750, 370)
+			},
+			config = {}
+		},
+		{
+			t = "Sprite",
+			base = {
+				name = "close_press",
+				res = "UI/alpha/HVGA/herodetail-detail-close-p.png",
+				parent = "close"
+			},
+			layout = {
+				anchor = ccp(0, 0),
+				position = ccp(0, 0)
+			},
+			config = {visible = false}
+		}
+	}
+	local readNode = ed.readnode.create(self.container, self.ui)
+	readNode:addNode(ui_info)
+	ui_info = {
+		{
+			t = "Label",
+			base = {
+				name = "title",
+				text = T(LSTR("DUNGEON.SELECT_BOSS_DIFFICULTY")) or "Select Boss & Difficulty",
+				fontinfo = "ui_normal_button"
+			},
+			layout = {
+				position = ccp(352, 355)
+			},
+			config = {
+				color = ccc3(231, 206, 19)
+			}
+		}
+	}
+	local readNode2 = ed.readnode.create(self.ui.frame, self.ui)
+	readNode2:addNode(ui_info)
+	self:createDungeonDegree()
+	local outLayerTouch = self:doOutLayerTouch()
+	local closeTouch = self:doCloseTouch()
+	local degreeTouch = self:doDungeonDegreeTouch()
+	local function dungeonMainHandler(event, x, y)
+		xpcall(function()
+			outLayerTouch(event, x, y)
+			closeTouch(event, x, y)
+			degreeTouch(event, x, y)
+		end, EDDebug)
+		return true
+	end
+	self.mainLayer:setTouchEnabled(true)
+	self.mainLayer:registerScriptTouchHandler(dungeonMainHandler, false, -135, true)
+	self:show()
+	return self
+end
+class.createDungeon = createDungeon
+
 
 local destroy = function(self)
 	self:removeCountdownHandler()
@@ -862,8 +1130,13 @@ class.getHeroLimit = getHeroLimit
 local function doClickExerciseButton(self, key)
 	lsr:report("clickActButton")
 	if self:checkExerciseEnabled(key) then
-		local degree = degreeWindow.create(key)
-		self.container:addChild(degree.mainLayer, 100)
+		if ed.isDungeonKey(key) then
+			local degree = degreeWindow.createDungeon(key)
+			self.container:addChild(degree.mainLayer, 100)
+		else
+			local degree = degreeWindow.create(key)
+			self.container:addChild(degree.mainLayer, 100)
+		end
 	else
 		local detail = detailWindow.create(key)
 		self.container:addChild(detail.mainLayer, 100)
@@ -982,6 +1255,44 @@ local function doIntTouch(self)
 	return handler
 end
 class.doIntTouch = doIntTouch
+
+-- 副本入口触摸（矩形碰撞，4个入口）
+local dungeonKeys = {"dg1", "dg2", "dg3", "dg4"}
+local function doDungeonTouch(self)
+  local pressKey = nil
+  local function handler(event, x, y)
+    if event == "began" then
+      for _, k in ipairs(dungeonKeys) do
+        local info = res.entry[k]
+        if info and info.isDungeon then
+          local cx, cy = info.center.x, info.center.y
+          local r = info.radius
+          if math.abs(x - cx) < r and math.abs(y - cy) < r then
+            pressKey = k
+            return
+          end
+        end
+      end
+    elseif event == "ended" then
+      if pressKey then
+        local info = res.entry[pressKey]
+        local cx, cy = info.center.x, info.center.y
+        local r = info.radius
+        if math.abs(x - cx) < r and math.abs(y - cy) < r then
+          self:doClickExerciseButton(pressKey)
+        end
+        pressKey = nil
+      end
+    end
+  end
+  return handler
+end
+class.doDungeonTouch = doDungeonTouch
+
+function ed.isDungeonKey(key)
+	return key == "dg1" or key == "dg2" or key == "dg3" or key == "dg4"
+end
+
 local registerButtonTouchHandler = function(self, handler)
 	self.buttonTouchHandler = self.buttonTouchHandler or {}
 	table.insert(self.buttonTouchHandler, handler)
@@ -1053,6 +1364,25 @@ local function createExerciseButton(self)
 		self:registerButtonTouchHandler(self:doStrTouch())
 		self:registerButtonTouchHandler(self:doAgiTouch())
 		self:registerButtonTouchHandler(self:doIntTouch())
+		-- 副本入口：文字标签
+		local dgTable = ed.getDataTable("ActStageGroupDungeon")
+		for _, dk in ipairs({"dg1", "dg2", "dg3", "dg4"}) do
+			local info = res.entry[dk]
+			if info and info.isDungeon then
+				local sgid = entryStage[dk]
+				local gName = dgTable and dgTable[sgid] and dgTable[sgid]["Group Name"] or dk
+				local nameStr = type(gName) == "table" and T(gName) or tostring(gName)
+				local bg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
+				bg:setPosition(info.center)
+				bg:setContentSize(CCSizeMake(100, 40))
+				container:addChild(bg, 9)
+				local lbl = ed.createttf(nameStr, 14)
+				lbl:setPosition(info.center)
+				lbl:setColor(ccc3(233, 214, 181))
+				container:addChild(lbl, 10)
+			end
+		end
+		self:registerButtonTouchHandler(self:doDungeonTouch())
 	end
 	self.entry = entry
 end

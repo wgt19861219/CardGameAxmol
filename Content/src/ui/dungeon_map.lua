@@ -69,7 +69,6 @@ local function getBossesForGroup(groupId)
       local baseVit = (baseData and (baseData["Vitality Cost"] or baseData["Vit Cost"])) or 12
       local baseUnlock = (baseData and baseData["Unlock Level"]) or 1
       local vitScale = { 1.0, 1.3, 1.7, 2.0 }
-      local unlockOffset = { 0, 5, 10, 15 }
       for diff = 1, 4 do
         local diffId = bossId + (diff - 1) * 1000
         local stageData = stDungeon[diffId]
@@ -86,7 +85,7 @@ local function getBossesForGroup(groupId)
             id = diffId,
             vit = math.ceil(baseVit * vitScale[diff]),
             keyCost = 0,
-            unlockLevel = baseUnlock + unlockOffset[diff],
+            unlockLevel = baseUnlock,
             diff = diff,
           })
         end

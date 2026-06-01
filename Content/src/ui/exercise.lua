@@ -1483,10 +1483,10 @@ local function create(type)
 	local groupIds
 	local modeTitle
 	if type == "em" then
-		groupIds = {20001, 20002}
+		groupIds = {40005, 40006, 40007}
 		modeTitle = "em"
 	else
-		groupIds = {20003, 20004, 20005, 40001, 40002, 40003, 40004}
+		groupIds = {40001, 40002, 40003, 40004}
 		modeTitle = "equip"
 	end
 	local dungeon_map_mod = ed.ui.dungeon_map

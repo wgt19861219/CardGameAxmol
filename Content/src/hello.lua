@@ -237,6 +237,13 @@ function loadAllFiles()
 		exercise = {
 			modules = { "ui/exercise", "ui/listener/exerciselsr", "ui/parameter/exerciseres" },
 		},
+		dungeon_map = {
+			modules = {
+				"ui/dungeon_map", "gametable/dungeonmapconfig",
+				"ui/exercise", "ui/listener/exerciselsr", "ui/parameter/exerciseres",
+			},
+			dataTables = { "ActStageGroupDungeon", "StageDungeon" },
+		},
 	}
 
 	local function ensureSceneModules(sceneName)

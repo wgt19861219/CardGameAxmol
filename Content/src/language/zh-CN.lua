@@ -5091,6 +5091,7 @@
 	["DUNGEON.SELECT_BOSS_DIFFICULTY"] = "选择Boss与难度",
 	["DUNGEON.NOT_ENOUGH_KEYS"] = "龙鳞硬币不足",
 	["DUNGEON.DEFEAT_THE_BOSS_TO_EARN_REWARDS"] = "击败Boss可获得丰厚奖励",
+	["DUNGEON.HERIC_DUNGEONS"] = "英雄副本",
 	["DUNGEON.DUNGEON_POINT"] = "龙鳞硬币",
 
 }

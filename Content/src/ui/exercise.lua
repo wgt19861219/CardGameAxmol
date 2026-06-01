@@ -843,6 +843,159 @@ local function createDungeon(key)
 end
 class.createDungeon = createDungeon
 
+-- 时光之穴子窗口：显示3个英雄副本入口
+local heroicKeys = {"dg5", "dg6", "dg7"}
+local function createCavern(key)
+	local self = {}
+	setmetatable(self, class.mt)
+	local mainLayer = CCLayerColor:create(ccc4(0, 0, 0, 150))
+	self.mainLayer = mainLayer
+	self.key = key
+	self.baseScene = ed.getCurrentScene()
+	self.isCavern = true
+	local container = CCLayer:create()
+	container:setAnchorPoint(ccp(0.5, 0.5))
+	self.container = container
+	mainLayer:addChild(container)
+	self.ui = {}
+	local ui_info = {
+		{
+			t = "Scale9Sprite",
+			base = {
+				name = "frame",
+				res = "UI/alpha/HVGA/main_vit_tips.png",
+				capInsets = CCRectMake(10, 10, 58, 26)
+			},
+			layout = {
+				position = ccp(400, 240)
+			},
+			config = {
+				scaleSize = CCSizeMake(500, 280)
+			}
+		},
+		{
+			t = "Sprite",
+			base = {
+				name = "close",
+				res = "UI/alpha/HVGA/herodetail-detail-close.png"
+			},
+			layout = {
+				position = ccp(645, 370)
+			},
+			config = {}
+		},
+		{
+			t = "Sprite",
+			base = {
+				name = "close_press",
+				res = "UI/alpha/HVGA/herodetail-detail-close-p.png",
+				parent = "close"
+			},
+			layout = {
+				anchor = ccp(0, 0),
+				position = ccp(0, 0)
+			},
+			config = {visible = false}
+		}
+	}
+	local readNode = ed.readnode.create(self.container, self.ui)
+	readNode:addNode(ui_info)
+	ui_info = {
+		{
+			t = "Label",
+			base = {
+				name = "title",
+				text = T(LSTR("CHAPTER.CAVERNS_OF_TIME")) or "时光之穴",
+				fontinfo = "ui_normal_button"
+			},
+			layout = {
+				position = ccp(352, 355)
+			},
+			config = {
+				color = ccc3(200, 150, 50)
+			}
+		}
+	}
+	local readNode2 = ed.readnode.create(self.ui.frame, self.ui)
+	readNode2:addNode(ui_info)
+	-- 3个英雄副本按钮
+	local dgTable = ed.getDataTable("ActStageGroupDungeon")
+	local entryMap = ed.ui.exerciseres.entry_stage
+	self.cavernButtons = {}
+	for i, dk in ipairs(heroicKeys) do
+		local sgid = entryMap[dk]
+		local gName = dgTable and dgTable[sgid] and dgTable[sgid]["Group Name"] or dk
+		local nameStr = type(gName) == "table" and T(gName) or tostring(gName)
+		local btnY = 310 - (i - 1) * 70
+		local btn = ed.createScale9Sprite(
+			"UI/alpha/HVGA/act/act_select_bg.png",
+			CCRectMake(30, 15, 40, 20)
+		)
+		btn:setContentSize(CCSizeMake(380, 50))
+		btn:setPosition(ccp(400, btnY))
+		self.ui.frame:addChild(btn)
+		local btnPress = ed.createScale9Sprite(
+			"UI/alpha/HVGA/act/act_select_bg_chosen.png",
+			CCRectMake(30, 15, 40, 20)
+		)
+		btnPress:setContentSize(CCSizeMake(380, 50))
+		btnPress:setAnchorPoint(ccp(0, 0))
+		btnPress:setPosition(ccp(0, 0))
+		btnPress:setVisible(false)
+		btn:addChild(btnPress)
+		local lbl = ed.createttf(nameStr, 16)
+		lbl:setColor(ccc3(200, 150, 255))
+		btn:addChild(lbl)
+		self.cavernButtons[i] = {
+			button = btn,
+			press = btnPress,
+			dungeonKey = dk
+		}
+	end
+	local outLayerTouch = self:doOutLayerTouch()
+	local closeTouch = self:doCloseTouch()
+	local pressIdx
+	local function cavernTouchHandler(event, x, y)
+		if event == "began" then
+			for i, cb in ipairs(self.cavernButtons) do
+				if ed.containsPoint(cb.button, x, y) then
+					pressIdx = i
+					cb.press:setVisible(true)
+					return
+				end
+			end
+		elseif event == "ended" then
+			if pressIdx then
+				local cb = self.cavernButtons[pressIdx]
+				cb.press:setVisible(false)
+				if ed.containsPoint(cb.button, x, y) then
+					self:destroy()
+					local dungeon = degreeWindow.createDungeon(cb.dungeonKey)
+					local scene = ed.getCurrentScene()
+					local exercise = scene and scene.exercise
+					if exercise and exercise.container then
+						exercise.container:addChild(dungeon.mainLayer, 100)
+					end
+				end
+				pressIdx = nil
+			end
+		end
+	end
+	local function mainHandler(event, x, y)
+		xpcall(function()
+			outLayerTouch(event, x, y)
+			closeTouch(event, x, y)
+			cavernTouchHandler(event, x, y)
+		end, EDDebug)
+		return true
+	end
+	self.mainLayer:setTouchEnabled(true)
+	self.mainLayer:registerScriptTouchHandler(mainHandler, false, -135, true)
+	self:show()
+	return self
+end
+class.createCavern = createCavern
+
 
 local destroy = function(self)
 	self:removeCountdownHandler()
@@ -1129,8 +1282,12 @@ end
 class.getHeroLimit = getHeroLimit
 local function doClickExerciseButton(self, key)
 	lsr:report("clickActButton")
+	print("[CLICK-BTN] key="..tostring(key).." isCavern="..tostring(ed.isCavernKey and ed.isCavernKey(key)).." isDungeon="..tostring(ed.isDungeonKey and ed.isDungeonKey(key)))
 	if self:checkExerciseEnabled(key) then
-		if ed.isDungeonKey(key) then
+		if ed.isCavernKey(key) then
+			local cavern = degreeWindow.createCavern(key)
+			self.container:addChild(cavern.mainLayer, 100)
+		elseif ed.isDungeonKey(key) then
 			local degree = degreeWindow.createDungeon(key)
 			self.container:addChild(degree.mainLayer, 100)
 		else
@@ -1293,6 +1450,39 @@ function ed.isDungeonKey(key)
 	return key == "dg1" or key == "dg2" or key == "dg3" or key == "dg4"
 end
 
+function ed.isCavernKey(key)
+	return key == "cavern"
+end
+
+-- 时光之穴入口触摸
+local function doCavernTouch(self)
+	local pressKey = nil
+	local function handler(event, x, y)
+		if event == "began" then
+			local info = res.entry.cavern
+			if info and info.isCavern then
+				local cx, cy = info.center.x, info.center.y
+				local r = info.radius
+				print("[CAVERN-TOUCH] began x="..x.." y="..y.." cx="..cx.." cy="..cy.." r="..r.." hit="..tostring(math.abs(x-cx)<r and math.abs(y-cy)<r))
+				if math.abs(x - cx) < r and math.abs(y - cy) < r then
+					pressKey = "cavern"
+					return
+				end
+			else
+				print("[CAVERN-TOUCH] no cavern entry info, res.entry="..tostring(res.entry)..", cavern="..tostring(res.entry and res.entry.cavern))
+			end
+		elseif event == "ended" then
+			if pressKey == "cavern" then
+				print("[CAVERN-TOUCH] ended, calling doClickExerciseButton")
+				self:doClickExerciseButton("cavern")
+				pressKey = nil
+			end
+		end
+	end
+	return handler
+end
+class.doCavernTouch = doCavernTouch
+
 local registerButtonTouchHandler = function(self, handler)
 	self.buttonTouchHandler = self.buttonTouchHandler or {}
 	table.insert(self.buttonTouchHandler, handler)
@@ -1360,6 +1550,19 @@ local function createExerciseButton(self)
 	if self.type == "em" then
 		self:registerButtonTouchHandler(self:doExpTouch())
 		self:registerButtonTouchHandler(self:doMoneyTouch())
+		-- 时光之穴：英雄副本入口
+		local cavernInfo = res.entry.cavern
+		if cavernInfo and cavernInfo.isCavern then
+			local cavernBg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
+			cavernBg:setPosition(cavernInfo.center)
+			cavernBg:setContentSize(CCSizeMake(120, 40))
+			container:addChild(cavernBg, 9)
+			local cavernLbl = ed.createttf(T(LSTR("DUNGEON.HERIC_DUNGEONS")) or "英雄副本", 14)
+			cavernLbl:setPosition(cavernInfo.center)
+			cavernLbl:setColor(ccc3(200, 150, 255))
+			container:addChild(cavernLbl, 10)
+		end
+		self:registerButtonTouchHandler(self:doCavernTouch())
 	elseif self.type == "equip" then
 		self:registerButtonTouchHandler(self:doStrTouch())
 		self:registerButtonTouchHandler(self:doAgiTouch())
@@ -1383,6 +1586,19 @@ local function createExerciseButton(self)
 			end
 		end
 		self:registerButtonTouchHandler(self:doDungeonTouch())
+		-- 时光之穴入口标签
+		local cavernInfo = res.entry.cavern
+		if cavernInfo and cavernInfo.isCavern then
+			local cavernBg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
+			cavernBg:setPosition(cavernInfo.center)
+			cavernBg:setContentSize(CCSizeMake(100, 40))
+			container:addChild(cavernBg, 9)
+			local cavernLbl = ed.createttf(T(LSTR("CHAPTER.CAVERNS_OF_TIME")) or "时光之穴", 14)
+			cavernLbl:setPosition(cavernInfo.center)
+			cavernLbl:setColor(ccc3(200, 150, 255))
+			container:addChild(cavernLbl, 10)
+		end
+		self:registerButtonTouchHandler(self:doCavernTouch())
 	end
 	self.entry = entry
 end

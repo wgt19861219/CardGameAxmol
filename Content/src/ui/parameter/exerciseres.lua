@@ -14,6 +14,9 @@ class.entry_stage = {
   dg2 = 40002,
   dg3 = 40003,
   dg4 = 40004,
+  dg5 = 40005,
+  dg6 = 40006,
+  dg7 = 40007,
 }
 class.em = {
   uires = {
@@ -47,6 +50,15 @@ class.em = {
       center = ccp(575, 185),
       radius = 85,
       descres = "UI/alpha/HVGA/act/act_popup_title_1_1.png"
+    },
+    cavern = {
+      fca = {},
+      pos = {},
+      scale = {},
+      center = ccp(400, 85),
+      radius = 55,
+      descres = "",
+      isCavern = true,
     }
   }
 }
@@ -136,6 +148,15 @@ class.equip = {
       radius = 55,
       descres = "",
       isDungeon = true,
+    },
+    cavern = {
+      fca = {},
+      pos = {},
+      scale = {},
+      center = ccp(830, 85),
+      radius = 55,
+      descres = "",
+      isCavern = true,
     },
   }
 }

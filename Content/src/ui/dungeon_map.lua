@@ -384,18 +384,9 @@ function dungeon_map.create(param)
         sub:addChild(bossSprite, 10)
       end
 
-      -- 宝箱
-      local boxp = crusadeBoxPos[s][posIdx] or ccp(bpos.x, bpos.y - 50)
-      local box = CCSprite:create("UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png")
-      if box then
-        box:setAnchorPoint(ccp(0.5, 0.5))
-        box:setPosition(boxp)
-        box:setScale(0.8)
-        sub:addChild(box, 11)
-      end
+      -- 宝箱暂时移除，后续按正确布局加回
 
       panel.dragLayer[string.format("battle%d", i)] = bossSprite
-      panel.dragLayer[string.format("box%d", i)] = box
     end
   end
 

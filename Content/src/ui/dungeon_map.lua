@@ -39,9 +39,10 @@ local crusadeBossPos = {
   { ccp(121, 190), ccp(345, 130), ccp(278, 275), ccp(472, 283), ccp(584, 145) },
   { ccp(30, 265),  ccp(60, 120),  ccp(185, 230), ccp(375, 277), ccp(285, 130) },
 }
+-- 远征原版宝箱分布：section1=4个, section2=6个, section3=5个
 local crusadeBoxPos = {
-  { ccp(100, 155), ccp(350, 110), ccp(410, 310), ccp(488, 162), ccp(300, 200) },
-  { ccp(-10, 170), ccp(215, 117), ccp(320, 186), ccp(370, 305), ccp(468, 133) },
+  { ccp(100, 155), ccp(350, 110), ccp(410, 310), ccp(488, 162) },
+  { ccp(-10, 170), ccp(215, 117), ccp(320, 186), ccp(370, 305), ccp(468, 133), ccp(627, 262) },
   { ccp(-10, 175), ccp(157, 130), ccp(233, 310), ccp(350, 195), ccp(435, 125) },
 }
 
@@ -384,9 +385,33 @@ function dungeon_map.create(param)
         sub:addChild(bossSprite, 10)
       end
 
-      -- 宝箱暂时移除，后续按正确布局加回
-
       panel.dragLayer[string.format("battle%d", i)] = bossSprite
+    end
+  end
+
+  -- 宝箱独立放置（照搬远征：沿路径放置，不与boss一一对应）
+  -- 远征section1有4箱、section2有6箱、section3有5箱，副本按boss数量等比分配
+  for s = 1, MAX_SECTIONS do
+    local sub = panel.dragLayer[string.format("sub%d", s)]
+    if sub then
+      local sectionBossCount = 0
+      for _, boss in ipairs(bosses) do
+        if boss.sectionIdx == s then sectionBossCount = sectionBossCount + 1 end
+      end
+      -- section有几个boss就放几个box，用远征该section的box坐标
+      local boxCount = math.min(sectionBossCount, #crusadeBoxPos[s])
+      for b = 1, boxCount do
+        local boxp = crusadeBoxPos[s][b]
+        if boxp then
+          local box = CCSprite:create("UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png")
+          if box then
+            box:setAnchorPoint(ccp(0.5, 0.5))
+            box:setPosition(boxp)
+            box:setScale(0.8)
+            sub:addChild(box, 11)
+          end
+        end
+      end
     end
   end
 

@@ -32,6 +32,8 @@ local diffColors = {
 local titleMap = {
   hero_trial = "英雄试炼",
   time_cavern = "时光之穴",
+  em = "经验关",
+  equip = "装备关",
 }
 
 ---------------------------------------------------

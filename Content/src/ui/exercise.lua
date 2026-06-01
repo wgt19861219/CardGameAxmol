@@ -843,158 +843,27 @@ local function createDungeon(key)
 end
 class.createDungeon = createDungeon
 
--- 时光之穴子窗口：显示3个英雄副本入口
-local heroicKeys = {"dg5", "dg6", "dg7"}
-local function createCavern(key)
-	local self = {}
-	setmetatable(self, class.mt)
-	local mainLayer = CCLayerColor:create(ccc4(0, 0, 0, 150))
-	self.mainLayer = mainLayer
-	self.key = key
-	self.baseScene = ed.getCurrentScene()
-	self.isCavern = true
-	local container = CCLayer:create()
-	container:setAnchorPoint(ccp(0.5, 0.5))
-	self.container = container
-	mainLayer:addChild(container)
-	self.ui = {}
-	local ui_info = {
-		{
-			t = "Scale9Sprite",
-			base = {
-				name = "frame",
-				res = "UI/alpha/HVGA/main_vit_tips.png",
-				capInsets = CCRectMake(10, 10, 58, 26)
-			},
-			layout = {
-				position = ccp(400, 240)
-			},
-			config = {
-				scaleSize = CCSizeMake(500, 280)
-			}
-		},
-		{
-			t = "Sprite",
-			base = {
-				name = "close",
-				res = "UI/alpha/HVGA/herodetail-detail-close.png"
-			},
-			layout = {
-				position = ccp(645, 370)
-			},
-			config = {}
-		},
-		{
-			t = "Sprite",
-			base = {
-				name = "close_press",
-				res = "UI/alpha/HVGA/herodetail-detail-close-p.png",
-				parent = "close"
-			},
-			layout = {
-				anchor = ccp(0, 0),
-				position = ccp(0, 0)
-			},
-			config = {visible = false}
-		}
-	}
-	local readNode = ed.readnode.create(self.container, self.ui)
-	readNode:addNode(ui_info)
-	ui_info = {
-		{
-			t = "Label",
-			base = {
-				name = "title",
-				text = T(LSTR("CHAPTER.CAVERNS_OF_TIME")) or "时光之穴",
-				fontinfo = "ui_normal_button"
-			},
-			layout = {
-				position = ccp(352, 355)
-			},
-			config = {
-				color = ccc3(200, 150, 50)
-			}
-		}
-	}
-	local readNode2 = ed.readnode.create(self.ui.frame, self.ui)
-	readNode2:addNode(ui_info)
-	-- 3个英雄副本按钮
-	local dgTable = ed.getDataTable("ActStageGroupDungeon")
-	local entryMap = ed.ui.exerciseres.entry_stage
-	self.cavernButtons = {}
-	for i, dk in ipairs(heroicKeys) do
-		local sgid = entryMap[dk]
-		local gName = dgTable and dgTable[sgid] and dgTable[sgid]["Group Name"] or dk
-		local nameStr = type(gName) == "table" and T(gName) or tostring(gName)
-		local btnY = 310 - (i - 1) * 70
-		local btn = ed.createScale9Sprite(
-			"UI/alpha/HVGA/act/act_select_bg.png",
-			CCRectMake(30, 15, 40, 20)
-		)
-		btn:setContentSize(CCSizeMake(380, 50))
-		btn:setPosition(ccp(400, btnY))
-		self.ui.frame:addChild(btn)
-		local btnPress = ed.createScale9Sprite(
-			"UI/alpha/HVGA/act/act_select_bg_chosen.png",
-			CCRectMake(30, 15, 40, 20)
-		)
-		btnPress:setContentSize(CCSizeMake(380, 50))
-		btnPress:setAnchorPoint(ccp(0, 0))
-		btnPress:setPosition(ccp(0, 0))
-		btnPress:setVisible(false)
-		btn:addChild(btnPress)
-		local lbl = ed.createttf(nameStr, 16)
-		lbl:setColor(ccc3(200, 150, 255))
-		btn:addChild(lbl)
-		self.cavernButtons[i] = {
-			button = btn,
-			press = btnPress,
-			dungeonKey = dk
-		}
+-- 时光之穴/英雄试炼 → 直接打开远征风格副本地图场景
+local cavernGroupIds = {40005, 40006, 40007}
+local function openCavernScene(mode)
+	local dungeon_map = ed.ui.dungeon_map
+	if not dungeon_map then
+		pcall(require, "ui/dungeon_map")
+		dungeon_map = ed.ui.dungeon_map
 	end
-	local outLayerTouch = self:doOutLayerTouch()
-	local closeTouch = self:doCloseTouch()
-	local pressIdx
-	local function cavernTouchHandler(event, x, y)
-		if event == "began" then
-			for i, cb in ipairs(self.cavernButtons) do
-				if ed.containsPoint(cb.button, x, y) then
-					pressIdx = i
-					cb.press:setVisible(true)
-					return
-				end
-			end
-		elseif event == "ended" then
-			if pressIdx then
-				local cb = self.cavernButtons[pressIdx]
-				cb.press:setVisible(false)
-				if ed.containsPoint(cb.button, x, y) then
-					self:destroy()
-					local dungeon = degreeWindow.createDungeon(cb.dungeonKey)
-					local scene = ed.getCurrentScene()
-					local exercise = scene and scene.exercise
-					if exercise and exercise.container then
-						exercise.container:addChild(dungeon.mainLayer, 100)
-					end
-				end
-				pressIdx = nil
-			end
-		end
+	if not dungeon_map then
+		ed.showToast("副本地图模块加载失败")
+		return
 	end
-	local function mainHandler(event, x, y)
-		xpcall(function()
-			outLayerTouch(event, x, y)
-			closeTouch(event, x, y)
-			cavernTouchHandler(event, x, y)
-		end, EDDebug)
-		return true
+	local scene = dungeon_map.create({
+		mode = mode or "time_cavern",
+		groupIds = cavernGroupIds,
+	})
+	if scene then
+		ed.pushScene(scene)
 	end
-	self.mainLayer:setTouchEnabled(true)
-	self.mainLayer:registerScriptTouchHandler(mainHandler, false, -135, true)
-	self:show()
-	return self
 end
-class.createCavern = createCavern
+class.openCavernScene = openCavernScene
 
 
 local destroy = function(self)
@@ -1282,11 +1151,11 @@ end
 class.getHeroLimit = getHeroLimit
 local function doClickExerciseButton(self, key)
 	lsr:report("clickActButton")
-	print("[CLICK-BTN] key="..tostring(key).." isCavern="..tostring(ed.isCavernKey and ed.isCavernKey(key)).." isDungeon="..tostring(ed.isDungeonKey and ed.isDungeonKey(key)))
 	if self:checkExerciseEnabled(key) then
 		if ed.isCavernKey(key) then
-			local cavern = degreeWindow.createCavern(key)
-			self.container:addChild(cavern.mainLayer, 100)
+			local mode = (self.type == "em") and "hero_trial" or "time_cavern"
+			self:doBack()
+			degreeWindow.openCavernScene(mode)
 		elseif ed.isDungeonKey(key) then
 			local degree = degreeWindow.createDungeon(key)
 			self.container:addChild(degree.mainLayer, 100)
@@ -1463,17 +1332,13 @@ local function doCavernTouch(self)
 			if info and info.isCavern then
 				local cx, cy = info.center.x, info.center.y
 				local r = info.radius
-				print("[CAVERN-TOUCH] began x="..x.." y="..y.." cx="..cx.." cy="..cy.." r="..r.." hit="..tostring(math.abs(x-cx)<r and math.abs(y-cy)<r))
 				if math.abs(x - cx) < r and math.abs(y - cy) < r then
 					pressKey = "cavern"
 					return
 				end
-			else
-				print("[CAVERN-TOUCH] no cavern entry info, res.entry="..tostring(res.entry)..", cavern="..tostring(res.entry and res.entry.cavern))
 			end
 		elseif event == "ended" then
 			if pressKey == "cavern" then
-				print("[CAVERN-TOUCH] ended, calling doClickExerciseButton")
 				self:doClickExerciseButton("cavern")
 				pressKey = nil
 			end
@@ -1547,59 +1412,47 @@ local function createExerciseButton(self)
 			action = action
 		}
 	end
-	if self.type == "em" then
-		self:registerButtonTouchHandler(self:doExpTouch())
-		self:registerButtonTouchHandler(self:doMoneyTouch())
-		-- 时光之穴：英雄副本入口
-		local cavernInfo = res.entry.cavern
-		if cavernInfo and cavernInfo.isCavern then
-			local cavernBg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
-			cavernBg:setPosition(cavernInfo.center)
-			cavernBg:setContentSize(CCSizeMake(120, 40))
-			container:addChild(cavernBg, 9)
-			local cavernLbl = ed.createttf(T(LSTR("DUNGEON.HERIC_DUNGEONS")) or "英雄副本", 14)
-			cavernLbl:setPosition(cavernInfo.center)
-			cavernLbl:setColor(ccc3(200, 150, 255))
-			container:addChild(cavernLbl, 10)
-		end
-		self:registerButtonTouchHandler(self:doCavernTouch())
-	elseif self.type == "equip" then
-		self:registerButtonTouchHandler(self:doStrTouch())
-		self:registerButtonTouchHandler(self:doAgiTouch())
-		self:registerButtonTouchHandler(self:doIntTouch())
-		-- 副本入口：文字标签
-		local dgTable = ed.getDataTable("ActStageGroupDungeon")
-		for _, dk in ipairs({"dg1", "dg2", "dg3", "dg4"}) do
-			local info = res.entry[dk]
-			if info and info.isDungeon then
-				local sgid = entryStage[dk]
-				local gName = dgTable and dgTable[sgid] and dgTable[sgid]["Group Name"] or dk
-				local nameStr = type(gName) == "table" and T(gName) or tostring(gName)
-				local bg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
-				bg:setPosition(info.center)
-				bg:setContentSize(CCSizeMake(100, 40))
-				container:addChild(bg, 9)
-				local lbl = ed.createttf(nameStr, 14)
-				lbl:setPosition(info.center)
-				lbl:setColor(ccc3(233, 214, 181))
-				container:addChild(lbl, 10)
+		if self.type == "em" then
+			self:registerButtonTouchHandler(self:doExpTouch())
+			self:registerButtonTouchHandler(self:doMoneyTouch())
+			-- 时光之穴：英雄副本入口（CCLabelTTF已验证可见）
+			local cavernInfo = res.entry.cavern
+			if cavernInfo and cavernInfo.isCavern then
+				local cavernLbl = CCLabelTTF:create("è±éå¯æ¬", "Arial", 20)
+				cavernLbl:setPosition(cavernInfo.center)
+				cavernLbl:setColor(ccc3(200, 150, 255))
+				container:addChild(cavernLbl, 20)
 			end
+			self:registerButtonTouchHandler(self:doCavernTouch())
+		elseif self.type == "equip" then
+			self:registerButtonTouchHandler(self:doStrTouch())
+			self:registerButtonTouchHandler(self:doAgiTouch())
+			self:registerButtonTouchHandler(self:doIntTouch())
+			-- 副本入口：文字标签（CCLabelTTF）
+			local dgTable = ed.getDataTable("ActStageGroupDungeon")
+			for _, dk in ipairs({"dg1", "dg2", "dg3", "dg4"}) do
+				local info = res.entry[dk]
+				if info and info.isDungeon then
+					local sgid = entryStage[dk]
+					local gName = dgTable and dgTable[sgid] and dgTable[sgid]["Group Name"] or dk
+					local nameStr = type(gName) == "table" and T(gName) or tostring(gName)
+					local lbl = CCLabelTTF:create(nameStr, "Arial", 16)
+					lbl:setPosition(info.center)
+					lbl:setColor(ccc3(233, 214, 181))
+					container:addChild(lbl, 20)
+				end
+			end
+			self:registerButtonTouchHandler(self:doDungeonTouch())
+			-- 时光之穴入口标签
+			local cavernInfo = res.entry.cavern
+			if cavernInfo and cavernInfo.isCavern then
+				local cavernLbl = CCLabelTTF:create("æ¶åä¹ç©´", "Arial", 20)
+				cavernLbl:setPosition(cavernInfo.center)
+				cavernLbl:setColor(ccc3(200, 150, 255))
+				container:addChild(cavernLbl, 20)
+			end
+			self:registerButtonTouchHandler(self:doCavernTouch())
 		end
-		self:registerButtonTouchHandler(self:doDungeonTouch())
-		-- 时光之穴入口标签
-		local cavernInfo = res.entry.cavern
-		if cavernInfo and cavernInfo.isCavern then
-			local cavernBg = ed.createScale9Sprite("UI/alpha/HVGA/main_vit_tips.png", CCRectMake(10, 10, 58, 26))
-			cavernBg:setPosition(cavernInfo.center)
-			cavernBg:setContentSize(CCSizeMake(100, 40))
-			container:addChild(cavernBg, 9)
-			local cavernLbl = ed.createttf(T(LSTR("CHAPTER.CAVERNS_OF_TIME")) or "时光之穴", 14)
-			cavernLbl:setPosition(cavernInfo.center)
-			cavernLbl:setColor(ccc3(200, 150, 255))
-			container:addChild(cavernLbl, 10)
-		end
-		self:registerButtonTouchHandler(self:doCavernTouch())
-	end
 	self.entry = entry
 end
 class.createExerciseButton = createExerciseButton
@@ -1610,93 +1463,36 @@ local function create(type)
 		print("illegal key of exercise , please input \"em\" or \"equip\" ")
 		return self
 	end
-	res = ed.ui.exerciseres
-	res = res[type]
 	self.type = type
-	local scene = self.scene
-	local mainLayer = self.mainLayer
-	self:btRegisterHandler({
-		handler = self:doMainLayerTouch()
-	})
-	local container = CCSprite:create()
-	mainLayer:addChild(container, 5)
-	self.container = container
-	local clipNode = ax.ClippingNode:create()
-	clipNode:setAlphaThreshold(1.0)
-	local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
-	stencil:setContentSize(CCSizeMake(712, 370))
-	stencil:setPosition(ccp(44, 20))
-	clipNode:setStencil(stencil)
-	self.clipLayer = clipNode
-	mainLayer:addChild(clipNode)
-	self.ui = {}
-	local ur = self:getres()
-	local ui_info = {
-		{
-			t = "Sprite",
-			base = {
-				name = "map",
-				res = ur.map
-			},
-			layout = {
-				position = ccp(400, 212)
-			},
-			config = {}
-		}
-	}
-	local readNode = ed.readnode.create(clipLayer, self.ui)
-	readNode:addNode(ui_info)
-	ui_info = {
-		{
-			t = "Sprite",
-			base = {
-				name = "title_shadow",
-				res = ur.titleShadow
-			},
-			layout = {
-				anchor = ccp(0.5, 1),
-				position = ccp(400, 397)
-			},
-			config = {scale = 0.99}
-		},
-		{
-			t = "Sprite",
-			base = {
-				name = "frame",
-				res = ur.frame
-			},
-			layout = {
-				position = ccp(400, 205)
-			},
-			config = {}
-		},
-		{
-			t = "Sprite",
-			base = {
-				name = "title_bg",
-				res = ur.titleBg
-			},
-			layout = {
-				position = ccp(400, 355)
-			},
-			config = {}
-		},
-		{
-			t = "Sprite",
-			base = {
-				name = "title",
-				res = ur.title
-			},
-			layout = {
-				position = ccp(400, 355)
-			},
-			config = {}
-		}
-	}
-	readNode = ed.readnode.create(container, self.ui)
-	readNode:addNode(ui_info)
-	self:createExerciseButton()
-	self:registerOnEnterHandler("enter", self:onEnterHandler())
+	-- 直接打开远征风格副本地图，不再创建角色动画UI
+	local groupIds
+	local modeTitle
+	if type == "em" then
+		groupIds = {20001, 20002}
+		modeTitle = "em"
+	else
+		groupIds = {20003, 20004, 20005, 40001, 40002, 40003, 40004}
+		modeTitle = "equip"
+	end
+	local dungeon_map_mod = ed.ui.dungeon_map
+	if not dungeon_map_mod then
+		pcall(require, "ui/dungeon_map")
+		dungeon_map_mod = ed.ui.dungeon_map
+	end
+	if dungeon_map_mod then
+		local mapScene = dungeon_map_mod.create({
+			mode = modeTitle,
+			groupIds = groupIds,
+		})
+		if mapScene then
+			-- 延迟pushScene，让当前场景先完成初始化
+			self:registerOnEnterHandler("pushDungeonMap", function()
+				ed.pushScene(mapScene)
+			end)
+		end
+	else
+		print("[EXERCISE] dungeon_map module not found!")
+	end
 	return self
 end
 class.create = create

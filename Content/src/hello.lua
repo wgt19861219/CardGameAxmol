@@ -235,7 +235,8 @@ function loadAllFiles()
 			},
 		},
 		exercise = {
-			modules = { "ui/exercise", "ui/listener/exerciselsr", "ui/parameter/exerciseres" },
+			modules = { "ui/exercise", "ui/listener/exerciselsr", "ui/parameter/exerciseres", "ui/dungeon_map", "gametable/dungeonmapconfig" },
+			dataTables = { "ActStageGroupDungeon", "StageDungeon" },
 		},
 		dungeon_map = {
 			modules = {

@@ -17,8 +17,9 @@ local groupBossOffset = {}
 local acts = require("util.cocos2dx.actions")
 local needRefreshOnEnter = false
 
--- 难度弹窗引用（照搬exercise原版degreeWindow视觉）
-local degreePopup = nil  -- {mainLayer, container, ui, degree, bossIdx}
+-- 难度弹窗引用
+local degreePopup = nil
+local degreeButtons = {}
 
 ---------------------------------------------------
 -- 远征坐标表（从crusadeconfig.lua原样复制）
@@ -131,7 +132,6 @@ local function calcMaxRight()
       if absX > maxX then maxX = absX end
     end
   end
-  -- 裁剪区右边界=44+712=756，留足余量让最右boss完整显示
   return math.min(0, 660 - maxX)
 end
 
@@ -141,7 +141,6 @@ end
 local function dragLayerTouch(event, x, y)
   if not panel then return false end
   if not panel.dragLayer:getVisible() then return false end
-  -- 弹窗可能已被自身destroy()移除，检查mainLayer是否还有效
   if degreePopup and degreePopup.mainLayer and not tolua.isnull(degreePopup.mainLayer) then return false end
   if degreePopup then degreePopup = nil end
 
@@ -209,55 +208,299 @@ local function refreshBattleState()
 end
 
 ---------------------------------------------------
--- 难度弹窗（直接调用exercise原装degreeWindow）
+-- 单boss难度弹窗（完全照搬exercise createDegree风格）
 ---------------------------------------------------
--- groupId反查exercise key
-local groupIdToKey = {}
-for k, v in pairs(ed.ui.exerciseres and ed.ui.exerciseres.entry_stage or {}) do
-  groupIdToKey[v] = k
-end
+local iconres = {
+  "UI/alpha/HVGA/act/act_icon_difficulty_1.png",
+  "UI/alpha/HVGA/act/act_icon_difficulty_2.png",
+  "UI/alpha/HVGA/act/act_icon_difficulty_3.png",
+  "UI/alpha/HVGA/act/act_icon_difficulty_4.png"
+}
 
-local function showDegreePopup(bossIdx)
+local function destroyPopup()
   if degreePopup then
     xpcall(function()
-      if degreePopup.container then
-        degreePopup.container:removeFromParentAndCleanup(true)
-      elseif degreePopup.mainLayer then
+      if degreePopup.mainLayer and not tolua.isnull(degreePopup.mainLayer) then
         degreePopup.mainLayer:removeFromParentAndCleanup(true)
       end
     end, EDDebug)
     degreePopup = nil
+    degreeButtons = {}
   end
+end
+
+local function showDegreePopup(bossIdx)
+  destroyPopup()
 
   local boss = bosses[bossIdx]
-  if not boss then return end
+  if not boss or #boss.difficulties == 0 then return end
 
-  -- 找到该boss所属group的exercise key
-  local groupIdx = math.ceil(bossIdx / 5)
-  local gid = param_groupIds[groupIdx]
-  local exKey = groupIdToKey[gid]
-  if not exKey then
-    return
+  -- 照搬 exercise createDungeon 结构
+  local mainLayer = CCLayerColor:create(ccc4(0, 0, 0, 150))
+  local container = CCLayer:create()
+  container:setAnchorPoint(ccp(0.5, 0.5))
+  mainLayer:addChild(container)
+
+  local ui = {}
+  local ui_info = {
+    {
+      t = "Scale9Sprite",
+      base = {
+        name = "frame",
+        res = "UI/alpha/HVGA/main_vit_tips.png",
+        capInsets = CCRectMake(10, 10, 58, 26)
+      },
+      layout = { position = ccp(400, 220) },
+      config = { scaleSize = CCSizeMake(705, 300) }
+    },
+    {
+      t = "Sprite",
+      base = {
+        name = "close",
+        res = "UI/alpha/HVGA/herodetail-detail-close.png"
+      },
+      layout = { position = ccp(750, 350) },
+      config = {}
+    },
+    {
+      t = "Sprite",
+      base = {
+        name = "close_press",
+        res = "UI/alpha/HVGA/herodetail-detail-close-p.png",
+        parent = "close"
+      },
+      layout = { anchor = ccp(0, 0), position = ccp(0, 0) },
+      config = { visible = false }
+    },
+  }
+  local readNode = ed.readnode.create(container, ui)
+  readNode:addNode(ui_info)
+
+  -- 标题（添加到frame上，和exercise create一样）
+  local title_info = {
+    {
+      t = "Sprite",
+      base = {
+        name = "title_bg",
+        res = "UI/alpha/HVGA/act/act_popup_bg.png"
+      },
+      layout = { position = ccp(352, 272) },
+      config = { visible = false }
+    },
+    {
+      t = "Label",
+      base = {
+        name = "title",
+        text = boss.name or "",
+        fontinfo = "ui_normal_button"
+      },
+      layout = { position = ccp(352, 272) },
+      config = { color = ccc3(231, 206, 19) }
+    },
+  }
+  local readNode2 = ed.readnode.create(ui.frame, ui)
+  readNode2:addNode(title_info)
+
+  -- 4个难度按钮（完全照搬 exercise createDegree 的布局）
+  degreeButtons = {}
+  local ox, oy = 97, 140
+  local dx = 170
+  local ly = 45
+
+  for di, diff in ipairs(boss.difficulties) do
+    local isUnlock = diff.unlockLevel <= ed.player:getLevel()
+
+    local btn_info = {
+      {
+        t = "Sprite",
+        base = {
+          name = "button",
+          res = "UI/alpha/HVGA/act/act_select_bg.png"
+        },
+        layout = { position = ccp(ox + dx * (di - 1), oy) },
+        config = {}
+      },
+      {
+        t = "Sprite",
+        base = {
+          name = "button_press",
+          res = "UI/alpha/HVGA/act/act_select_bg_chosen.png",
+          parent = "button"
+        },
+        layout = { anchor = ccp(0, 0), position = ccp(0, 0) },
+        config = { visible = false }
+      },
+      {
+        t = "Sprite",
+        base = {
+          name = "button_icon",
+          res = iconres[di],
+          parent = "button"
+        },
+        layout = { mediate = true },
+        config = {}
+      },
+      {
+        t = "Sprite",
+        base = {
+          name = "vit_bg",
+          res = "UI/alpha/HVGA/act/act_comment_bg.png"
+        },
+        layout = { position = ccp(ox + dx * (di - 1), ly) },
+        config = {}
+      },
+      {
+        t = "Label",
+        base = {
+          name = "vit_number",
+          text = tostring(diff.vit),
+          size = 18
+        },
+        layout = {
+          anchor = ccp(1, 0.5),
+          position = ccp(ox + dx * (di - 1) - 5, ly)
+        },
+        config = { color = ccc3(233, 214, 181) }
+      },
+      {
+        t = "Sprite",
+        base = {
+          name = "vit_icon",
+          res = "UI/alpha/HVGA/vitalityicon.png"
+        },
+        layout = {
+          anchor = ccp(0, 0.5),
+          position = ccp(ox + dx * (di - 1) + 5, ly)
+        },
+        config = { fix_height = 35 }
+      },
+    }
+
+    local btn_ui = {}
+    local rn = ed.readnode.create(ui.frame, btn_ui)
+    rn:addNode(btn_info)
+
+    if not isUnlock then
+      ed.setSpriteGray(btn_ui.button)
+    end
+
+    degreeButtons[di] = {
+      button = btn_ui.button,
+      press = btn_ui.button_press,
+      diff = diff,
+      isUnlock = isUnlock,
+    }
   end
 
-  local degree = ed.ui.exercise.createDungeon(exKey)
-  if not degree or not degree.mainLayer then
-    return
-  end
-
+  -- 添加到场景
   local root = panel and panel.getRoot and panel:getRoot()
   if root then
-    root:addChild(degree.mainLayer, 200)
+    root:addChild(mainLayer, 200)
   end
 
-  degreePopup = degree
+  -- 弹出动画
+  container:setScale(0)
+  local s = CCScaleTo:create(0.2, 1)
+  s = CCEaseBackOut:create(s)
+  container:runAction(s)
+
+  degreePopup = {
+    mainLayer = mainLayer,
+    container = container,
+    ui = ui,
+    bossIdx = bossIdx,
+  }
   selectedBossIdx = bossIdx
 end
 
+---------------------------------------------------
+-- 弹窗触摸处理
+---------------------------------------------------
+local pressDiffIdx = nil
+local pressClose = false
+
+local function popupTouchHandler(event, x, y)
+  if not degreePopup or not degreePopup.mainLayer then return false end
+  if tolua.isnull(degreePopup.mainLayer) then
+    degreePopup = nil
+    return false
+  end
+
+  if event == "began" then
+    -- 检测关闭按钮
+    if degreePopup.ui.close and ed.containsPoint(degreePopup.ui.close, x, y) then
+      pressClose = true
+      degreePopup.ui.close_press:setVisible(true)
+      return true
+    end
+    -- 检测难度按钮
+    for di, btn in ipairs(degreeButtons) do
+      if btn.isUnlock and ed.containsPoint(btn.button, x, y) then
+        pressDiffIdx = di
+        btn.press:setVisible(true)
+        return true
+      end
+    end
+    -- 点击遮罩关闭
+    destroyPopup()
+    return true
+
+  elseif event == "ended" then
+    if pressClose then
+      pressClose = false
+      if degreePopup and degreePopup.ui then
+        degreePopup.ui.close_press:setVisible(false)
+        if degreePopup.ui.close and ed.containsPoint(degreePopup.ui.close, x, y) then
+          destroyPopup()
+        end
+      end
+      return true
+    end
+    if pressDiffIdx then
+      local btn = degreeButtons[pressDiffIdx]
+      btn.press:setVisible(false)
+      if btn and btn.isUnlock and ed.containsPoint(btn.button, x, y) then
+        -- 进入战斗（调用exercise的doDungeonGotoStage逻辑）
+        local diffData = btn.diff
+        local ul = diffData.unlockLevel
+        if ul > ed.player:getLevel() then
+          ed.showToast(T(LSTR("EXERCISE.YOU_CAN_ACCESS_HERE_ONCE_YOUR_CLAN_LEVEL_REACHES__D"), ul))
+        elseif ed.player:getVitality() < diffData.vit then
+          ed.showHandyDialog("buyVitality")
+        else
+          destroyPopup()
+          local baseId = ed.getDungeonBaseStageId(diffData.id)
+          ed._pendingDungeonDifficulty = diffData.diff
+          local scene = ed.ui.stagedetail.createForExercise(baseId, {
+            heroLimit = nil,
+            actType = "dungeon",
+            dungeonVit = diffData.vit,
+            dungeonDailyLimit = 2
+          })
+          ed.pushScene(scene)
+        end
+      end
+      pressDiffIdx = nil
+      return true
+    end
+    pressDiffIdx = nil
+    pressClose = false
+    return true
+  end
+  return true
+end
+
 function dungeon_map.selectBoss(index)
-  xpcall(showDegreePopup, function(err)
+  xpcall(function()
+    showDegreePopup(index)
+    -- 注册弹窗触摸
+    if degreePopup and degreePopup.mainLayer then
+      degreePopup.mainLayer:setTouchEnabled(true)
+      degreePopup.mainLayer:registerScriptTouchHandler(popupTouchHandler, false, -135, true)
+    end
+  end, function(err)
     print("[DM] showDegreePopup ERROR: " .. tostring(err))
-  end, index)
+  end)
 end
 
 ---------------------------------------------------
@@ -292,7 +535,6 @@ function dungeon_map.create(param)
     if boss.sectionIdx > MAX_SECTIONS then boss.sectionIdx = MAX_SECTIONS end
   end
 
-
   -- 创建panel（固定3个section的UI配置）
   local dungeonmapconfig = require("gametable/dungeonmapconfig")
   local uiRes = dungeonmapconfig.buildUIRes()
@@ -304,11 +546,10 @@ function dungeon_map.create(param)
     local s = boss.sectionIdx
     local sub = panel.dragLayer[string.format("sub%d", s)]
     if sub then
-      local localIdx = i - (s - 1) * 5  -- section内的序号1-5
+      local localIdx = i - (s - 1) * 5
       local posIdx = math.min(localIdx, 5)
       local imgIdx = (i - 1) % 15 + 1
 
-      -- boss精灵
       local bpos = crusadeBossPos[s][posIdx] or ccp(300, 200)
       local bossPath = string.format("UI/alpha/HVGA/crusade/stage/crusade_stage_%d.png", imgIdx)
       local bossSprite = CCSprite:create(bossPath)
@@ -322,8 +563,7 @@ function dungeon_map.create(param)
     end
   end
 
-  -- 宝箱独立放置（照搬远征：沿路径放置，不与boss一一对应）
-  -- 远征section1有4箱、section2有6箱、section3有5箱，副本按boss数量等比分配
+  -- 宝箱
   for s = 1, MAX_SECTIONS do
     local sub = panel.dragLayer[string.format("sub%d", s)]
     if sub then
@@ -331,7 +571,6 @@ function dungeon_map.create(param)
       for _, boss in ipairs(bosses) do
         if boss.sectionIdx == s then sectionBossCount = sectionBossCount + 1 end
       end
-      -- section有几个boss就放几个box，用远征该section的box坐标
       local boxCount = math.min(sectionBossCount, #crusadeBoxPos[s])
       for b = 1, boxCount do
         local boxp = crusadeBoxPos[s][b]
@@ -348,7 +587,7 @@ function dungeon_map.create(param)
     end
   end
 
-  -- ClippingNode裁剪（使用之前效果好的参数：alphaThreshold=0.1, 712x370）
+  -- ClippingNode裁剪
   if panel.dragLayer and panel.dragLayer.dragContainer then
     local clipNode = ax.ClippingNode:create()
     clipNode:setAlphaThreshold(0.1)
@@ -380,7 +619,7 @@ function dungeon_map.create(param)
   end)
   newscene:registerOnExitHandler("onExitDungeon", function() end)
   newscene:registerOnPopSceneHandler("onPopSceneDungeon", function()
-    degreePopup = nil
+    destroyPopup()
     panel = nil
     bosses = {}
     groupBossCounts = {}

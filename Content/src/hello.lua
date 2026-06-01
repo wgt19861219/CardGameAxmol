@@ -243,7 +243,7 @@ function loadAllFiles()
 				"ui/dungeon_map", "gametable/dungeonmapconfig",
 				"ui/exercise", "ui/listener/exerciselsr", "ui/parameter/exerciseres",
 			},
-			dataTables = { "ActStageGroupDungeon", "StageDungeon" },
+			dataTables = { "ActStageGroupDungeon", "StageDungeon", "ActStageGroup", "Stage" },
 		},
 	}
 

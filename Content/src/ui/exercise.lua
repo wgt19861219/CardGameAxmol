@@ -72,6 +72,10 @@ local function getDungeonStages(self)
 	local groupKey = entryMap[self.key]
 	local dgTable = ed.getDataTable("ActStageGroupDungeon")
 	local groupData = dgTable[groupKey]
+	if not groupData then
+		local asTable = ed.getDataTable("ActStageGroup")
+		groupData = asTable and asTable[groupKey]
+	end
 	if not groupData then return {} end
 	local stDungeon = ed.getDataTable("StageDungeon")
 	local bosses = {}
@@ -87,6 +91,10 @@ local function getDungeonStages(self)
 				name = bossName,
 				difficulties = {}
 			}
+			local baseVit = (baseData and (baseData["Vitality Cost"] or baseData["Vit Cost"])) or 12
+			local baseUnlock = (baseData and baseData["Unlock Level"]) or 1
+			local vitScale = { 1.0, 1.3, 1.7, 2.0 }
+			local unlockOffset = { 0, 5, 10, 15 }
 			for diff = 1, 4 do
 				local diffId = bossId + (diff - 1) * 1000
 				local stageData = stDungeon[diffId]
@@ -96,6 +104,14 @@ local function getDungeonStages(self)
 						vit = stageData["Vitality Cost"] or 12,
 						keyCost = stageData["Key Cost"] or 0,
 						unlockLevel = stageData["Unlock Level"] or 1,
+						diff = diff
+					})
+				else
+					table.insert(boss.difficulties, {
+						id = diffId,
+						vit = math.ceil(baseVit * vitScale[diff]),
+						keyCost = 0,
+						unlockLevel = baseUnlock + unlockOffset[diff],
 						diff = diff
 					})
 				end

@@ -12,6 +12,8 @@ local bosses = {}
 local selectedBossIdx = nil
 local param_mode = ""
 local param_groupIds = {}
+local groupBossCounts = {} -- 每组的boss数量
+local groupBossOffset = {} -- 每组在bosses数组中的起始索引
 local acts = require("util.cocos2dx.actions")
 local needRefreshOnEnter = false
 
@@ -38,23 +40,33 @@ local titleMap = {
 
 ---------------------------------------------------
 -- 从数据表获取某组Boss列表
+-- 先查ActStageGroupDungeon，找不到则查ActStageGroup
 ---------------------------------------------------
 local function getBossesForGroup(groupId)
   local dgTable = ed.getDataTable("ActStageGroupDungeon")
   local groupData = dgTable[groupId]
-  if not groupData then return {} end
+  local stageTable = ed.getDataTable("Stage")
   local stDungeon = ed.getDataTable("StageDungeon")
+
+  -- 回退到ActStageGroup
+  if not groupData then
+    local asTable = ed.getDataTable("ActStageGroup")
+    groupData = asTable and asTable[groupId]
+  end
+  if not groupData then return {} end
+
   local result = {}
   for _, bossId in ipairs(groupData.Stages) do
     if bossId > 0 then
-      local baseData = stDungeon[bossId]
+      -- 先查StageDungeon，再查Stage
+      local baseData = stDungeon[bossId] or (stageTable and stageTable[bossId])
       local bossName = ""
-      if baseData and baseData["Stage Name"] then
-        bossName = T(baseData["Stage Name"])
+      if baseData then
+        local nameField = baseData["Stage Name"] or baseData["Group Name"]
+        if nameField then bossName = T(nameField) end
       end
       local boss = { baseId = bossId, name = bossName, difficulties = {} }
-      -- 生成4级难度（StageDungeon只有基础条目，额外难度从基础数据派生）
-      local baseVit = (baseData and baseData["Vitality Cost"]) or 12
+      local baseVit = (baseData and (baseData["Vitality Cost"] or baseData["Vit Cost"])) or 12
       local baseUnlock = (baseData and baseData["Unlock Level"]) or 1
       local vitScale = { 1.0, 1.3, 1.7, 2.0 }
       local unlockOffset = { 0, 5, 10, 15 }
@@ -62,7 +74,6 @@ local function getBossesForGroup(groupId)
         local diffId = bossId + (diff - 1) * 1000
         local stageData = stDungeon[diffId]
         if stageData then
-          -- 数据表有该难度条目
           table.insert(boss.difficulties, {
             id = diffId,
             vit = stageData["Vitality Cost"] or 12,
@@ -71,7 +82,6 @@ local function getBossesForGroup(groupId)
             diff = diff,
           })
         else
-          -- 没有该难度条目，从基础数据派生
           table.insert(boss.difficulties, {
             id = diffId,
             vit = math.ceil(baseVit * vitScale[diff]),
@@ -96,8 +106,10 @@ local function isBossCleared(bossId)
 end
 
 local function isGroupCleared(groupIdx)
-  for b = 1, 3 do
-    local bossIdx = (groupIdx - 1) * 3 + b
+  local count = groupBossCounts[groupIdx] or 0
+  local offset = groupBossOffset[groupIdx] or 0
+  for b = 1, count do
+    local bossIdx = offset + b
     if bossIdx > #bosses then return false end
     if not isBossCleared(bosses[bossIdx].baseId) then
       return false
@@ -121,7 +133,6 @@ local function dragLayerTouch(event, x, y)
 
   if event == "began" then
     dragPressX = x
-    print("[DUNGEON_MAP] touch began: " .. x .. "," .. y)
     local cx, cy = panel.dragLayer.dragContainer:getPosition()
     layerOriPos = ccp(cx, cy)
   elseif event == "moved" then
@@ -137,8 +148,25 @@ local function dragLayerTouch(event, x, y)
       dragMode = false
       return
     end
+    -- 非拖拽时检测boss点击（通过坐标距离判断）
+    local container = panel.dragLayer.dragContainer
+    if container and #bosses > 0 then
+      local ox, oy = container:getPosition()
+      for i, boss in ipairs(bosses) do
+        local sprite = panel.dragLayer[string.format("battle%d", i)]
+        if sprite then
+          local sx, sy = sprite:getPosition()
+          -- 屏幕坐标 = 容器偏移 + 精灵本地坐标
+          local worldX = ox + sx
+          local worldY = oy + sy
+          if math.abs(x - worldX) < 40 and math.abs(y - worldY) < 40 then
+            dungeon_map.selectBoss(i)
+            return true
+          end
+        end
+      end
+    end
   end
-  panel.dragLayer:touch(event, x, y)
   return true
 end
 
@@ -148,14 +176,21 @@ end
 local function refreshBattleState()
   if not panel then return end
   for i, boss in ipairs(bosses) do
-    local btn = panel.dragLayer[string.format("battle%d", i)]
+    local sprite = panel.dragLayer[string.format("battle%d", i)]
     local box = panel.dragLayer[string.format("box%d", i)]
     local cleared = isBossCleared(boss.baseId)
-    if btn and btn.enable then
-      btn:enable(not cleared)
+    if sprite then
+      -- 已通关的boss变灰
+      if cleared then
+        ed.setSpriteGray(sprite)
+      end
     end
-    if box and box.setVisible then
-      box:setVisible(cleared)
+    if box then
+      -- 宝箱始终可见，通关后换开箱图标
+      if cleared then
+        local tex = CCTextureCache:sharedTextureCache():addImage("UI/alpha/HVGA/crusade/crusade_box_bronze_open.png")
+        if tex and box.setTexture then box:setTexture(tex) end
+      end
     end
   end
 end
@@ -346,53 +381,129 @@ function dungeon_map.create(param)
   local newscene = base.create("dungeon_map")
   setmetatable(newscene, dungeon_map)
 
-  -- 收集所有Boss数据
+  -- 收集所有Boss数据（同时记录每组的数量和偏移）
   bosses = {}
-  for _, gid in ipairs(param_groupIds) do
+  groupBossCounts = {}
+  groupBossOffset = {}
+  for g, gid in ipairs(param_groupIds) do
+    groupBossOffset[g] = #bosses
     local group = getBossesForGroup(gid)
+    groupBossCounts[g] = #group
     for _, boss in ipairs(group) do
       table.insert(bosses, boss)
     end
   end
 
-  -- 生成UI配置并创建panel
+  print(string.format("[DM] total bosses=%d mode=%s groups=%d", #bosses, param_mode, #param_groupIds))
+  for i, b in ipairs(bosses) do
+    print(string.format("[DM] boss[%d] baseId=%d name=%s diffs=%d", i, b.baseId, b.name, #b.difficulties))
+  end
+  -- 生成UI配置并创建panel（只含背景和框架，不含boss节点）
   local dungeonmapconfig = require("gametable/dungeonmapconfig")
   local uiRes = dungeonmapconfig.buildUIRes(#param_groupIds)
   panel = panelMeta:new(newscene, uiRes)
   if not panel then return newscene end
 
-  -- 标题文字（添加到topLayer.titleBg精灵上）
-  local titleLabel = CCLabelTTF:create(titleMap[param_mode] or "副本", "Arial", 22)
-  titleLabel:setPosition(ccp(0, -5))
-  titleLabel:setColor(ccc3(255, 255, 255))
-  if panel.uiLayer and panel.uiLayer.titleBg then
-    panel.uiLayer.titleBg:addChild(titleLabel)
-  elseif panel.mainLayer and panel.mainLayer.titleBg then
-    panel.mainLayer.titleBg:addChild(titleLabel)
+  -- 手动创建boss节点、宝箱和迷雾（完全照搬远征crusadeconfig布局）
+  -- 远征结构：dragContainer > subContainer(25+offset,12) > battle/box
+  -- 转换到dragContainer坐标 = subContainer偏移(25,12) + crusade坐标
+  local container = panel.dragLayer and panel.dragLayer.dragContainer
+  if container then
+    local groupWidth = 727
+    -- 远征section1的boss坐标（相对于子容器laftMap）
+    local crusadeBossPos = {
+      ccp(135, 260), ccp(210, 132), ccp(370, 211), ccp(548, 268), ccp(584, 126)
+    }
+    -- 远征section1的宝箱坐标（相对于子容器laftMap）
+    local crusadeBoxPos = {
+      ccp(100, 155), ccp(350, 110), ccp(410, 310), ccp(488, 162)
+    }
+    local bossIdx = 0
+    for g = 1, #param_groupIds do
+      local offsetX = (g - 1) * groupWidth
+      local groupBosses = getBossesForGroup(param_groupIds[g])
+      local count = #groupBosses
+      for b = 1, count do
+        bossIdx = bossIdx + 1
+        -- 远征子容器偏移(25,12) + boss坐标
+        local posIdx = math.min(b, #crusadeBossPos)
+        local bpos = crusadeBossPos[posIdx] or ccp(300, 200)
+        local bx = 25 + offsetX + bpos.x
+        local by = 12 + bpos.y
+
+        -- boss图片（循环使用1-15）
+        local imgIdx = (bossIdx - 1) % 15 + 1
+        print(string.format("[DM] boss#%d group=%d/%d pos=(%d,%d) img=%d baseId=%d",
+          bossIdx, g, #param_groupIds, bx, by, imgIdx, groupBosses[b].baseId or 0))
+        local bossPath = string.format("UI/alpha/HVGA/crusade/stage/crusade_stage_%d.png", imgIdx)
+        local bossSprite = CCSprite:create(bossPath)
+        if bossSprite then
+          bossSprite:setAnchorPoint(ccp(0.5, 0.5))
+          bossSprite:setPosition(ccp(bx, by))
+          container:addChild(bossSprite, 10)
+        else
+          print("[DM] FAIL create boss sprite: " .. bossPath)
+        end
+
+        -- 宝箱（使用远征宝箱坐标，默认可见-关闭状态）
+        local boxPosIdx = math.min(b, #crusadeBoxPos)
+        local boxp = crusadeBoxPos[boxPosIdx] or ccp(bpos.x, bpos.y + 50)
+        local boxX = 25 + offsetX + boxp.x
+        local boxY = 12 + boxp.y
+        local box = CCSprite:create("UI/alpha/HVGA/crusade/crusade_box_bronze_closed.png")
+        if box then
+          box:setAnchorPoint(ccp(0.5, 0.5))
+          box:setPosition(ccp(boxX, boxY))
+          box:setScale(0.8)
+          box:setVisible(true)
+          container:addChild(box, 11)
+        end
+
+        -- 存储引用
+        panel.dragLayer[string.format("battle%d", bossIdx)] = bossSprite
+        panel.dragLayer[string.format("box%d", bossIdx)] = box
+      end
+
+      -- 迷雾（照搬远征：在dragContainer中，下一组的起始位置）
+      if g < #param_groupIds then
+        local fogImg = math.min(g, 4)
+        local fog = CCSprite:create(string.format("UI/alpha/HVGA/crusade/crusade_fog_%d.png", fogImg))
+        if fog then
+          fog:setAnchorPoint(ccp(0, 0.5))
+          fog:setPosition(ccp(25 + g * groupWidth, 210))
+          fog:setScale(4.0)
+          container:addChild(fog, 20)
+          panel.dragLayer[string.format("fog%d", g)] = fog
+        end
+      end
+    end
   end
 
-  -- 底部信息文字（添加到topLayer.bottom精灵上）
-  local infoLabel = CCLabelTTF:create(
-    string.format("共%d个Boss  |  %s", #bosses, titleMap[param_mode] or ""),
-    "Arial", 16
-  )
-  infoLabel:setPosition(ccp(0, 0))
-  infoLabel:setColor(ccc3(255, 255, 200))
-  if panel.uiLayer and panel.uiLayer.bottom then
-    panel.uiLayer.bottom:addChild(infoLabel)
-  elseif panel.mainLayer and panel.mainLayer.bottom then
-    panel.mainLayer.bottom:addChild(infoLabel)
+  -- ClippingNode裁剪（使用stageselect同款参数，效果比远征更好）
+  if panel.dragLayer and panel.dragLayer.dragContainer then
+    local clipNode = ax.ClippingNode:create()
+    clipNode:setAlphaThreshold(0.1)
+    local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
+    stencil:setContentSize(CCSizeMake(712, 370))
+    stencil:setPosition(ccp(44, 20))
+    clipNode:setStencil(stencil)
+    local dc = panel.dragLayer.dragContainer
+    dc:retain()
+    dc:removeFromParent(false)
+    clipNode:addChild(dc)
+    dc:release()
+    panel.dragLayer.mainLayer:addChild(clipNode, 1)
   end
 
-  -- dragLayer触摸
+  -- dragLayer触摸（照搬远征：注册在dragLayer.mainLayer上）
   if panel.dragLayer and panel.dragLayer.mainLayer then
     panel.dragLayer.mainLayer:setTouchEnabled(true)
     panel.dragLayer.mainLayer:registerScriptTouchHandler(dragLayerTouch, false, -10, false)
   end
 
-  -- 构建难度弹窗（添加到topLayer，确保在所有内容之上）
-  if panel.uiLayer and panel.uiLayer.titleBg then
-    buildDifficultyLayer(panel.uiLayer.titleBg)
+  -- 构建难度弹窗（与远征一致：titleBg在mainLayer里）
+  if panel.mainLayer and panel.mainLayer.titleBg then
+    buildDifficultyLayer(panel.mainLayer.titleBg)
   elseif panel.mainLayer and panel.mainLayer.bgframe then
     buildDifficultyLayer(panel.mainLayer.bgframe)
   end
@@ -413,6 +524,8 @@ function dungeon_map.create(param)
   newscene:registerOnPopSceneHandler("onPopSceneDungeon", function()
     panel = nil
     bosses = {}
+    groupBossCounts = {}
+    groupBossOffset = {}
     diffLayerNode = nil
     diffRows = {}
   end)

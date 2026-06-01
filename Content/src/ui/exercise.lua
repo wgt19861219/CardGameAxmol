@@ -1457,14 +1457,11 @@ local function createExerciseButton(self)
 end
 class.createExerciseButton = createExerciseButton
 local function create(type)
-	local self = base.create(type)
-	setmetatable(self, class.mt)
 	if not ed.isElementInTable(type, {"em", "equip"}) then
-		print("illegal key of exercise , please input \"em\" or \"equip\" ")
-		return self
+		print("illegal key of exercise , please input 'em' or 'equip' ")
+		return base.create("exercise")
 	end
-	self.type = type
-	-- 直接打开远征风格副本地图，不再创建角色动画UI
+	-- 直接创建并返回 dungeon_map 场景，不再创建空壳 exercise 场景
 	local groupIds
 	local modeTitle
 	if type == "em" then
@@ -1479,20 +1476,14 @@ local function create(type)
 		pcall(require, "ui/dungeon_map")
 		dungeon_map_mod = ed.ui.dungeon_map
 	end
-	if dungeon_map_mod then
-		local mapScene = dungeon_map_mod.create({
-			mode = modeTitle,
-			groupIds = groupIds,
-		})
-		if mapScene then
-			-- 延迟pushScene，让当前场景先完成初始化
-			self:registerOnEnterHandler("pushDungeonMap", function()
-				ed.pushScene(mapScene)
-			end)
-		end
-	else
+	if not dungeon_map_mod then
 		print("[EXERCISE] dungeon_map module not found!")
+		return base.create("exercise")
 	end
-	return self
+	local mapScene = dungeon_map_mod.create({
+		mode = modeTitle,
+		groupIds = groupIds,
+	})
+	return mapScene
 end
 class.create = create

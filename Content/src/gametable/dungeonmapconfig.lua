@@ -1,32 +1,68 @@
--- 副本地图UI配置动态生成器
--- 2层结构（与远征crusadeconfig完全一致）：
--- dragLayer(z=0): dragContainer + bg（地图内容，可拖拽）
--- mainLayer(z=1,触摸): bgframe + title + bottom（盖在地图上面，产生裁剪效果）
-local function buildUIRes(groupCount)
+-- 副本地图UI配置
+-- 完全照搬远征crusadeconfig：固定3张背景+3个子容器
+-- 3个section，每个section最多5个boss，总计15个boss位置
+-- mainLayer: bgframe + title + bottom（与远征完全一致）
+local function buildUIRes()
   local uiRes = {}
 
-  -- ============ dragLayer: 地图内容 ============
+  -- ============ dragLayer: 固定3个section（照搬远征） ============
   local dragUI = {
-    { t = "Sprite", base = { name = "dragContainer" }, config = {} }
-  }
-  for g = 1, groupCount do
-    local offsetX = (g - 1) * 727
-    local bgIdx = ((g - 1) % 3) + 1
-    table.insert(dragUI, {
+    { t = "Sprite", base = { name = "dragContainer" }, config = {} },
+    -- 背景1（对应远征bg1 at 25,210）
+    {
       t = "Sprite",
       base = {
-        name = string.format("bg%d", g),
-        res = string.format("UI/alpha/HVGA/crusade/crusade_detail_bg%d.png", bgIdx),
+        name = "bg1",
+        res = "UI/alpha/HVGA/crusade/crusade_detail_bg1.png",
         parent = "dragContainer"
       },
-      layout = { anchor = ccp(0, 0.5), position = ccp(25 + offsetX, 210) },
+      layout = { anchor = ccp(0, 0.5), position = ccp(25, 210) },
       config = { scale = 2.0 }
-    })
-  end
+    },
+    -- 背景2（对应远征bg2 at 752,210）
+    {
+      t = "Sprite",
+      base = {
+        name = "bg2",
+        res = "UI/alpha/HVGA/crusade/crusade_detail_bg2.png",
+        parent = "dragContainer"
+      },
+      layout = { anchor = ccp(0, 0.5), position = ccp(752, 210) },
+      config = { scale = 2.0 }
+    },
+    -- 背景3（对应远征bg3 at 1477,210）
+    {
+      t = "Sprite",
+      base = {
+        name = "bg3",
+        res = "UI/alpha/HVGA/crusade/crusade_detail_bg3.png",
+        parent = "dragContainer"
+      },
+      layout = { anchor = ccp(0, 0.5), position = ccp(1477, 210) },
+      config = { scale = 2.0 }
+    },
+    -- 子容器1（对应远征laftMap at 25,12）
+    {
+      t = "Sprite",
+      base = { name = "sub1", parent = "dragContainer" },
+      layout = { anchor = ccp(0, 0.5), position = ccp(25, 12) }
+    },
+    -- 子容器2（对应远征rightMap at 752,12）
+    {
+      t = "Sprite",
+      base = { name = "sub2", parent = "dragContainer" },
+      layout = { anchor = ccp(0, 0.5), position = ccp(752, 12) }
+    },
+    -- 子容器3（对应远征rightMap2 at 1477,12）
+    {
+      t = "Sprite",
+      base = { name = "sub3", parent = "dragContainer" },
+      layout = { anchor = ccp(0, 0.5), position = ccp(1477, 12) }
+    },
+  }
   table.insert(uiRes, { layerName = "dragLayer", uiRes = dragUI })
 
-  -- ============ mainLayer: 触摸 + 边框 + 标题 + 底栏（与远征完全一致） ============
-  -- bgframe盖在dragLayer上面，产生裁剪视觉效果
+  -- ============ mainLayer: 边框+标题+底栏（与远征完全一致） ============
   table.insert(uiRes, {
     layerName = "mainLayer",
     touchInfo = { iPriority = -1, bSwallowsTouches = true },

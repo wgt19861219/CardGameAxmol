@@ -105,6 +105,13 @@ local function isBossCleared(bossId)
   return stars and stars > 0
 end
 
+-- Boss是否已解锁（第1个始终解锁，后续需要前一个通关）
+local function isBossUnlocked(bossIdx)
+  if bossIdx <= 1 then return true end
+  if bossIdx > #bosses then return false end
+  return isBossCleared(bosses[bossIdx - 1].baseId)
+end
+
 local function isGroupCleared(groupIdx)
   local count = groupBossCounts[groupIdx] or 0
   local offset = groupBossOffset[groupIdx] or 0
@@ -175,7 +182,9 @@ local function dragLayerTouch(event, x, y)
             local worldX = ox + sx + bx
             local worldY = oy + sy + by
             if math.abs(x - worldX) < 40 and math.abs(y - worldY) < 40 then
-              dungeon_map.selectBoss(i)
+              if isBossUnlocked(i) then
+                dungeon_map.selectBoss(i)
+              end
               return true
             end
           end
@@ -203,6 +212,22 @@ local function refreshBattleState()
     if box and cleared then
       local tex = CCTextureCache:sharedTextureCache():addImage("UI/alpha/HVGA/crusade/crusade_box_bronze_open.png")
       if tex and box.setTexture then box:setTexture(tex) end
+    end
+  end
+end
+
+---------------------------------------------------
+-- 迷雾消散动画（远征风格）
+---------------------------------------------------
+local function refreshFogAnimation()
+  if not panel then return end
+  for s = 1, MAX_SECTIONS do
+    local fog = panel.dragLayer[string.format("fog%d", s)]
+    if fog and isGroupCleared(s) then
+      fog:runAction(acts.sequence({
+        CCFadeOut:create(0.5),
+        CCCallFunc:create(function() fog:setVisible(false) end),
+      }))
     end
   end
 end
@@ -551,6 +576,7 @@ function dungeon_map.create(param)
       local imgIdx = (i - 1) % 15 + 1
 
       local bpos = crusadeBossPos[s][posIdx] or ccp(300, 200)
+
       local bossPath = string.format("UI/alpha/HVGA/crusade/stage/crusade_stage_%d.png", imgIdx)
       local bossSprite = CCSprite:create(bossPath)
       if bossSprite then
@@ -581,27 +607,38 @@ function dungeon_map.create(param)
             box:setPosition(boxp)
             box:setScale(0.8)
             sub:addChild(box, 11)
+            -- 用全局boss索引命名，让refreshBattleState能找到
+            local bossIdx = (groupBossOffset[s] or 0) + b
+            panel.dragLayer[string.format("box%d", bossIdx)] = box
           end
         end
       end
     end
   end
 
-  -- ClippingNode裁剪
-  if panel.dragLayer and panel.dragLayer.dragContainer then
-    local clipNode = ax.ClippingNode:create()
-    clipNode:setAlphaThreshold(0.1)
-    local stencil = CCLayerColor:create(ccc4(255, 255, 255, 255))
-    stencil:setContentSize(CCSizeMake(712, 370))
-    stencil:setPosition(ccp(44, 20))
-    clipNode:setStencil(stencil)
-    local dc = panel.dragLayer.dragContainer
-    dc:retain()
-    dc:removeFromParent(false)
-    clipNode:addChild(dc)
-    dc:release()
-    panel.dragLayer.mainLayer:addChild(clipNode, 1)
+  -- 注意：ClippingNode在Android上不可用，不做裁剪
+  -- dragContainer已由panelMeta添加到dragLayer中
+
+  -- 远征风格迷雾：按section遮挡，挂在dragContainer上
+  local dc = panel.dragLayer and panel.dragLayer.dragContainer
+  if dc then
+    for s = MAX_SECTIONS, 1, -1 do
+      if not isGroupCleared(s) then
+        local fogIdx = ((s - 1) % 4) + 1
+        local fog = CCSprite:create(string.format("UI/alpha/HVGA/crusade/crusade_fog_%d.png", fogIdx))
+        if fog then
+          fog:setAnchorPoint(ccp(0, 0.5))
+          fog:setPosition(ccp(subOffsetX[s], 210))
+          fog:setScale(4.0)
+          dc:addChild(fog, 20)
+          panel.dragLayer[string.format("fog%d", s)] = fog
+        end
+      end
+    end
   end
+
+  -- 迷雾消散动画（远征风格）
+  refreshFogAnimation()
 
   -- dragLayer触摸
   if panel.dragLayer and panel.dragLayer.mainLayer then
@@ -615,6 +652,7 @@ function dungeon_map.create(param)
     if needRefreshOnEnter and panel then
       needRefreshOnEnter = false
       refreshBattleState()
+      refreshFogAnimation()
     end
   end)
   newscene:registerOnExitHandler("onExitDungeon", function() end)

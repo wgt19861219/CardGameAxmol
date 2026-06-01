@@ -17,18 +17,8 @@ local groupBossOffset = {}
 local acts = require("util.cocos2dx.actions")
 local needRefreshOnEnter = false
 
--- 难度弹窗引用
-local diffLayerNode
-local diffBossLabel
-local diffRows = {}
-
-local diffNames = { "Normal", "Elite", "Hero", "Nightmare" }
-local diffColors = {
-  ccc3(100, 220, 100),
-  ccc3(100, 150, 255),
-  ccc3(180, 100, 255),
-  ccc3(255, 80, 80),
-}
+-- 难度弹窗引用（照搬exercise原版degreeWindow视觉）
+local degreePopup = nil  -- {mainLayer, container, ui, degree, bossIdx}
 
 ---------------------------------------------------
 -- 远征坐标表（从crusadeconfig.lua原样复制）
@@ -151,7 +141,9 @@ end
 local function dragLayerTouch(event, x, y)
   if not panel then return false end
   if not panel.dragLayer:getVisible() then return false end
-  if diffLayerNode and diffLayerNode:isVisible() then return false end
+  -- 弹窗可能已被自身destroy()移除，检查mainLayer是否还有效
+  if degreePopup and degreePopup.mainLayer and not tolua.isnull(degreePopup.mainLayer) then return false end
+  if degreePopup then degreePopup = nil end
 
   if event == "began" then
     dragPressX = x
@@ -217,113 +209,55 @@ local function refreshBattleState()
 end
 
 ---------------------------------------------------
--- 难度弹窗
+-- 难度弹窗（直接调用exercise原装degreeWindow）
 ---------------------------------------------------
-local function closeDifficultyPopup()
-  if diffLayerNode then diffLayerNode:setVisible(false) end
-  selectedBossIdx = nil
+-- groupId反查exercise key
+local groupIdToKey = {}
+for k, v in pairs(ed.ui.exerciseres and ed.ui.exerciseres.entry_stage or {}) do
+  groupIdToKey[v] = k
 end
 
-local function showDifficultyPopup(bossIdx)
-  selectedBossIdx = bossIdx
+local function showDegreePopup(bossIdx)
+  if degreePopup then
+    xpcall(function()
+      if degreePopup.container then
+        degreePopup.container:removeFromParentAndCleanup(true)
+      elseif degreePopup.mainLayer then
+        degreePopup.mainLayer:removeFromParentAndCleanup(true)
+      end
+    end, EDDebug)
+    degreePopup = nil
+  end
+
   local boss = bosses[bossIdx]
-  if not boss or not diffLayerNode then return end
+  if not boss then return end
 
-  diffBossLabel:setString(boss.name)
-  for d = 1, 4 do
-    local row = diffRows[d]
-    if row then
-      local diffData = boss.difficulties[d]
-      if diffData then
-        row.bg:setVisible(true)
-        row.label:setVisible(true)
-        row.diffData = diffData
-        local txt = string.format("%s    Vit:%d    Lv:%d",
-          diffNames[d], diffData.vit, diffData.unlockLevel)
-        row.label:setString(txt)
-        local locked = diffData.unlockLevel > ed.player:getLevel()
-        row.label:setColor(locked and ccc3(128, 128, 128) or diffColors[d])
-      else
-        row.bg:setVisible(false)
-        row.label:setVisible(false)
-        row.diffData = nil
-      end
-    end
-  end
-  diffLayerNode:setVisible(true)
-end
-
-local function diffLayerTouchHandler(event, x, y)
-  if event ~= "began" then return true end
-  if not diffLayerNode or not diffLayerNode:isVisible() then return false end
-  if x > 610 and x < 660 and y > 440 and y < 490 then
-    closeDifficultyPopup()
-    return true
-  end
-  for d = 1, 4 do
-    local rowY = 375 - (d - 1) * 65
-    if y > rowY - 27 and y < rowY + 27 and x > 300 and x < 660 then
-      local row = diffRows[d]
-      if row and row.diffData then
-        closeDifficultyPopup()
-        ed.ui.exercise.doDungeonGotoStage({}, row.diffData)
-      end
-      return true
-    end
-  end
-  if y < 200 or y > 500 or x < 270 or x > 690 then
-    closeDifficultyPopup()
-  end
-  return true
-end
-
-local function buildDifficultyLayer(parentSprite)
-  local layer = CCLayer:create()
-  layer:setContentSize(CCSizeMake(960, 640))
-  layer:setPosition(ccp(-402, -395))
-  layer:setVisible(false)
-
-  local backdrop = CCLayerColor:create(ccc4(0, 0, 0, 150))
-  backdrop:setContentSize(CCSizeMake(960, 640))
-  layer:addChild(backdrop)
-
-  local panelBg = CCScale9Sprite:create("UI/alpha/HVGA/crusade/crusade_reset_bg.png")
-  panelBg:setContentSize(CCSizeMake(400, 330))
-  panelBg:setPosition(ccp(480, 330))
-  layer:addChild(panelBg)
-
-  local bossLabel = CCLabelTTF:create("", "Arial", 22)
-  bossLabel:setPosition(ccp(480, 465))
-  bossLabel:setColor(ccc3(255, 255, 200))
-  layer:addChild(bossLabel)
-  diffBossLabel = bossLabel
-
-  local closeLabel = CCLabelTTF:create("X", "Arial", 26)
-  closeLabel:setPosition(ccp(635, 465))
-  closeLabel:setColor(ccc3(255, 200, 200))
-  layer:addChild(closeLabel)
-
-  diffRows = {}
-  for d = 1, 4 do
-    local rowY = 375 - (d - 1) * 65
-    local rowBg = CCScale9Sprite:create("UI/alpha/HVGA/tavern_button_normal_1.png")
-    rowBg:setContentSize(CCSizeMake(350, 50))
-    rowBg:setPosition(ccp(480, rowY))
-    layer:addChild(rowBg)
-    local rowLabel = CCLabelTTF:create("", "Arial", 18)
-    rowLabel:setPosition(ccp(480, rowY))
-    layer:addChild(rowLabel)
-    diffRows[d] = { bg = rowBg, label = rowLabel, diffData = nil }
+  -- 找到该boss所属group的exercise key
+  local groupIdx = math.ceil(bossIdx / 5)
+  local gid = param_groupIds[groupIdx]
+  local exKey = groupIdToKey[gid]
+  if not exKey then
+    return
   end
 
-  layer:setTouchEnabled(true)
-  layer:registerScriptTouchHandler(diffLayerTouchHandler, false, -50, true)
-  parentSprite:addChild(layer, 100)
-  diffLayerNode = layer
+  local degree = ed.ui.exercise.createDungeon(exKey)
+  if not degree or not degree.mainLayer then
+    return
+  end
+
+  local root = panel and panel.getRoot and panel:getRoot()
+  if root then
+    root:addChild(degree.mainLayer, 200)
+  end
+
+  degreePopup = degree
+  selectedBossIdx = bossIdx
 end
 
 function dungeon_map.selectBoss(index)
-  showDifficultyPopup(index)
+  xpcall(showDegreePopup, function(err)
+    print("[DM] showDegreePopup ERROR: " .. tostring(err))
+  end, index)
 end
 
 ---------------------------------------------------
@@ -358,7 +292,6 @@ function dungeon_map.create(param)
     if boss.sectionIdx > MAX_SECTIONS then boss.sectionIdx = MAX_SECTIONS end
   end
 
-  print(string.format("[DM] mode=%s bosses=%d", param_mode, #bosses))
 
   -- 创建panel（固定3个section的UI配置）
   local dungeonmapconfig = require("gametable/dungeonmapconfig")
@@ -437,13 +370,6 @@ function dungeon_map.create(param)
     panel.dragLayer.mainLayer:registerScriptTouchHandler(dragLayerTouch, false, -10, false)
   end
 
-  -- 构建难度弹窗
-  if panel.mainLayer and panel.mainLayer.titleBg then
-    buildDifficultyLayer(panel.mainLayer.titleBg)
-  elseif panel.mainLayer and panel.mainLayer.bgframe then
-    buildDifficultyLayer(panel.mainLayer.bgframe)
-  end
-
   refreshBattleState()
 
   newscene:registerOnEnterHandler("onEnterDungeon", function()
@@ -454,12 +380,11 @@ function dungeon_map.create(param)
   end)
   newscene:registerOnExitHandler("onExitDungeon", function() end)
   newscene:registerOnPopSceneHandler("onPopSceneDungeon", function()
+    degreePopup = nil
     panel = nil
     bosses = {}
     groupBossCounts = {}
     groupBossOffset = {}
-    diffLayerNode = nil
-    diffRows = {}
     selectedBossIdx = nil
     dragMode = false
     dragPressX = nil

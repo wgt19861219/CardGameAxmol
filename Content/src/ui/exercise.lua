@@ -1080,6 +1080,8 @@ class.mt.__index = class
 ed.ui.exercise = class
 local base = ed.ui.framework
 setmetatable(class, base.mt)
+-- 导出degreeWindow的弹窗函数供dungeon_map调用
+class.createDungeon = degreeWindow.createDungeon
 local res
 local entryStage = ed.ui.exerciseres.entry_stage
 local function getres(self)

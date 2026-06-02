@@ -33,7 +33,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50002] = {
     ["Chapter ID"] = 201,
@@ -69,7 +69,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50003] = {
     ["Chapter ID"] = 201,
@@ -105,7 +105,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50004] = {
     ["Chapter ID"] = 201,
@@ -141,7 +141,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50005] = {
     ["Chapter ID"] = 201,
@@ -177,7 +177,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50006] = {
     ["Chapter ID"] = 201,
@@ -213,7 +213,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50007] = {
     ["Chapter ID"] = 201,
@@ -249,7 +249,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50008] = {
     ["Chapter ID"] = 201,
@@ -285,7 +285,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50009] = {
     ["Chapter ID"] = 201,
@@ -321,7 +321,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50010] = {
     ["Chapter ID"] = 201,
@@ -357,7 +357,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50011] = {
     ["Chapter ID"] = 201,
@@ -393,7 +393,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50012] = {
     ["Chapter ID"] = 201,
@@ -429,7 +429,7 @@ local data = {
     ["Unlock Level"] = 60,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 12,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50013] = {
     ["Chapter ID"] = 202,
@@ -465,7 +465,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50014] = {
     ["Chapter ID"] = 202,
@@ -501,7 +501,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50015] = {
     ["Chapter ID"] = 202,
@@ -537,7 +537,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50016] = {
     ["Chapter ID"] = 202,
@@ -573,7 +573,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50017] = {
     ["Chapter ID"] = 202,
@@ -609,7 +609,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50018] = {
     ["Chapter ID"] = 202,
@@ -645,7 +645,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50019] = {
     ["Chapter ID"] = 202,
@@ -681,7 +681,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50020] = {
     ["Chapter ID"] = 202,
@@ -717,7 +717,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
   [50021] = {
     ["Chapter ID"] = 202,
@@ -753,7 +753,7 @@ local data = {
     ["Unlock Level"] = 80,
     ["Vit Return"] = 0,
     ["Vitality Cost"] = 18,
-    ["Waves"] = 1,
+    ["Waves"] = 3,
   },
 }
 

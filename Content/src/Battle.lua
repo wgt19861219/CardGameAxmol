@@ -80984,6 +80984,68 @@ local dungeonBosses = {
 
 for _, b in ipairs(dungeonBosses) do
   data[b.id] = {
+    -- Wave 1: 小兵第一波（2个小怪）
+    [1] = {
+      ["Background Pic"] = b.bg,
+      ["Boss DPS%"] = 0, ["Boss HP%"] = 0, ["Boss Position"] = 0, ["BOSS SIZE%"] = 0,
+      ["Chest 1 ID"] = 10288, ["Chest 1 Mult"] = 20,
+      ["Chest 2 ID"] = 0, ["Chest 2 Mult"] = 0,
+      ["Chest 3 ID"] = 0, ["Chest 3 Mult"] = 0,
+      ["Chest 4 ID"] = 0, ["Chest 4 Mult"] = 0,
+      ["Chest 5 ID"] = 0, ["Chest 5 Mult"] = 0,
+      ["FD Bonus 1"] = 0, ["FD Bonus 2"] = 0, ["FD Bonus 3"] = 0,
+      ["FD Bonus 4"] = 0, ["FD Bonus 5"] = 0,
+      ["H Flip"] = false,
+      ["Level 1"] = 80, ["Level 2"] = 80, ["Level 3"] = 0,
+      ["Level 4"] = 0, ["Level 5"] = 0,
+      ["Money Reward 1"] = 0, ["Money Reward 2"] = 0, ["Money Reward 3"] = 0,
+      ["Money Reward 4"] = 0, ["Money Reward 5"] = 0,
+      ["Monster 1 ID"] = b.m[1],
+      ["Monster 2 ID"] = b.m[2],
+      ["Monster 3 ID"] = 0, ["Monster 4 ID"] = 0, ["Monster 5 ID"] = 0,
+      ["Monster DPS%"] = 100, ["Monster HP%"] = 1000,
+      ["MP 1"] = 0, ["MP 2"] = 0, ["MP 3"] = 0, ["MP 4"] = 0, ["MP 5"] = 0,
+      ["Raid Wave Weight"] = 1,
+      ["Stage Difficulty"] = 1,
+      ["Stage ID"] = b.id,
+      ["Stage Name"] = "Dungeon Wave 1",
+      ["Stage Type"] = "dungeon",
+      ["Stars 1"] = 1, ["Stars 2"] = 1, ["Stars 3"] = 0,
+      ["Stars 4"] = 0, ["Stars 5"] = 0,
+      ["Wave ID"] = 1,
+    },
+    -- Wave 2: 小兵第二波（3个小怪）
+    [2] = {
+      ["Background Pic"] = b.bg,
+      ["Boss DPS%"] = 0, ["Boss HP%"] = 0, ["Boss Position"] = 0, ["BOSS SIZE%"] = 0,
+      ["Chest 1 ID"] = 10288, ["Chest 1 Mult"] = 30,
+      ["Chest 2 ID"] = 0, ["Chest 2 Mult"] = 0,
+      ["Chest 3 ID"] = 0, ["Chest 3 Mult"] = 0,
+      ["Chest 4 ID"] = 0, ["Chest 4 Mult"] = 0,
+      ["Chest 5 ID"] = 0, ["Chest 5 Mult"] = 0,
+      ["FD Bonus 1"] = 0, ["FD Bonus 2"] = 0, ["FD Bonus 3"] = 0,
+      ["FD Bonus 4"] = 0, ["FD Bonus 5"] = 0,
+      ["H Flip"] = false,
+      ["Level 1"] = 80, ["Level 2"] = 80, ["Level 3"] = 80,
+      ["Level 4"] = 0, ["Level 5"] = 0,
+      ["Money Reward 1"] = 0, ["Money Reward 2"] = 0, ["Money Reward 3"] = 0,
+      ["Money Reward 4"] = 0, ["Money Reward 5"] = 0,
+      ["Monster 1 ID"] = b.m[1],
+      ["Monster 2 ID"] = b.m[2],
+      ["Monster 3 ID"] = b.m[3],
+      ["Monster 4 ID"] = 0, ["Monster 5 ID"] = 0,
+      ["Monster DPS%"] = 110, ["Monster HP%"] = 1500,
+      ["MP 1"] = 0, ["MP 2"] = 0, ["MP 3"] = 0, ["MP 4"] = 0, ["MP 5"] = 0,
+      ["Raid Wave Weight"] = 1,
+      ["Stage Difficulty"] = 1,
+      ["Stage ID"] = b.id,
+      ["Stage Name"] = "Dungeon Wave 2",
+      ["Stage Type"] = "dungeon",
+      ["Stars 1"] = 1, ["Stars 2"] = 1, ["Stars 3"] = 1,
+      ["Stars 4"] = 0, ["Stars 5"] = 0,
+      ["Wave ID"] = 2,
+    },
+    -- Wave 3: Boss + 小怪
     [3] = {
       ["Background Pic"] = b.bg,
       ["Boss DPS%"] = 150,
@@ -81018,7 +81080,7 @@ for _, b in ipairs(dungeonBosses) do
       ["Stage Type"] = "dungeon",
       ["Stars 1"] = 1, ["Stars 2"] = 1, ["Stars 3"] = 1,
       ["Stars 4"] = 1, ["Stars 5"] = 0,
-      ["Wave ID"] = 1,
+      ["Wave ID"] = 3,
     }
   }
 end
@@ -81029,27 +81091,34 @@ local diffScale = {
   [4] = { hp = 3.0, dps = 2.0, stars = 5, level = 30 },
 }
 for _, b in ipairs(dungeonBosses) do
-  if data[b.id] and data[b.id][3] then
-    local base = data[b.id][3]
+  if data[b.id] then
     for diff = 2, 4 do
       local s = diffScale[diff]
       local diffId = b.id + (diff - 1) * 1000
-      local wave = {}
-      for k, v in pairs(base) do wave[k] = v end
-      wave["Stage ID"] = diffId
-      wave["Boss HP%"] = math.ceil(base["Boss HP%"] * s.hp)
-      wave["Boss DPS%"] = math.ceil(base["Boss DPS%"] * s.dps)
-      wave["Monster HP%"] = math.ceil(base["Monster HP%"] * s.hp)
-      wave["Monster DPS%"] = math.ceil(base["Monster DPS%"] * s.dps)
-      -- 所有怪物都缩放，不只是Boss
-      for i = 1, 5 do
-        local mid = base["Monster " .. i .. " ID"]
-        if mid and mid > 0 then
-          wave["Level " .. i] = (base["Level " .. i] or 80) + s.level
-          wave["Stars " .. i] = s.stars
+      data[diffId] = {}
+      -- 为每个wave生成难度变体
+      for wid = 1, 3 do
+        local baseWave = data[b.id][wid]
+        if baseWave then
+          local wave = {}
+          for k, v in pairs(baseWave) do wave[k] = v end
+          wave["Stage ID"] = diffId
+          wave["Monster HP%"] = math.ceil((baseWave["Monster HP%"] or 100) * s.hp)
+          wave["Monster DPS%"] = math.ceil((baseWave["Monster DPS%"] or 100) * s.dps)
+          if baseWave["Boss HP%"] and baseWave["Boss HP%"] > 0 then
+            wave["Boss HP%"] = math.ceil(baseWave["Boss HP%"] * s.hp)
+            wave["Boss DPS%"] = math.ceil(baseWave["Boss DPS%"] * s.dps)
+          end
+          for i = 1, 5 do
+            local mid = baseWave["Monster " .. i .. " ID"]
+            if mid and mid > 0 then
+              wave["Level " .. i] = (baseWave["Level " .. i] or 80) + s.level
+              wave["Stars " .. i] = s.stars
+            end
+          end
+          data[diffId][wid] = wave
         end
       end
-      data[diffId] = { [3] = wave }
     end
   end
 end

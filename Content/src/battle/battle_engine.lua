@@ -359,6 +359,7 @@ local function enterStage(self, stage_info, hero_list, isbot, startWaveId)
 		lookupId = lookupId + (diff - 1) * 1000
 		ed._pendingDungeonDifficulty = nil
 	end
+	self.battle_lookup_id = lookupId
 	local battle = ed.lookupDataTable("Battle", nil, lookupId, startWaveId)
 	self:setupBattle(battle)
 	self.mp_bonus = self.stage_info["MP Bonus"] or 1
@@ -390,7 +391,8 @@ local function getStageProgress(self)
 	local totalPercent = 0
 	local totalWaves = self.stage_info.Waves
 	for i = 1, totalWaves do
-		local battle = ed.lookupDataTable("Battle", nil, self.stage_info["Stage ID"], i)
+		local lookupId = self.battle_lookup_id or self.stage_info["Stage ID"]
+		local battle = ed.lookupDataTable("Battle", nil, lookupId, i)
 		local weight = battle["Raid Wave Weight"] or 0
 		totalPercent = totalPercent + weight
 		if i < self.wave_id then
@@ -607,7 +609,7 @@ class.enterRelay = enterRelay
 local function battleSupply(self, bSupplyEnemy)
 	for unit in self:foreachAliveUnit(bSupplyEnemy and ed.emCampEnemy or ed.emCampPlayer) do
 		local coefficient = 1
-		if self.stage_info["Mps Restraint"] > 0 then
+		if (self.stage_info["Mps Restraint"] or 0) > 0 then
 			coefficient = self.stage_info["Mps Restraint"] / 100
 		end
 		unit:battleSupply(coefficient)
@@ -623,7 +625,8 @@ local function nextBattle(self)
 	if not self.supplied then
 		self:battleSupply()
 	end
-	local battle = ed.lookupDataTable("Battle", nil, self.stage_info["Stage ID"], self.wave_id + 1)
+	local lookupId = self.battle_lookup_id or self.stage_info["Stage ID"]
+	local battle = ed.lookupDataTable("Battle", nil, lookupId, self.wave_id + 1)
 	if not battle then
 		return
 	end
@@ -1112,7 +1115,37 @@ local function downExit(self, result)
 								ed.player:addActTimes(sg)
 								ed.player:refreshActResetTime(sg)
 							end
-							ed.player:takeStageReward(stage, self.result_stars - getMercenaryNum(self), self.hero_list, ed.player:getStageLoots())
+							-- 副本奖励：从StageDungeon表读取
+							if type == "dungeon" then
+								local stageCfg = ed.getDataTable("StageDungeon")[stage]
+								if stageCfg then
+									local difficulty = stageCfg["Difficulty"] or 1
+									local expReward = (stageCfg["Exp Reward"] or 0) * 10
+									local goldByDiff = { [1] = 2000, [2] = 3500, [3] = 5000, [4] = 8000 }
+									local goldReward = goldByDiff[difficulty] or 2000
+									ed.player:addMoney(goldReward)
+									ed.player:addExp(expReward, "battle")
+									local heroexp = math.floor(expReward / #self.hero_list)
+									for i = 1, #self.hero_list do
+										local hero = self.hero_list[i]
+										if hero:getMercenaryData() == nil then
+											hero:addExp(heroexp)
+										end
+									end
+									local loots = ed.player:getStageLoots()
+									if loots then
+										for _, item in ipairs(loots) do
+											if item.type == "equip" then ed.player:addEquip(item.id)
+											elseif item.type == "book" then ed.player:addSkillbook(item.id)
+											elseif item.type == "hero" then ed.player:addHero(item.id)
+											end
+										end
+									end
+									ed.player:setStageStars(stage, self.result_stars)
+								end
+							else
+								ed.player:takeStageReward(stage, self.result_stars - getMercenaryNum(self), self.hero_list, ed.player:getStageLoots())
+							end
 							if pveMode(self) == true then
 								local vit = self.stage_info["Vit Return"]
 								ed.player:addVitality(-vit)
@@ -1551,10 +1584,30 @@ local function victory(self, skip)
 			end
 		end
 		if ed.run_with_scene then
-			ed.scene:showNextButton()
-			for unit in self:foreachAliveUnit(ed.emCampPlayer) do
-				if unit.actor then
-					unit.actor:waitAfterBattle()
+			-- 副本Boss战自动进入下一波（无需手动点击）
+			local isDungeon = self.stage_info and self.stage_info["Stage ID"] and self.stage_info["Stage ID"] >= 50001
+			if isDungeon then
+					-- 立即隐藏所有敌人actor（避免死亡动画残留）
+					for _, actor in ipairs(ed.scene.actor_list or {}) do
+						if actor.model and actor.model.camp == ed.emCampEnemy and actor.node then
+							pcall(function() actor.node:setVisible(false) end)
+						end
+					end
+					-- 延迟切波：等当前tick完成后再进入下一波
+					local delay = CCDelayTime:create(0.5)
+					local callFunc = CCCallFunc:create(function()
+						xpcall(function()
+							ed.engine:battleSupply()
+							ed.scene:nextBattle()
+						end, EDDebug)
+					end)
+					ed.scene.node:runAction(CCSequence:createWithTwoActions(delay, callFunc))
+			else
+				ed.scene:showNextButton()
+				for unit in self:foreachAliveUnit(ed.emCampPlayer) do
+					if unit.actor then
+						unit.actor:waitAfterBattle()
+					end
 				end
 			end
 		else

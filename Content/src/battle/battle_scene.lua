@@ -61,7 +61,7 @@ local function reset(self, stage_info, battle_info, extraInfo, skipUI)
 		self.actor_list = {}
 		for _, actor in ipairs(old_actors) do
 			-- 保留玩家阵营的actor（enemy会在新波次被替换）
-			if actor.unit and actor.unit.camp == ed.emCampPlayer and actor.node and not tolua.isnull(actor.node) then
+			if actor.model and actor.model.camp == ed.emCampPlayer and actor.node and not tolua.isnull(actor.node) then
 				table.insert(self.actor_list, actor)
 				actor._inScene = true
 			end
@@ -463,12 +463,13 @@ class.autoCollectLoots = autoCollectLoots
 local function nextBattle(self)
 	local auto = self.auto_combat
 	local stage = ed.engine.stage_info
-	local battle = ed.lookupDataTable("Battle", nil, stage["Stage ID"], ed.engine.wave_id + 1)
+	local lookupId = ed.engine.battle_lookup_id or stage["Stage ID"]
+	local battle = ed.lookupDataTable("Battle", nil, lookupId, ed.engine.wave_id + 1)
 	-- 清理旧波次的敌人 actor（保留玩家方）
 	local old_actors = self.actor_list or {}
 	self.actor_list = {}
 	for _, actor in ipairs(old_actors) do
-		if actor.unit and actor.unit.camp == ed.emCampPlayer and actor.node and not tolua.isnull(actor.node) then
+		if actor.model and actor.model.camp == ed.emCampPlayer and actor.node and not tolua.isnull(actor.node) then
 			table.insert(self.actor_list, actor)
 		else
 			if actor.node and not tolua.isnull(actor.node) then
@@ -578,7 +579,7 @@ local function syncActors(self)
 				unit.actor._inScene = true
 			end
 		end
-		for npc in ed.engine:foreachNpc() do
+	for npc in ed.engine:foreachNpc() do
 			if not npc.actor then
 				npc.actor = ed.NpcActorCreate(npc)
 				npc:setAction(npc.bornActionName, true)

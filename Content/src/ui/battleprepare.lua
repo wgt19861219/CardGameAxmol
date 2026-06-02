@@ -223,7 +223,7 @@ local function gotoBattle(self)
       LegendLog("[GOTO_BATTLE] hero_list count=" .. tostring(#hero_list))
       local stageTable = self.actType == "dungeon" and ed.getDataTable("StageDungeon") or ed.getDataTable("Stage")
       local stage = stageTable[stage_id]
-      local startWave = (self.actType == "dungeon") and 3 or 1
+      local startWave = 1
       local battle = ed.lookupDataTable("Battle", nil, stage_id, startWave)
       LegendLog("[GOTO_BATTLE] stage=" .. tostring(stage ~= nil) .. " battle=" .. tostring(battle ~= nil))
       if self.pvpMode == "attack" and enemyList then
@@ -240,11 +240,7 @@ local function gotoBattle(self)
         ed.engine:enterExcavate(hero_list, enemyList, isBot, selfHeroData, enemyDyna, stage_id, self.excavateTypeid)
       else
         LegendLog("[GOTO_BATTLE] calling engine:enterStage")
-        if ed.stageType(stage_id) == "dungeon" then
-          ed.engine:enterStage(stage, hero_list, nil, 3)
-        else
-          ed.engine:enterStage(stage, hero_list)
-        end
+        ed.engine:enterStage(stage, hero_list)
       end
       local extraInfo = {}
       if self.mode == "crusade" then

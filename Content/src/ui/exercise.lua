@@ -860,7 +860,7 @@ end
 class.createDungeon = createDungeon
 
 -- 时光之穴/英雄试炼 → 直接打开远征风格副本地图场景
-local cavernGroupIds = {40005, 40006, 40007}
+local cavernGroupIds = {50005, 50006, 50007}
 local function openCavernScene(mode)
 	local dungeon_map = ed.ui.dungeon_map
 	if not dungeon_map then
@@ -1483,10 +1483,10 @@ local function create(type)
 	local groupIds
 	local modeTitle
 	if type == "em" then
-		groupIds = {40005, 40006, 40007}
+		groupIds = {50005, 50006, 50007}
 		modeTitle = "em"
 	else
-		groupIds = {40001, 40002, 40003, 40004}
+		groupIds = {50001, 50002, 50003, 50004}
 		modeTitle = "equip"
 	end
 	local dungeon_map_mod = ed.ui.dungeon_map

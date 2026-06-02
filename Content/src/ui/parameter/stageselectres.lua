@@ -645,7 +645,7 @@ map.chapter7 = {
       pos = ccp(225, 270),
       id = 117,
       eid = 10042,
-      guildInstanceId = 40001
+      guildInstanceId = 50001
     },
     {
       pos = ccp(175, 185),
@@ -659,7 +659,7 @@ map.chapter7 = {
       pos = ccp(202, 95),
       id = 120,
       eid = 10043,
-      guildInstanceId = 40002
+      guildInstanceId = 50002
     },
     {
       pos = ccp(280, 75),
@@ -673,7 +673,7 @@ map.chapter7 = {
       pos = ccp(350, 165),
       id = 123,
       eid = 10044,
-      guildInstanceId = 40003
+      guildInstanceId = 50003
     },
     {
       pos = ccp(295, 210),
@@ -687,7 +687,7 @@ map.chapter7 = {
       pos = ccp(451, 273),
       id = 126,
       eid = 10045,
-      guildInstanceId = 40004
+      guildInstanceId = 50004
     },
     {
       pos = ccp(426, 165),
@@ -701,7 +701,7 @@ map.chapter7 = {
       pos = ccp(495, 115),
       id = 129,
       eid = 10046,
-      guildInstanceId = 40005
+      guildInstanceId = 50005
     },
     {
       pos = ccp(550, 145),
@@ -715,7 +715,7 @@ map.chapter7 = {
       pos = ccp(621, 179),
       id = 132,
       eid = 10047,
-      guildInstanceId = 40006
+      guildInstanceId = 50006
     },
     {
       pos = ccp(670, 245),
@@ -725,7 +725,7 @@ map.chapter7 = {
       pos = ccp(585, 285),
       id = 134,
       eid = 10048,
-      guildInstanceId = 40007
+      guildInstanceId = 50007
     }
   },
   guildInstance = true

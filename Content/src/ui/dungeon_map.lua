@@ -533,7 +533,7 @@ end
 function dungeon_map.create(param)
   param = param or {}
   param_mode = param.mode or "hero_trial"
-  param_groupIds = param.groupIds or { 40001, 40002, 40003, 40004 }
+  param_groupIds = param.groupIds or { 50001, 50002, 50003, 50004 }
 
   local newscene = base.create("dungeon_map")
   setmetatable(newscene, dungeon_map)

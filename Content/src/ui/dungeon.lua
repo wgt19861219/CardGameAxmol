@@ -34,7 +34,7 @@ local function getDungeonStages(groupId)
   return stages
 end
 
-local heroicPrereq = { [40005]=40001, [40006]=40002, [40007]=40004 }
+local heroicPrereq = { [50005]=50001, [50006]=50002, [50007]=50003 }
 
 local function isHeroicUnlocked(groupId)
   local normalGroup = heroicPrereq[groupId]

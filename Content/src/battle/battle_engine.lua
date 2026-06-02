@@ -352,9 +352,16 @@ local function enterStage(self, stage_info, hero_list, isbot, startWaveId)
 	self.stage_info = stage_info
 	initSelfHero(self, hero_list, isbot)
 	startWaveId = startWaveId or 1
-	local battle = ed.lookupDataTable("Battle", nil, stage_info["Stage ID"], startWaveId)
+	-- 副本难度：用难度ID查找Battle表（Battle.lua已预生成缩放数据）
+	local lookupId = stage_info["Stage ID"]
+	local diff = ed._pendingDungeonDifficulty
+	if diff and diff > 1 then
+		lookupId = lookupId + (diff - 1) * 1000
+		ed._pendingDungeonDifficulty = nil
+	end
+	local battle = ed.lookupDataTable("Battle", nil, lookupId, startWaveId)
 	self:setupBattle(battle)
-	self.mp_bonus = self.stage_info["MP Bonus"]
+	self.mp_bonus = self.stage_info["MP Bonus"] or 1
 end
 class.enterStage = enterStage
 

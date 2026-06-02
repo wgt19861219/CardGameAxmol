@@ -482,23 +482,18 @@ local function popupTouchHandler(event, x, y)
     end
     if pressDiffIdx then
       local btn = degreeButtons[pressDiffIdx]
-      print("[DBG-DM] pressDiffIdx=" .. tostring(pressDiffIdx))
       btn.press:setVisible(false)
       if btn and btn.isUnlock and ed.containsPoint(btn.button, x, y) then
         -- 进入战斗（调用exercise的doDungeonGotoStage逻辑）
         local diffData = btn.diff
-        print("[DBG-DM] diffData.id=" .. tostring(diffData.id) .. " vit=" .. tostring(diffData.vit))
         local ul = diffData.unlockLevel
         if ul > ed.player:getLevel() then
-          print("[DBG-DM] level fail")
           ed.showToast(T(LSTR("EXERCISE.YOU_CAN_ACCESS_HERE_ONCE_YOUR_CLAN_LEVEL_REACHES__D"), ul))
         elseif ed.player:getVitality() < diffData.vit then
-          print("[DBG-DM] vit fail")
           ed.showHandyDialog("buyVitality")
         else
           destroyPopup()
           local baseId = ed.getDungeonBaseStageId(diffData.id)
-          print("[DBG-DM] baseId=" .. tostring(baseId) .. " creating stagedetail...")
           ed._pendingDungeonDifficulty = diffData.diff
           local ok, scene = pcall(function()
             return ed.ui.stagedetail.createForExercise(baseId, {
@@ -508,19 +503,11 @@ local function popupTouchHandler(event, x, y)
               dungeonDailyLimit = 2
             })
           end)
-          if not ok then
-            print("[DBG-DM] createForExercise ERROR: " .. tostring(scene))
+          if not ok or not scene then
             return true
           end
-          if not scene then
-            print("[DBG-DM] scene is nil!")
-            return true
-          end
-          print("[DBG-DM] pushScene OK")
           ed.pushScene(scene)
         end
-      else
-        print("[DBG-DM] btn check fail: btn=" .. tostring(btn) .. " isUnlock=" .. tostring(btn and btn.isUnlock))
       end
       pressDiffIdx = nil
       return true

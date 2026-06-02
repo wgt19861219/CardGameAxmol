@@ -657,6 +657,14 @@ local function getResInformation(self, stage)
     info.starLeft = 530
     info.starGap = 50
     info.goButtonPos = res.goButtonPosElite
+  elseif type == "dungeon" then
+    info.frameRes = "UI/alpha/HVGA/stage-map-elite-frame.png"
+	  info.titleBgRes = "UI/alpha/HVGA/Elite_title_bg.png"
+    info.framePos = res.framePosElite
+    info.titleBgSize = CCSizeMake(404, 12)
+    info.starLeft = 530
+    info.starGap = 50
+    info.goButtonPos = res.goButtonPosElite
   end
   info.stars = {}
   for i = 1, 3 do
@@ -684,24 +692,39 @@ end
 class.findBoss = findBoss
 local function getEnemyInformation(self, stage)
   local info = {}
-  local row = ed.getDataTable("Stage")[stage]
+  local stageTable = self.actType == "dungeon" and ed.getDataTable("StageDungeon") or ed.getDataTable("Stage")
+  local row = stageTable[stage]
+  -- 副本难度：用难度ID查Battle表（已预生成缩放数据）
+  local battleId = stage
+  if self.actType == "dungeon" and ed._pendingDungeonDifficulty and ed._pendingDungeonDifficulty > 1 then
+    battleId = stage + (ed._pendingDungeonDifficulty - 1) * 1000
+  end
   local ids = {}
   for i = 1, 5 do
-    local brow = ed.getDataTable("Battle")[stage][self.step]
+    local brow = ed.getDataTable("Battle")[battleId] and ed.getDataTable("Battle")[battleId][self.step]
+    if not brow then
+      brow = ed.getDataTable("Battle")[stage][self.step]
+    end
     local tn = string.format("Monster %d ID", i)
     local enemy = brow[tn]
     if enemy then
       ids[i] = enemy
     end
   end
+  local battleData = ed.getDataTable("Battle")[battleId] and ed.getDataTable("Battle")[battleId][self.step]
+  if not battleData then
+    battleData = ed.getDataTable("Battle")[stage][self.step]
+  end
   local unit = ed.getDataTable("Unit")
   for i = 1, #ids do
     if ids[i] ~= 0 then
+      local lv = battleData["Level " .. i] or stageTable[self.stage]["Monster Level"]
+      local st = battleData["Stars " .. i] or 1
       info[i] = {
         id = ids[i],
         res = unit[ids[i]].Portrait,
-        level = ed.getDataTable("Stage")[self.stage]["Monster Level"],
-        stars = ed.getDataTable("Battle")[self.stage][self.step]["Stars " .. i],
+        level = lv,
+        stars = st,
         index = i
       }
     end
@@ -712,7 +735,8 @@ end
 class.getEnemyInformation = getEnemyInformation
 local function getRewardInformation(self, stage)
   local info = {}
-  local row = ed.getDataTable("Stage")[stage]
+  local stageTable = self.actType == "dungeon" and ed.getDataTable("StageDungeon") or ed.getDataTable("Stage")
+  local row = stageTable[stage]
   local ids = {}
   for i = 1, 7 do
     local tn = "UI reward" .. i
@@ -845,7 +869,8 @@ local function doClickGo(self)
     pcall(require, "ui/battleprepare")
     print("[STAGEDETAIL] ed.ui.battleprepare=" .. tostring(ed.ui.battleprepare))
   end
-  local ul = ed.getDataTable("Stage")[self.stage]["Unlock Level"]
+  local stageTable = self.actType == "dungeon" and ed.getDataTable("StageDungeon") or ed.getDataTable("Stage")
+  local ul = stageTable[self.stage]["Unlock Level"]
 
 
   if ul > ed.player:getLevel() then

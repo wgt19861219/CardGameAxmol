@@ -221,8 +221,10 @@ local function gotoBattle(self)
       end
       local hero_list = getBattleHeros(self, selfList)
       LegendLog("[GOTO_BATTLE] hero_list count=" .. tostring(#hero_list))
-      local stage = ed.lookupDataTable("Stage", nil, stage_id)
-      local battle = ed.lookupDataTable("Battle", nil, stage_id, 1)
+      local stageTable = self.actType == "dungeon" and ed.getDataTable("StageDungeon") or ed.getDataTable("Stage")
+      local stage = stageTable[stage_id]
+      local startWave = (self.actType == "dungeon") and 3 or 1
+      local battle = ed.lookupDataTable("Battle", nil, stage_id, startWave)
       LegendLog("[GOTO_BATTLE] stage=" .. tostring(stage ~= nil) .. " battle=" .. tostring(battle ~= nil))
       if self.pvpMode == "attack" and enemyList then
         ed.engine:enterArena(hero_list, enemyList, false, isBot)
@@ -238,7 +240,11 @@ local function gotoBattle(self)
         ed.engine:enterExcavate(hero_list, enemyList, isBot, selfHeroData, enemyDyna, stage_id, self.excavateTypeid)
       else
         LegendLog("[GOTO_BATTLE] calling engine:enterStage")
-        ed.engine:enterStage(stage, hero_list)
+        if ed.stageType(stage_id) == "dungeon" then
+          ed.engine:enterStage(stage, hero_list, nil, 3)
+        else
+          ed.engine:enterStage(stage, hero_list)
+        end
       end
       local extraInfo = {}
       if self.mode == "crusade" then
@@ -353,7 +359,7 @@ local function doGo(self)
       ed.delaySend(ed.player:tomd5(), "important_data_md5", true)
       ed.send(msg, "enter_stage")
       LegendLog("[DOGO] enter_stage sent")
-    elseif type == "act" or type == "raid" then
+    elseif type == "act" or type == "raid" or type == "dungeon" then
       ed.netreply.enterStage = self:gotoBattle()
       local msg = ed.upmsg.enter_act_stage()
       msg._stage = stageid

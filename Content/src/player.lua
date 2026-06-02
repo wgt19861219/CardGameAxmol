@@ -780,6 +780,8 @@ local stageType = function(id)
       type = "pvp"
     elseif id > 40000 and id < 50000 then
       type = "raid"
+    elseif id >= 50001 and id <= 53021 then
+      type = "dungeon"
     end
   end, EDDebug)
   return type

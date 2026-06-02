@@ -1099,10 +1099,11 @@ for _, mod in ipairs(coreModules) do
                                 })
                             end
                             -- 初始化 starshop（星际旅行商人）
-                            if not ed.player._sshop then
+                            local sshopExpired = ed.player._sshop and ed.player._sshop._expire_time and ed.player._sshop._expire_time < os.time()
+                            if not ed.player._sshop or sshopExpired then
                                 ed.player:refreshStarShopData({
                                     _id = 6,
-                                    _expire_time = os.time() + 86400 * 30,
+                                    _expire_time = os.time() + 86400 * 365,
                                     _star_goods = {
                                         {_type = 0, _amount = 1, _stone_id = 8, _stone_amount = 50},
                                         {_type = 0, _amount = 1, _stone_id = 8, _stone_amount = 50},

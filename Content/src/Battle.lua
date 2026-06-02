@@ -81024,9 +81024,9 @@ for _, b in ipairs(dungeonBosses) do
 end
 
 local diffScale = {
-  [2] = { hp = 1.5, dps = 1.3, stars = 2, level = 5 },
-  [3] = { hp = 2.0, dps = 1.7, stars = 3, level = 10 },
-  [4] = { hp = 3.0, dps = 2.0, stars = 4, level = 15 },
+  [2] = { hp = 1.5, dps = 1.3, stars = 3, level = 10 },
+  [3] = { hp = 2.0, dps = 1.7, stars = 4, level = 20 },
+  [4] = { hp = 3.0, dps = 2.0, stars = 5, level = 30 },
 }
 for _, b in ipairs(dungeonBosses) do
   if data[b.id] and data[b.id][3] then
@@ -81041,8 +81041,14 @@ for _, b in ipairs(dungeonBosses) do
       wave["Boss DPS%"] = math.ceil(base["Boss DPS%"] * s.dps)
       wave["Monster HP%"] = math.ceil(base["Monster HP%"] * s.hp)
       wave["Monster DPS%"] = math.ceil(base["Monster DPS%"] * s.dps)
-      wave["Level 4"] = (base["Level 4"] or 80) + s.level
-      wave["Stars 4"] = s.stars
+      -- 所有怪物都缩放，不只是Boss
+      for i = 1, 5 do
+        local mid = base["Monster " .. i .. " ID"]
+        if mid and mid > 0 then
+          wave["Level " .. i] = (base["Level " .. i] or 80) + s.level
+          wave["Stars " .. i] = s.stars
+        end
+      end
       data[diffId] = { [3] = wave }
     end
   end

@@ -30542,6 +30542,7 @@ for sid = 50001, 50021 do
     ["Loot 1 Name"] = 0, ["Loot 2 Name"] = 0, ["Loot 3 Name"] = 0,
     ["Loot 4 Name"] = 0, ["Loot 5 Name"] = 0, ["Loot 6 Name"] = 0, ["Loot 7 Name"] = 0,
     ["Monster Level"] = 80,
+    ["Mps Restraint"] = 0,
     ["Raid Bonus Amount 1"] = 1, ["Raid Bonus Amount 2"] = 1,
     ["Raid Bonus Amount 3"] = 0, ["Raid Bonus Amount 4"] = 0,
     ["Raid Bonus ID 1"] = 0, ["Raid Bonus ID 2"] = 0,

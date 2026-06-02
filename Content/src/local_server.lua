@@ -427,6 +427,7 @@ local function getDungeonBaseStageId(stage_id)
   if stage_id >= 53001 then return stage_id - 3000 end
   if stage_id >= 52001 then return stage_id - 2000 end
   if stage_id >= 51001 then return stage_id - 1000 end
+  if stage_id >= 50001 then return stage_id end
   -- 旧段 40001-43021
   if stage_id >= 43001 then return stage_id - 3000 end
   if stage_id >= 42001 then return stage_id - 2000 end

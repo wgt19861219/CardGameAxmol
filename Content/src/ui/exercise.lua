@@ -149,15 +149,22 @@ end
 class.doGotoStage = doGotoStage
 
 local function doDungeonGotoStage(self, diffData)
+	print("[DBG] doDungeonGotoStage id=" .. tostring(diffData.id) .. " diff=" .. tostring(diffData.diff))
 	local stDungeon = ed.getDataTable("StageDungeon")
 	local stageData = stDungeon[diffData.id]
-	if not stageData then return end
+	if not stageData then
+		print("[DBG] stDungeon[" .. tostring(diffData.id) .. "] = nil, RETURN")
+		return
+	end
+	print("[DBG] stageData OK, ul=" .. tostring(diffData.unlockLevel))
 	local ul = diffData.unlockLevel
 	if ul > ed.player:getLevel() then
+		print("[DBG] level check FAIL")
 		ed.showToast(T(LSTR("EXERCISE.YOU_CAN_ACCESS_HERE_ONCE_YOUR_CLAN_LEVEL_REACHES__D"), ul))
 		return
 	end
 	if ed.player:getVitality() < diffData.vit then
+		print("[DBG] vit check FAIL")
 		ed.showHandyDialog("buyVitality")
 		return
 	end
@@ -165,18 +172,31 @@ local function doDungeonGotoStage(self, diffData)
 	if keyCost > 0 then
 		local coins = (ed.player.getDungeonCoin and ed.player:getDungeonCoin()) or 0
 		if coins < keyCost then
+			print("[DBG] key check FAIL")
 			ed.showToast(T(LSTR("DUNGEON.NOT_ENOUGH_KEYS")) or "not enough keys")
 			return
 		end
 	end
 	local baseId = ed.getDungeonBaseStageId(diffData.id)
+	print("[DBG] baseId=" .. tostring(baseId) .. " creating stagedetail...")
 	ed._pendingDungeonDifficulty = diffData.diff
-	local scene = ed.ui.stagedetail.createForExercise(baseId, {
-		heroLimit = nil,
-		actType = "dungeon",
-		dungeonVit = diffData.vit,
-		dungeonDailyLimit = 2
-	})
+	local ok, scene = pcall(function()
+		return ed.ui.stagedetail.createForExercise(baseId, {
+			heroLimit = nil,
+			actType = "dungeon",
+			dungeonVit = diffData.vit,
+			dungeonDailyLimit = 2
+		})
+	end)
+	if not ok then
+		print("[DBG] createForExercise ERROR: " .. tostring(scene))
+		return
+	end
+	if not scene then
+		print("[DBG] scene is nil!")
+		return
+	end
+	print("[DBG] pushScene OK")
 	ed.pushScene(scene)
 end
 class.doDungeonGotoStage = doDungeonGotoStage

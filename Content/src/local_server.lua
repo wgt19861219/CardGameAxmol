@@ -423,6 +423,11 @@ end
 
 -- 副本Stage->BaseStage映射（去掉难度偏移）
 local function getDungeonBaseStageId(stage_id)
+  -- 新副本段 50001-53021
+  if stage_id >= 53001 then return stage_id - 3000 end
+  if stage_id >= 52001 then return stage_id - 2000 end
+  if stage_id >= 51001 then return stage_id - 1000 end
+  -- 旧段 40001-43021
   if stage_id >= 43001 then return stage_id - 3000 end
   if stage_id >= 42001 then return stage_id - 2000 end
   if stage_id >= 41001 then return stage_id - 1000 end
@@ -430,24 +435,24 @@ local function getDungeonBaseStageId(stage_id)
 end
 ed.getDungeonBaseStageId = getDungeonBaseStageId
 
--- 副本BaseStage->Group映射
-local dungeonBaseToGroup = {
-  [40001]=40001,[40002]=40001,[40003]=40001,
-  [40004]=40002,[40005]=40002,[40006]=40002,
-  [40007]=40003,[40008]=40003,[40009]=40003,
-  [40010]=40004,[40011]=40004,[40012]=40004,
-  [40013]=40005,[40014]=40005,[40015]=40005,
-  [40016]=40006,[40017]=40006,[40018]=40006,
-  [40019]=40007,[40020]=40007,[40021]=40007,
-}
+-- 每3个Boss = 1组：50001-50003→50001, 50004-50006→50002, ...
+local function dungeonBaseToGroup(baseId)
+  if baseId >= 50001 and baseId <= 50021 then
+    return math.floor((baseId - 50001) / 3) + 50001
+  end
+  return nil
+end
 
 -- 副本Stage->Group（支持所有难度ID）
 local function dungeonStageToGroup(stage_id)
   local baseId = getDungeonBaseStageId(stage_id)
-  return dungeonBaseToGroup[baseId]
+  return dungeonBaseToGroup(baseId)
 end
 
 local function isDungeonStage(stage_id)
+  -- 新段 50001-53021
+  if stage_id >= 50001 and stage_id <= 53021 then return true end
+  -- 旧段 40001-43021（保留兼容）
   if stage_id >= 40001 and stage_id <= 40021 then return true end
   if stage_id >= 41001 and stage_id <= 41021 then return true end
   if stage_id >= 42001 and stage_id <= 42021 then return true end

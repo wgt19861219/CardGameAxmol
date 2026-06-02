@@ -1,4 +1,4 @@
-return {
+local data = {
   [-27] = {
     ["[O] Heroexp"] = "",
     ["Chapter ID"] = -1,
@@ -30500,3 +30500,85 @@ return {
     ["Waves"] = 0
   }
 }
+
+-- ============================================================
+-- 副本Boss关卡数据 (50001-50021)
+-- ============================================================
+local dungeonStageBossNames = {
+  [50001] = "DUNGEON.BOSS_LAVA_BEAST",
+  [50002] = "DUNGEON.BOSS_FIRE_CRAFTER",
+  [50003] = "DUNGEON.BOSS_DARK_IRON_LORD",
+  [50004] = "DUNGEON.BOSS_PLAGUE_BRINGER",
+  [50005] = "DUNGEON.BOSS_MEAT_SHIELD",
+  [50006] = "DUNGEON.BOSS_DEATH_KNIGHT",
+  [50007] = "DUNGEON.BOSS_TWISTED_TREANT",
+  [50008] = "DUNGEON.BOSS_DEMON_GUARD",
+  [50009] = "DUNGEON.BOSS_PRINCE_OF_DOOM",
+  [50010] = "DUNGEON.BOSS_FROST_LECTURER",
+  [50011] = "DUNGEON.BOSS_SHADOW_STUDENT",
+  [50012] = "DUNGEON.BOSS_DEAN_GANDLING",
+  [50013] = "DUNGEON.BOSS_RAZUVIOUS",
+  [50014] = "DUNGEON.BOSS_NOTH_PLAGUE",
+  [50015] = "DUNGEON.BOSS_KELTHUZAD",
+  [50016] = "DUNGEON.BOSS_RAZZGOR",
+  [50017] = "DUNGEON.BOSS_VAELASTRASZ",
+  [50018] = "DUNGEON.BOSS_NEFARIAN",
+  [50019] = "DUNGEON.BOSS_SKERAM",
+  [50020] = "DUNGEON.BOSS_SARTURA",
+  [50021] = "DUNGEON.BOSS_CTHUN",
+}
+
+for sid = 50001, 50021 do
+  local groupId = math.floor((sid - 50001) / 3) + 50001
+  data[sid] = {
+    ["Chapter ID"] = 201,
+    ["Chest For FD"] = false,
+    ["Daily Limit"] = 2,
+    ["Difficulty"] = (groupId >= 50005) and 2 or 1,
+    ["Exp Reward"] = 10,
+    ["Fail Exp Reward"] = 5,
+    ["Heroexp Reward"] = 250,
+    ["Key Stage"] = false,
+    ["Loot 1 Name"] = 0, ["Loot 2 Name"] = 0, ["Loot 3 Name"] = 0,
+    ["Loot 4 Name"] = 0, ["Loot 5 Name"] = 0, ["Loot 6 Name"] = 0, ["Loot 7 Name"] = 0,
+    ["Monster Level"] = 80,
+    ["Raid Bonus Amount 1"] = 1, ["Raid Bonus Amount 2"] = 1,
+    ["Raid Bonus Amount 3"] = 0, ["Raid Bonus Amount 4"] = 0,
+    ["Raid Bonus ID 1"] = 0, ["Raid Bonus ID 2"] = 0,
+    ["Raid Bonus ID 3"] = 0, ["Raid Bonus ID 4"] = 0,
+    ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
+    ["Raid Bonus Type 3"] = "Item",
+    ["Require Stage"] = 0, ["Require Stars"] = 0,
+    ["Stage Group"] = groupId,
+    ["Stage ID"] = sid,
+    ["Stage Name"] = LSTR(dungeonStageBossNames[sid] or "DUNGEON.UNKNOWN"),
+    ["Unlock Level"] = 60,
+    ["Vit Return"] = 0,
+    ["Vitality Cost"] = 12,
+    ["Waves"] = 1,
+  }
+end
+
+local stageDiffScale = {
+  [2] = { vitAdd = 4, levelAdd = 5 },
+  [3] = { vitAdd = 9, levelAdd = 10 },
+  [4] = { vitAdd = 12, levelAdd = 15 },
+}
+for sid = 50001, 50021 do
+  if data[sid] then
+    local base = data[sid]
+    for diff = 2, 4 do
+      local s = stageDiffScale[diff]
+      local diffId = sid + (diff - 1) * 1000
+      local entry = {}
+      for k, v in pairs(base) do entry[k] = v end
+      entry["Stage ID"] = diffId
+      entry["Vitality Cost"] = (base["Vitality Cost"] or 12) + s.vitAdd
+      entry["Monster Level"] = (base["Monster Level"] or 80) + s.levelAdd
+      entry["Difficulty"] = diff
+      data[diffId] = entry
+    end
+  end
+end
+
+return data

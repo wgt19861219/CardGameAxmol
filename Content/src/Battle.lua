@@ -80984,7 +80984,7 @@ local dungeonBosses = {
 
 for _, b in ipairs(dungeonBosses) do
   data[b.id] = {
-    [1] = {
+    [3] = {
       ["Background Pic"] = b.bg,
       ["Boss DPS%"] = 150,
       ["Boss HP%"] = 200,
@@ -81029,8 +81029,8 @@ local diffScale = {
   [4] = { hp = 3.0, dps = 2.0, stars = 4, level = 15 },
 }
 for _, b in ipairs(dungeonBosses) do
-  if data[b.id] and data[b.id][1] then
-    local base = data[b.id][1]
+  if data[b.id] and data[b.id][3] then
+    local base = data[b.id][3]
     for diff = 2, 4 do
       local s = diffScale[diff]
       local diffId = b.id + (diff - 1) * 1000
@@ -81043,7 +81043,7 @@ for _, b in ipairs(dungeonBosses) do
       wave["Monster DPS%"] = math.ceil(base["Monster DPS%"] * s.dps)
       wave["Level 4"] = (base["Level 4"] or 80) + s.level
       wave["Stars 4"] = s.stars
-      data[diffId] = { [1] = wave }
+      data[diffId] = { [3] = wave }
     end
   end
 end

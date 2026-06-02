@@ -1,8 +1,8 @@
 -- 副本组配置：7个副本（4普通+3英雄）
--- Group ID: 40001-40007
+-- Group ID: 50001-50007
 -- 全周开放，用每日次数控制
 return {
-  [40001] = {
+  [50001] = {
     ["CD"] = 0,
     ["DailyLimit"] = 2,
     ["MaxBuyPerDay"] = 3,
@@ -12,13 +12,13 @@ return {
     ["Difficulty"] = 1,
     ["Monday"] = true, ["Tuesday"] = true, ["Wednesday"] = true,
     ["Thursday"] = true, ["Friday"] = true, ["Saturday"] = true, ["Sunday"] = true,
-    ["Stage Group"] = 40001,
-    ["Stages"] = { 40001, 40002, 40003, 0, 0, 0, 0, 0 },
+    ["Stage Group"] = 50001,
+    ["Stages"] = { 50001, 50002, 50003, 0, 0, 0, 0, 0 },
     ["UI reward1"] = 312,
     ["UI reward2"] = 351,
     ["UI reward3"] = 338,
   },
-  [40002] = {
+  [50002] = {
     ["CD"] = 0,
     ["DailyLimit"] = 2,
     ["MaxBuyPerDay"] = 3,
@@ -28,13 +28,13 @@ return {
     ["Difficulty"] = 1,
     ["Monday"] = true, ["Tuesday"] = true, ["Wednesday"] = true,
     ["Thursday"] = true, ["Friday"] = true, ["Saturday"] = true, ["Sunday"] = true,
-    ["Stage Group"] = 40002,
-    ["Stages"] = { 40004, 40005, 40006, 0, 0, 0, 0, 0 },
+    ["Stage Group"] = 50002,
+    ["Stages"] = { 50004, 50005, 50006, 0, 0, 0, 0, 0 },
     ["UI reward1"] = 306,
     ["UI reward2"] = 309,
     ["UI reward3"] = 311,
   },
-  [40003] = {
+  [50003] = {
     ["CD"] = 0,
     ["DailyLimit"] = 2,
     ["MaxBuyPerDay"] = 3,
@@ -44,13 +44,13 @@ return {
     ["Difficulty"] = 1,
     ["Monday"] = true, ["Tuesday"] = true, ["Wednesday"] = true,
     ["Thursday"] = true, ["Friday"] = true, ["Saturday"] = true, ["Sunday"] = true,
-    ["Stage Group"] = 40003,
-    ["Stages"] = { 40007, 40008, 40009, 0, 0, 0, 0, 0 },
+    ["Stage Group"] = 50003,
+    ["Stages"] = { 50007, 50008, 50009, 0, 0, 0, 0, 0 },
     ["UI reward1"] = 307,
     ["UI reward2"] = 310,
     ["UI reward3"] = 347,
   },
-  [40004] = {
+  [50004] = {
     ["CD"] = 0,
     ["DailyLimit"] = 2,
     ["MaxBuyPerDay"] = 3,
@@ -60,13 +60,13 @@ return {
     ["Difficulty"] = 1,
     ["Monday"] = true, ["Tuesday"] = true, ["Wednesday"] = true,
     ["Thursday"] = true, ["Friday"] = true, ["Saturday"] = true, ["Sunday"] = true,
-    ["Stage Group"] = 40004,
-    ["Stages"] = { 40010, 40011, 40012, 0, 0, 0, 0, 0 },
+    ["Stage Group"] = 50004,
+    ["Stages"] = { 50010, 50011, 50012, 0, 0, 0, 0, 0 },
     ["UI reward1"] = 315,
     ["UI reward2"] = 310,
     ["UI reward3"] = 306,
   },
-  [40005] = {
+  [50005] = {
     ["CD"] = 0,
     ["DailyLimit"] = 1,
     ["MaxBuyPerDay"] = 2,
@@ -76,13 +76,13 @@ return {
     ["Difficulty"] = 2,
     ["Monday"] = true, ["Tuesday"] = true, ["Wednesday"] = true,
     ["Thursday"] = true, ["Friday"] = true, ["Saturday"] = true, ["Sunday"] = true,
-    ["Stage Group"] = 40005,
-    ["Stages"] = { 40013, 40014, 40015, 0, 0, 0, 0, 0 },
+    ["Stage Group"] = 50005,
+    ["Stages"] = { 50013, 50014, 50015, 0, 0, 0, 0, 0 },
     ["UI reward1"] = 405,
     ["UI reward2"] = 406,
     ["UI reward3"] = 409,
   },
-  [40006] = {
+  [50006] = {
     ["CD"] = 0,
     ["DailyLimit"] = 1,
     ["MaxBuyPerDay"] = 2,
@@ -92,13 +92,13 @@ return {
     ["Difficulty"] = 2,
     ["Monday"] = true, ["Tuesday"] = true, ["Wednesday"] = true,
     ["Thursday"] = true, ["Friday"] = true, ["Saturday"] = true, ["Sunday"] = true,
-    ["Stage Group"] = 40006,
-    ["Stages"] = { 40016, 40017, 40018, 0, 0, 0, 0, 0 },
+    ["Stage Group"] = 50006,
+    ["Stages"] = { 50016, 50017, 50018, 0, 0, 0, 0, 0 },
     ["UI reward1"] = 417,
     ["UI reward2"] = 419,
     ["UI reward3"] = 412,
   },
-  [40007] = {
+  [50007] = {
     ["CD"] = 0,
     ["DailyLimit"] = 1,
     ["MaxBuyPerDay"] = 2,
@@ -108,8 +108,8 @@ return {
     ["Difficulty"] = 2,
     ["Monday"] = true, ["Tuesday"] = true, ["Wednesday"] = true,
     ["Thursday"] = true, ["Friday"] = true, ["Saturday"] = true, ["Sunday"] = true,
-    ["Stage Group"] = 40007,
-    ["Stages"] = { 40019, 40020, 40021, 0, 0, 0, 0, 0 },
+    ["Stage Group"] = 50007,
+    ["Stages"] = { 50019, 50020, 50021, 0, 0, 0, 0, 0 },
     ["UI reward1"] = 413,
     ["UI reward2"] = 414,
     ["UI reward3"] = 416,

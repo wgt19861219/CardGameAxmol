@@ -1,4 +1,4 @@
-return {
+local data = {
   [-27] = {
     [1] = {
       ["Background Pic"] = "battle_bg/bbg_pvp.jpg",
@@ -80947,3 +80947,105 @@ return {
     }
   }
 }
+
+-- ============================================================
+-- 副本Boss战斗数据 (50001-50021)
+-- ============================================================
+local dungeonBosses = {
+  -- 普通副本：黑石塔下层（火山主题，小怪：电魂5/火女3/宙斯4）
+  { id=50001, bg="battle_bg/bbg_volcano_throne.jpg", boss=29,  m={5,3,4} },
+  { id=50002, bg="battle_bg/bbg_volcano_throne.jpg", boss=4,   m={5,3,4} },
+  { id=50003, bg="battle_bg/bbg_volcano_throne.jpg", boss=28,  m={5,3,4} },
+  -- 普通副本：斯坦索姆废墟（亡灵主题，小怪：骷髅王19/死灵法师20/骨法18）
+  { id=50004, bg="battle_bg/bbg_corridor_ruin.jpg", boss=20,  m={19,20,18} },
+  { id=50005, bg="battle_bg/bbg_corridor_ruin.jpg", boss=14,  m={19,20,18} },
+  { id=50006, bg="battle_bg/bbg_corridor_ruin.jpg", boss=19,  m={19,20,18} },
+  -- 普通副本：厄运之槌（自然/恶魔主题，小怪：风行11/沉默26/暗牧22）
+  { id=50007, bg="battle_bg/bbg_fall_cityofmage.jpg", boss=29,  m={11,26,22} },
+  { id=50008, bg="battle_bg/bbg_fall_cityofmage.jpg", boss=23,  m={11,26,22} },
+  { id=50009, bg="battle_bg/bbg_fall_cityofmage.jpg", boss=27,  m={11,26,22} },
+  -- 普通副本：通灵学院（冰霜/暗影主题，小怪：冰女12/巫妖35/影魔25）
+  { id=50010, bg="battle_bg/bbg_snow_castle.jpg", boss=12,  m={12,35,25} },
+  { id=50011, bg="battle_bg/bbg_snow_castle.jpg", boss=25,  m={12,35,25} },
+  { id=50012, bg="battle_bg/bbg_snow_castle.jpg", boss=43,  m={12,35,25} },
+  -- 英雄副本：纳克萨玛斯（天灾主题，小怪：死亡先知40/死骑42/骨弓17）
+  { id=50013, bg="battle_bg/bbg_underground_hall.jpg", boss=6,   m={40,42,17} },
+  { id=50014, bg="battle_bg/bbg_underground_hall.jpg", boss=40,  m={40,42,17} },
+  { id=50015, bg="battle_bg/bbg_underground_hall.jpg", boss=35,  m={40,42,17} },
+  -- 英雄副本：黑翼之巢（龙族主题，小怪：双头龙38/凤凰52/亚龙37）
+  { id=50016, bg="battle_bg/bbg_spring_lair.jpg", boss=52,  m={38,52,37} },
+  { id=50017, bg="battle_bg/bbg_spring_lair.jpg", boss=37,  m={38,52,37} },
+  { id=50018, bg="battle_bg/bbg_spring_lair.jpg", boss=38,  m={38,52,37} },
+  -- 英雄副本：安其拉废墟（虫族主题，小怪：小娜迦13/大鱼人14/潮汐15）
+  { id=50019, bg="battle_bg/bbg_sand_bone.jpg", boss=53,  m={13,14,15} },
+  { id=50020, bg="battle_bg/bbg_sand_bone.jpg", boss=13,  m={13,14,15} },
+  { id=50021, bg="battle_bg/bbg_sand_bone.jpg", boss=7,   m={13,14,15} },
+}
+
+for _, b in ipairs(dungeonBosses) do
+  data[b.id] = {
+    [1] = {
+      ["Background Pic"] = b.bg,
+      ["Boss DPS%"] = 150,
+      ["Boss HP%"] = 200,
+      ["Boss Position"] = 4,
+      ["BOSS SIZE%"] = 0,
+      ["Chest 1 ID"] = 10288, ["Chest 1 Mult"] = 50,
+      ["Chest 2 ID"] = 10288, ["Chest 2 Mult"] = 50,
+      ["Chest 3 ID"] = 10288, ["Chest 3 Mult"] = 50,
+      ["Chest 4 ID"] = 10288, ["Chest 4 Mult"] = 50,
+      ["Chest 5 ID"] = 0, ["Chest 5 Mult"] = 0,
+      ["FD Bonus 1"] = 0, ["FD Bonus 2"] = 0, ["FD Bonus 3"] = 0,
+      ["FD Bonus 4"] = 0, ["FD Bonus 5"] = 0,
+      ["H Flip"] = false,
+      ["Level 1"] = 80, ["Level 2"] = 80, ["Level 3"] = 80,
+      ["Level 4"] = 80, ["Level 5"] = 0,
+      ["Money Reward 1"] = 0, ["Money Reward 2"] = 0, ["Money Reward 3"] = 0,
+      ["Money Reward 4"] = 0, ["Money Reward 5"] = 0,
+      ["Monster 1 ID"] = b.m[1],
+      ["Monster 2 ID"] = b.m[2],
+      ["Monster 3 ID"] = b.m[3],
+      ["Monster 4 ID"] = b.boss,
+      ["Monster 5 ID"] = 0,
+      ["Monster DPS%"] = 120,
+      ["Monster HP%"] = 2000,
+      ["MP 1"] = 0, ["MP 2"] = 0, ["MP 3"] = 0,
+      ["MP 4"] = 400, ["MP 5"] = 0,
+      ["Raid Wave Weight"] = 2,
+      ["Stage Difficulty"] = 1,
+      ["Stage ID"] = b.id,
+      ["Stage Name"] = "Dungeon Boss",
+      ["Stage Type"] = "dungeon",
+      ["Stars 1"] = 1, ["Stars 2"] = 1, ["Stars 3"] = 1,
+      ["Stars 4"] = 1, ["Stars 5"] = 0,
+      ["Wave ID"] = 1,
+    }
+  }
+end
+
+local diffScale = {
+  [2] = { hp = 1.5, dps = 1.3, stars = 2, level = 5 },
+  [3] = { hp = 2.0, dps = 1.7, stars = 3, level = 10 },
+  [4] = { hp = 3.0, dps = 2.0, stars = 4, level = 15 },
+}
+for _, b in ipairs(dungeonBosses) do
+  if data[b.id] and data[b.id][1] then
+    local base = data[b.id][1]
+    for diff = 2, 4 do
+      local s = diffScale[diff]
+      local diffId = b.id + (diff - 1) * 1000
+      local wave = {}
+      for k, v in pairs(base) do wave[k] = v end
+      wave["Stage ID"] = diffId
+      wave["Boss HP%"] = math.ceil(base["Boss HP%"] * s.hp)
+      wave["Boss DPS%"] = math.ceil(base["Boss DPS%"] * s.dps)
+      wave["Monster HP%"] = math.ceil(base["Monster HP%"] * s.hp)
+      wave["Monster DPS%"] = math.ceil(base["Monster DPS%"] * s.dps)
+      wave["Level 4"] = (base["Level 4"] or 80) + s.level
+      wave["Stars 4"] = s.stars
+      data[diffId] = { [1] = wave }
+    end
+  end
+end
+
+return data

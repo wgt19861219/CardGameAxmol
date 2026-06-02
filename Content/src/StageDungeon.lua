@@ -1,5 +1,5 @@
 local data = {
-  [40001] = {
+  [50001] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -19,8 +19,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40001,
-    ["Stage ID"] = 40001,
+    ["Stage Group"] = 50001,
+    ["Stage ID"] = 50001,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_LAVA_BEAST"),
     ["description"] = LSTR("DUNGEON.DESC_LAVA_BEAST"),
     ["UI reward1"] = 312, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -35,7 +35,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40002] = {
+  [50002] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -55,8 +55,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40001,
-    ["Stage ID"] = 40002,
+    ["Stage Group"] = 50001,
+    ["Stage ID"] = 50002,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_FIRE_CRAFTER"),
     ["description"] = LSTR("DUNGEON.DESC_FIRE_CRAFTER"),
     ["UI reward1"] = 352, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -71,7 +71,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40003] = {
+  [50003] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -91,8 +91,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40001,
-    ["Stage ID"] = 40003,
+    ["Stage Group"] = 50001,
+    ["Stage ID"] = 50003,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_DARK_IRON_LORD"),
     ["description"] = LSTR("DUNGEON.DESC_DARK_IRON_LORD"),
     ["UI reward1"] = 318, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -107,7 +107,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40004] = {
+  [50004] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -127,8 +127,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40002,
-    ["Stage ID"] = 40004,
+    ["Stage Group"] = 50002,
+    ["Stage ID"] = 50004,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_PLAGUE_BRINGER"),
     ["description"] = LSTR("DUNGEON.DESC_PLAGUE_BRINGER"),
     ["UI reward1"] = 306, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -143,7 +143,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40005] = {
+  [50005] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -163,8 +163,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40002,
-    ["Stage ID"] = 40005,
+    ["Stage Group"] = 50002,
+    ["Stage ID"] = 50005,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_FLESH_ABOMINATION"),
     ["description"] = LSTR("DUNGEON.DESC_FLESH_ABOMINATION"),
     ["UI reward1"] = 311, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -179,7 +179,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40006] = {
+  [50006] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -199,8 +199,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40002,
-    ["Stage ID"] = 40006,
+    ["Stage Group"] = 50002,
+    ["Stage ID"] = 50006,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_DEATH_KNIGHT"),
     ["description"] = LSTR("DUNGEON.DESC_DEATH_KNIGHT"),
     ["UI reward1"] = 348, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -215,7 +215,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40007] = {
+  [50007] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -235,8 +235,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40003,
-    ["Stage ID"] = 40007,
+    ["Stage Group"] = 50003,
+    ["Stage ID"] = 50007,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_TWISTED_TREANT"),
     ["description"] = LSTR("DUNGEON.DESC_TWISTED_TREANT"),
     ["UI reward1"] = 307, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -251,7 +251,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40008] = {
+  [50008] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -271,8 +271,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40003,
-    ["Stage ID"] = 40008,
+    ["Stage Group"] = 50003,
+    ["Stage ID"] = 50008,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_DEMON_GUARD"),
     ["description"] = LSTR("DUNGEON.DESC_DEMON_GUARD"),
     ["UI reward1"] = 310, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -287,7 +287,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40009] = {
+  [50009] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -307,8 +307,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40003,
-    ["Stage ID"] = 40009,
+    ["Stage Group"] = 50003,
+    ["Stage ID"] = 50009,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_PRINCE_OF_DOOM"),
     ["description"] = LSTR("DUNGEON.DESC_PRINCE_OF_DOOM"),
     ["UI reward1"] = 347, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -323,7 +323,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40010] = {
+  [50010] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -343,8 +343,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40004,
-    ["Stage ID"] = 40010,
+    ["Stage Group"] = 50004,
+    ["Stage ID"] = 50010,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_FROST_LECTURER"),
     ["description"] = LSTR("DUNGEON.DESC_FROST_LECTURER"),
     ["UI reward1"] = 315, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -359,7 +359,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40011] = {
+  [50011] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -379,8 +379,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40004,
-    ["Stage ID"] = 40011,
+    ["Stage Group"] = 50004,
+    ["Stage ID"] = 50011,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_SHADOW_STUDENT"),
     ["description"] = LSTR("DUNGEON.DESC_SHADOW_STUDENT"),
     ["UI reward1"] = 310, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -395,7 +395,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40012] = {
+  [50012] = {
     ["Chapter ID"] = 201,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -415,8 +415,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40004,
-    ["Stage ID"] = 40012,
+    ["Stage Group"] = 50004,
+    ["Stage ID"] = 50012,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_HEADMASTER_GADING"),
     ["description"] = LSTR("DUNGEON.DESC_HEADMASTER_GADING"),
     ["UI reward1"] = 306, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -431,7 +431,7 @@ local data = {
     ["Vitality Cost"] = 12,
     ["Waves"] = 1,
   },
-  [40013] = {
+  [50013] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -451,8 +451,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40005,
-    ["Stage ID"] = 40013,
+    ["Stage Group"] = 50005,
+    ["Stage ID"] = 50013,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_INSTRUCTOR_RAZUVIUS"),
     ["description"] = LSTR("DUNGEON.DESC_INSTRUCTOR_RAZUVIUS"),
     ["UI reward1"] = 405, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -467,7 +467,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40014] = {
+  [50014] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -487,8 +487,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40005,
-    ["Stage ID"] = 40014,
+    ["Stage Group"] = 50005,
+    ["Stage ID"] = 50014,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_PLAGUE_NORTH"),
     ["description"] = LSTR("DUNGEON.DESC_PLAGUE_NORTH"),
     ["UI reward1"] = 406, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -503,7 +503,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40015] = {
+  [50015] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -523,8 +523,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40005,
-    ["Stage ID"] = 40015,
+    ["Stage Group"] = 50005,
+    ["Stage ID"] = 50015,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_KELTHUZAD"),
     ["description"] = LSTR("DUNGEON.DESC_KELTHUZAD"),
     ["UI reward1"] = 409, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -539,7 +539,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40016] = {
+  [50016] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -559,8 +559,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40006,
-    ["Stage ID"] = 40016,
+    ["Stage Group"] = 50006,
+    ["Stage ID"] = 50016,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_RAZORGORE"),
     ["description"] = LSTR("DUNGEON.DESC_RAZORGORE"),
     ["UI reward1"] = 417, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -575,7 +575,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40017] = {
+  [50017] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -595,8 +595,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40006,
-    ["Stage ID"] = 40017,
+    ["Stage Group"] = 50006,
+    ["Stage ID"] = 50017,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_VAELASTRAZ"),
     ["description"] = LSTR("DUNGEON.DESC_VAELASTRAZ"),
     ["UI reward1"] = 419, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -611,7 +611,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40018] = {
+  [50018] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -631,8 +631,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40006,
-    ["Stage ID"] = 40018,
+    ["Stage Group"] = 50006,
+    ["Stage ID"] = 50018,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_NEFARIAN"),
     ["description"] = LSTR("DUNGEON.DESC_NEFARIAN"),
     ["UI reward1"] = 412, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -647,7 +647,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40019] = {
+  [50019] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -667,8 +667,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40007,
-    ["Stage ID"] = 40019,
+    ["Stage Group"] = 50007,
+    ["Stage ID"] = 50019,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_SKERAM"),
     ["description"] = LSTR("DUNGEON.DESC_SKERAM"),
     ["UI reward1"] = 413, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -683,7 +683,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40020] = {
+  [50020] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -703,8 +703,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40007,
-    ["Stage ID"] = 40020,
+    ["Stage Group"] = 50007,
+    ["Stage ID"] = 50020,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_SARTURA"),
     ["description"] = LSTR("DUNGEON.DESC_SARTURA"),
     ["UI reward1"] = 414, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -719,7 +719,7 @@ local data = {
     ["Vitality Cost"] = 18,
     ["Waves"] = 1,
   },
-  [40021] = {
+  [50021] = {
     ["Chapter ID"] = 202,
     ["Chest For FD"] = false,
     ["Daily Limit"] = 0,
@@ -739,8 +739,8 @@ local data = {
     ["Raid Bonus Type 1"] = "Equip", ["Raid Bonus Type 2"] = "Equip",
     ["Raid Bonus Type 3"] = "Item",
     ["Require Stage"] = 0, ["Require Stars"] = 0,
-    ["Stage Group"] = 40007,
-    ["Stage ID"] = 40021,
+    ["Stage Group"] = 50007,
+    ["Stage ID"] = 50021,
     ["Stage Name"] = LSTR("DUNGEON.BOSS_CTHUN"),
     ["description"] = LSTR("DUNGEON.DESC_CTHUN"),
     ["UI reward1"] = 416, ["UI reward1 Max Amount"] = 1, ["UI reward1 Min Amount"] = 0,
@@ -764,7 +764,7 @@ local diffConfig = {
   [4] = { vitAdd = 12, mlAdd = 15, ulAdd = 20, expAdd = 10, heroMul = 1.8, keyCost = 2 },
 }
 
-for baseId = 40001, 40021 do
+for baseId = 50001, 50021 do
   local base = data[baseId]
   if base then
     for diff = 2, 4 do

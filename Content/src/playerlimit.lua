@@ -20,7 +20,7 @@ local function row(level)
 end
 class.row = row
 local function heroLevelLimit()
-  return row()["Max Hero Level"]
+  return ed.parameter.team_level_max
 end
 class.heroLevelLimit = heroLevelLimit
 local function maxVitality()

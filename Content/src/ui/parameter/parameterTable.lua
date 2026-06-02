@@ -16,7 +16,7 @@ return {
     ["tavern_magic_cd"] = 432000,
     ["tavern_magic_month_soul_id"] = 156,
 	["universal_fragment_id"] = 335,
-	["team_level_max"] = 80,
+	["team_level_max"] = 99,
 	["sweep_coin_id"] = 390,
 	["stren_health_ratio"] = 19,
 	["join_excavate_hero_level_limit"] = 35,

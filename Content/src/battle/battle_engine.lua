@@ -348,6 +348,11 @@ local function initSelfHero(self, hero_list, isbot)
 end
 
 local function enterStage(self, stage_info, hero_list, isbot, startWaveId)
+	-- 空队伍防护:0 英雄时失败判定(玩家全灭检查)永不触发,战斗无法结束
+	if not hero_list or #hero_list == 0 then
+		LegendLog("[BATTLE] enterStage rejected: empty hero_list, stage=" .. tostring(stage_info and stage_info["Stage ID"]))
+		return false
+	end
 	self:resetStage()
 	self.stage_info = stage_info
 	initSelfHero(self, hero_list, isbot)
@@ -867,14 +872,14 @@ local function setOperationList(self, list)
 	for i, v in ipairs(list) do
 		local optype = ed.splitbits(v, 3)
 		if optype ~= 5 then
-			local tick, uidx, op = ed.splitbits(v, 12, 3, 3)
+			local tick, uidx, op = ed.splitbits(v, 13, 4, 3)
 			self.operation_list[i] = {
 				op = op,
 				tick = tick,
 				unit_index = uidx
 			}
 		elseif optype == 5 then
-			local tick, uidx, idx, dsIdx, op = ed.splitbits(v, 12, 3, 9, 2, 3)
+			local tick, uidx, idx, dsIdx, op = ed.splitbits(v, 13, 4, 9, 2, 3)
 			self.operation_list[i] = {
 				op = op,
 				tick = tick,
@@ -891,9 +896,10 @@ local function getOprationList(self)
 	for i, op in ipairs(self.operation_list) do
 		local value
 		if op.op ~= 5 then
-			value = ed.makebits(12, op.tick, 3, op.unit_index, 3, op.op)
+			-- unit_index 4位(10人战斗索引到10,3位上限7会溢出污染tick);tick 13位防长战斗超4095
+			value = ed.makebits(13, op.tick, 4, op.unit_index, 3, op.op)
 		elseif op.op == 5 then
-			value = ed.makebits(12, op.tick, 3, op.unit_index, 9, op.ext[1], 2, op.ext[2], 3, op.op)
+			value = ed.makebits(13, op.tick, 4, op.unit_index, 9, op.ext[1], 2, op.ext[2], 3, op.op)
 		end
 		table.insert(list, value)
 	end

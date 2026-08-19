@@ -1745,18 +1745,20 @@ M.handlers.tavern_draw = function(data, obj, localdata)
         _smash_idx = {},
     }
 
-    -- 追踪钻石消费
-    local td = ed.getDataTable("TavernDrawConfig")
-    if td then
-        local costInfo = td[boxType]
-        if costInfo and drawType == 0 then
-            local diamondCost = costInfo["Draw 1 Cost Diamond"] or 0
-            if diamondCost > 0 then trackDiamondSpent(localdata, diamondCost) end
-        elseif costInfo and drawType == 1 then
-            local diamondCost = costInfo["Draw 10 Cost Diamond"] or 0
-            if diamondCost > 0 then trackDiamondSpent(localdata, diamondCost) end
+    -- 追踪钻石消费(纯统计,失败不得中断抽卡回复;TavernDrawConfig 缺表时 getDataTable 会抛错)
+    pcall(function()
+        local td = ed.getDataTable("TavernDrawConfig")
+        if td then
+            local costInfo = td[boxType]
+            if costInfo and drawType == 0 then
+                local diamondCost = costInfo["Draw 1 Cost Diamond"] or 0
+                if diamondCost > 0 then trackDiamondSpent(localdata, diamondCost) end
+            elseif costInfo and drawType == 1 then
+                local diamondCost = costInfo["Draw 10 Cost Diamond"] or 0
+                if diamondCost > 0 then trackDiamondSpent(localdata, diamondCost) end
+            end
         end
-    end
+    end)
 end
 
 -- ========== sync_vitality ==========

@@ -315,8 +315,9 @@ local function numberJump(self)
   local count = 0
   local expLabel = self.ui.exp_label
   local goldLabel = self.ui.gold_label
-  local exp = self.param.exp
-  local gold = self.param.gold
+  -- 副本结算等路径不传 exp/gold（nil 会导致 numberJump 第 321 行算术报错，结算界面卡死）
+  local exp = self.param.exp or 0
+  local gold = self.param.gold or 0
   local expSpeed = exp / number_jump_gap
   local goldSpeed = gold / number_jump_gap
   local hasDelay

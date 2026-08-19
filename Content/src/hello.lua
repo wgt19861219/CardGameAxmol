@@ -354,9 +354,22 @@ local function cleanupBeforeTransition()
 	end
 end
 
+-- GC stop 仅为避免场景切换过渡帧被 GC 打断，下一帧必须恢复；
+-- 否则非 basescene 场景（如 battle_scene 无 onEnter → 无 collectgarbage("restart")）
+-- 战斗全程 GC 停止，每帧闭包/table 纯累积 → emergency GC 大卡顿
+local function resumeGcNextFrame()
+	local scheduler = CCDirector:sharedDirector():getScheduler()
+	local entry
+	entry = scheduler:scheduleScriptFunc(function()
+		scheduler:unscheduleScriptEntry(entry)
+		collectgarbage("restart")
+	end, 0, false)
+end
+
 local function pushScene(scene)
 	table.insert(scene_stack, scene)
 	collectgarbage("stop")
+	resumeGcNextFrame()
 	CCDirector:sharedDirector():pushScene(scene:ccScene())
 end
 ed.pushScene = pushScene
@@ -413,6 +426,7 @@ local function replaceScene(scene)
 	scene.pushed = false
 	cleanupBeforeTransition()
 	collectgarbage("stop")
+	resumeGcNextFrame()
 	CCDirector:sharedDirector():replaceScene(scene:ccScene())
 end
 ed.replaceScene = replaceScene
@@ -484,30 +498,76 @@ ed.getCurrentScene = getCurrentScene
 local update_timestamp = ed.getMillionTime()
 local resume_timestamp
 local game_update_handler_list = {}
+-- 提为命名函数：xpcall 直接传引用，避免每帧创建 2 个闭包
 local _gu_tick = 0
+-- PERF 诊断：每 5 秒墙钟（毫秒）打印逻辑帧率与 Lua 堆大小（os.clock 在 Android 是 CPU 时间，帧率会被高估）
+local _diag_t0, _diag_frames = ed.getMillionTime(), 0
+local function gameUpdateImpl()
+	local time = ed.getMillionTime()
+	if not resume_timestamp then
+		resume_timestamp = time
+	end
+	local raw_dt = update_timestamp ~= 0 and (time - update_timestamp) / 1000 or 0
+	-- 钳制到 2 个逻辑 tick：低帧率(<30fps)下保持游戏时间流速（原钳制 1 tick 会把 17fps 压成 58% 速度的慢动作），
+	-- 极端卡顿(>66ms/帧)时仍防大跳帧
+	local dt = math.min(raw_dt, ed.tick_interval * 2)
+
+	update_timestamp = time
+	ed.proc_net()
+	local scene = scene_stack[#scene_stack] or {}
+	if scene.update then
+		scene:update(dt)
+	end
+	runScriptString()
+	UpdateEventSystem(dt)
+	memeryGC(dt)
+	for k, v in pairs(game_update_handler_list or {}) do
+		v(dt)
+	end
+	_diag_frames = _diag_frames + 1
+	local now = ed.getMillionTime()
+	local elapsed = (now - _diag_t0) / 1000
+	if elapsed >= 5 then
+		local msg = string.format("[PERF] %.0f fps(logic), lua heap %.1f MB\n", _diag_frames / elapsed, collectgarbage("count") / 1024)
+		print(msg)
+		-- print 管道可能被吞，同时落盘到 writable path 保底
+		pcall(function()
+			local p = CCFileUtils:sharedFileUtils():getWritablePath() .. "perf.log"
+			local f = io.open(p, "a")
+			if f then f:write(msg) f:close() end
+		end)
+		_diag_t0, _diag_frames = now, 0
+	end
+	-- 调试钩子：每 2 秒轮询 writable/debugcmd.lua，存在则执行并删除（MuMu 实测注入通道）
+	_dbghook_t = (_dbghook_t or 0) + dt
+	if _dbghook_t > 2 then
+		_dbghook_t = 0
+		pcall(function()
+			local p = CCFileUtils:sharedFileUtils():getWritablePath() .. "debugcmd.lua"
+			local f = io.open(p, "r")
+			if f then
+				local code = f:read("*a")
+				f:close()
+				os.remove(p)
+				local fn = loadstring(code)
+				if fn then
+					xpcall(fn, function(e)
+						print("[DBGHOOK] error: " .. tostring(e))
+					end)
+				end
+			end
+		end)
+	end
+end
+
+local function gameUpdateErr(msg)
+	LegendLog("[gameUpdate ERROR] " .. tostring(msg))
+	EDDebug(msg)
+end
+
 local function gameUpdate()
 	_gu_tick = _gu_tick + 1
-	xpcall(function()
-		local time = ed.getMillionTime()
-		if not resume_timestamp then
-			resume_timestamp = time
-		end
-			local raw_dt = update_timestamp ~= 0 and (time - update_timestamp) / 1000 or 0
-			local dt = math.min(raw_dt, ed.tick_interval)
-
-		update_timestamp = time
-		ed.proc_net()
-		local scene = scene_stack[#scene_stack] or {}
-		if scene.update then
-			scene:update(dt)
-		end
-		runScriptString()
-		UpdateEventSystem(dt)
-		memeryGC(dt)
-		for k, v in pairs(game_update_handler_list or {}) do
-			v(dt)
-		end
-			end, function(msg) LegendLog("[gameUpdate ERROR] " .. tostring(msg)) EDDebug(msg) end)
+	xpcall(gameUpdateImpl, gameUpdateErr)
 end
 ed.gameUpdate = gameUpdate
 local function registerGameUpdateHandler(key, handler)

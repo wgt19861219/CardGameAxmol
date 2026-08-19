@@ -779,7 +779,8 @@ local function update(self, dt)
 		paused = paused or v
 	end
 	if not paused then
-		local ok_eng, err_eng = pcall(function() ed.engine:update(dt) end)
+		-- pcall 直接传函数避免每帧每对象创建闭包（战斗 GC 压力主要来源之一）
+		local ok_eng, err_eng = pcall(ed.engine.update, ed.engine, dt)
 		if not ok_eng then
 			if not self._engErrShown then
 				print("[BATTLE_SCENE] engine update error: " .. tostring(err_eng))
@@ -795,7 +796,7 @@ local function update(self, dt)
 				nActor = nActor + 1
 				self.actor_list[nActor] = actor
 				if not actor.model.frozen_actor then
-					local ok_upd, err_upd = pcall(function() actor:update(dt) end)
+					local ok_upd, err_upd = pcall(actor.update, actor, dt)
 					if not ok_upd and not actor._updErrShown then
 						print("[BATTLE_SCENE] actor update error: " .. tostring(err_upd))
 						actor._updErrShown = true
@@ -815,7 +816,7 @@ local function update(self, dt)
 			local effect = self.effect_list[i]
 			local ok_eff = true
 			if effect.update then
-				ok_eff = pcall(function() effect:update(dt) end)
+				ok_eff = pcall(effect.update, effect, dt)
 			end
 			if effect:isTerminated() then
 				local node = effect.node or effect

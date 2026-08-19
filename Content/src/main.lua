@@ -123,11 +123,29 @@ if not rawget(_G, "socket") then rawset(_G, "socket", { connect = function() end
 
 -- LegendTime stub (C++ time function, returns y,m,d,h,min,sec,time,million)
 if not rawget(_G, "LegendTime") then
+    -- 毫秒时间源必须用墙钟：Windows 的 os.clock() 恰为墙钟，但 Android/Linux 的
+    -- os.clock() 是进程 CPU 时间——游戏 CPU 占用低时逻辑时间被等比拖慢（5% 占用
+    -- = 20 倍慢动作），且与 C++ 动作系统(真实帧时间)脱节导致波次切换不同步。
+    -- os.time() 在本引擎 Lua 编译里是整数秒（未定义 LUA_NUMTIME），不可用；
+    -- 优先用引擎绑定 utils:getTimeInMilliseconds()（真实墙钟毫秒），惰性缓存
+    local _wall_ms_fn, _wall_ms_self
     rawset(_G, "LegendTime", function()
-        local t = os.date("*t", os.time())
-        -- 使用 os.clock() 获取毫秒精度（os.time() 只有秒级精度，导致 dt 计算不准）
-        local million = math.floor(os.clock() * 1000)
-        return t.year, t.month, t.day, t.hour, t.min, t.sec, os.time(), million
+        local now = os.time()
+        local t = os.date("*t", now)
+        local million
+        if _wall_ms_fn then
+            million = _wall_ms_fn(_wall_ms_self)
+        else
+            local u = ax and ax.utils
+            if u and type(u.getTimeInMilliseconds) == "function" then
+                _wall_ms_fn = u.getTimeInMilliseconds
+                _wall_ms_self = u
+                million = _wall_ms_fn(u)
+            else
+                million = math.floor(os.clock() * 1000)
+            end
+        end
+        return t.year, t.month, t.day, t.hour, t.min, t.sec, now, million
     end)
 end
 
@@ -160,10 +178,24 @@ rawset(_G, "Type_DragonBone", 2)
 -- Lua 5.5 compat: loadstring → load
 if not rawget(_G, "loadstring") then rawset(_G, "loadstring", load) end
 
--- Lua 5.5 compat: collectgarbage("setpause"/"setstepmul") 已移除
+-- Lua 5.5 compat: collectgarbage("setpause"/"setstepmul") 已移除。
+-- 映射到等价的 incremental 模式参数；若直接丢弃（原实现），
+-- hello.lua 的原版 GC 调优（setpause=100, stepmul=5000）会失效，
+-- 战斗高分配率下 GC 按默认 pause=200 阶梯推进，造成周期性卡顿
 local _orig_collectgarbage = collectgarbage
+local _gc_pause, _gc_stepmul
 rawset(_G, "collectgarbage", function(opt, ...)
-    if opt == "setpause" or opt == "setstepmul" then return end
+    if opt == "setpause" then
+        _gc_pause = select(1, ...) or _gc_pause
+        local ok = pcall(_orig_collectgarbage, "incremental", _gc_pause or 200, _gc_stepmul or 200)
+        if not ok then pcall(_orig_collectgarbage, opt, ...) end
+        return
+    elseif opt == "setstepmul" then
+        _gc_stepmul = select(1, ...) or _gc_stepmul
+        local ok = pcall(_orig_collectgarbage, "incremental", _gc_pause or 200, _gc_stepmul or 200)
+        if not ok then pcall(_orig_collectgarbage, opt, ...) end
+        return
+    end
     return _orig_collectgarbage(opt, ...)
 end)
 
@@ -180,7 +212,11 @@ rawset(_G, "EDSwitchToResolutionDir", function() end)
 
 -- ed.getMillionTime fallback (overridden by time.lua if it loads)
 if not ed.getMillionTime then
-    ed.getMillionTime = function() return os.time() * 1000 end
+    -- 走 LegendTime 的墙钟毫秒源（os.time() 为整数秒，直接 *1000 会导致 dt 跳变）
+    ed.getMillionTime = function()
+        local _, _, _, _, _, _, _, million = LegendTime()
+        return million
+    end
 end
 -- ed.tick_interval fallback (overridden by battle_engine.lua)
 if not ed.tick_interval then ed.tick_interval = 0.1 end
@@ -2548,7 +2584,7 @@ local function ensureStubsAfterTools()
             end
         })
     end
-    if not ed.getMillionTime then ed.getMillionTime = function() return os.time() * 1000 end end
+    if not ed.getMillionTime then ed.getMillionTime = function() local _, _, _, _, _, _, _, m = LegendTime() return m end end
     if not ed.tick_interval then ed.tick_interval = 0.1 end
     -- 重新绑定存档系统（tools.lua 的 ed={} 会清除之前的 saveGame/loadSaveData）
     ed.saveGame = saveGame

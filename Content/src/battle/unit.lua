@@ -969,7 +969,11 @@ local function update(self, dt)
 		local pushVelocity = 0
 		local position = self.position
 		local collideWith = ed.Entity.collideWith
-		for unit in ed.engine:foreachAliveUnit(self.camp) do
+		-- 直接索引遍历替代 foreachAliveUnit 迭代器（闭包），消除每 tick 每单位的 GC 分配；
+		-- 原迭代器为倒序遍历，本循环无删除操作，正序等价
+		local alive_list = ed.engine.alive_units[self.camp]
+		for i = 1, #alive_list do
+			local unit = alive_list[i]
 			if self ~= unit and collideWith(self, unit) then
 				local dy = position[2] - unit.position[2]
 				if not isBuilding then
@@ -1765,7 +1769,8 @@ local function update(self, dt)
 	if not tolua.isnull(self.puppet) then
 		-- Pass 2x dt: scheduleUpdate removed, this is the only update call now
 		-- 2*dt preserves original animation rate at 1x, gives correct 4x sync
-		pcall(function() self.puppet:update(dt * 2, false) end)
+		-- pcall 直接传函数避免每帧每 actor 创建闭包
+		pcall(self.puppet.update, self.puppet, dt * 2, false)
 	end
 	local h = 0
 	if self.zSpeed then

@@ -675,6 +675,11 @@ local update = function(self, dt)
 	self.next_tick = self.next_tick - dt
 	while self.next_tick <= 0 do
 		self:tick()
+		-- tick 内 victory/exitStage 会置 running=false，当帧剩余补偿 tick 必须立即停止，
+		-- 否则同一帧内重复触发 victory → 重复创建切波 action → 副本连续重置波次（我方反复入场）
+		if not self.running then
+			break
+		end
 		self.next_tick = self.next_tick + self.tick_interval
 	end
 end
@@ -1587,6 +1592,7 @@ local function victory(self, skip)
 			-- 副本Boss战自动进入下一波（无需手动点击）
 			local isDungeon = self.stage_info and self.stage_info["Stage ID"] and self.stage_info["Stage ID"] >= 50001
 			if isDungeon then
+					print(string.format("[WAVE] dungeon auto next: wave %d -> %d, alive_enemy=%d", self.wave_id, self.wave_id + 1, self.alive_enemy_count))
 					-- 立即隐藏所有敌人actor（避免死亡动画残留）
 					for _, actor in ipairs(ed.scene.actor_list or {}) do
 						if actor.model and actor.model.camp == ed.emCampEnemy and actor.node then

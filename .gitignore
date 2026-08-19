@@ -66,3 +66,6 @@ lua_files_list.txt
 lua_full_paths.txt
 missing_files*.txt
 needload_modules.txt
+
+# 回归测试截图与调试脚本(本地证据,不入库;基础设施说明见 AGENTS.md)
+docs/screenshots/

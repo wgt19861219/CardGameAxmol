@@ -156,6 +156,7 @@ local function getFrames(resource)
 		factor = texture:getContentSize().width / texture:getPixelsWide()
 	end)
 	local frames = {}
+	local mainName, mainArea = nil, -1
 	for _, r in ipairs(regions) do
 		local storedW, storedH
 		if r.rotate then
@@ -163,6 +164,8 @@ local function getFrames(resource)
 		else
 			storedW, storedH = r.width, r.height
 		end
+		local area = storedW * storedH
+		if area > mainArea then mainArea, mainName = area, r.name end
 		-- atlas xy 为标准左上原点(2026-08-20 终版:Guard/Pvp 主体覆盖率 0.53/0.60 vs 左下解释 0.15/0.42
 		-- 证明左上;此前"左下原点"结论系 Pve 主体两解释重叠 95% + 风车序列帧相邻相似的假阳性)
 		-- rect 单位为逻辑点(×factor,引擎内部 ×contentScale 转像素)
@@ -173,6 +176,11 @@ local function getFrames(resource)
 		end
 	end
 	if not next(frames) then return nil end
+	-- 主体 region(面积最大):保持 Axmol 既有口径(逻辑尺寸,用户基准);
+	-- 其余装饰部件(光柱/旗帜/风车叶片等)按 spine 原生口径(×1/factor)渲染,
+	-- 与 Godot 端等效显示一致(2026-08-20 远征光柱可见性)
+	frames._mainRegion = mainName
+	frames._partScale = 1 / factor
 	frameCache[resource] = frames
 	return frames
 end
@@ -190,14 +198,18 @@ local function applyAttToSprite(sprite, att, frames, attName)
 	-- (2026-08-20 远征 Light 位置实证:att 偏移被骨骼反向旋转进火山体内)
 	local rot = -((att and att.rotation) or 0)
 	local sx, sy = (att and att.scaleX) or 1, (att and att.scaleY) or 1
+	local ts = 1
+	if frames._partScale and attName ~= frames._mainRegion then
+		ts = frames._partScale -- 装饰部件按 spine 原生口径(主体保持用户基准尺寸)
+	end
 	if entry.rotated then
 		sprite:setRotation(rot - 90)
-		sx = -sx
+		sprite:setScale(-sx * ts, sy * ts)
 	else
 		sprite:setRotation(rot)
+		sprite:setScale(sx * ts, sy * ts)
 	end
 	sprite:setPosition((att and att.x) or 0, (att and att.y) or 0)
-	sprite:setScale(sx, sy)
 end
 
 -- resource:资源名(如 "eff_UI_Main_Pve")。成功返回带骨骼层级与逐帧动画的 CCNode,失败返回 nil。
@@ -347,10 +359,14 @@ function spineplayer.create(resource)
 					local pl = meshPlacement(att, attName)
 					if pl then
 						local entry = frames[attName]
+						local ts = 1
+						if frames._partScale and attName ~= frames._mainRegion then
+							ts = frames._partScale -- 装饰部件按 spine 原生口径
+						end
 						local rw = math.max(att.width or 0, 1)
 						local rh = math.max(att.height or 0, 1)
-						local sx = pl.uw / rw
-						local sy = pl.vh / rh
+						local sx = pl.uw / rw * ts
+						local sy = pl.vh / rh * ts
 						if entry.rotated then
 							sprite:setRotation(pl.angle - 90)
 							sprite:setScaleX(-sx)

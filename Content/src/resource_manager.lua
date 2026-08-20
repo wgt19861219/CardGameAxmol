@@ -561,7 +561,16 @@ local function createStaticSpriteFromSpineAtlas(resource)
 	end
 
 	if not bestRegion then return nil end
-	local rect = CCRectMake(bestRegion.x, bestRegion.y, bestRegion.width, bestRegion.height)
+	-- 与 spineplayer.lua 同口径:atlas xy 左下原点、rect 逻辑点(×factor)、rotate +90 逆时针转正
+	local pxH = texture:getContentSize().height
+	local factor = 1
+	pcall(function()
+		pxH = texture:getPixelsHigh()
+		factor = texture:getContentSize().width / texture:getPixelsWide()
+	end)
+	local rw = bestRegion.rotate and bestRegion.height or bestRegion.width
+	local rh = bestRegion.rotate and bestRegion.width or bestRegion.height
+	local rect = CCRectMake(bestRegion.x * factor, (pxH - bestRegion.y - rh) * factor, rw * factor, rh * factor)
 	local frame = CCSpriteFrame:createWithTexture(texture, rect)
 	if not frame then return nil end
 	local sprite = CCSprite:createWithSpriteFrame(frame)

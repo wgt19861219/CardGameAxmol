@@ -146,15 +146,25 @@ local function getFrames(resource)
 	if not regions or #regions == 0 then return nil end
 	local texture = CCTextureCache:sharedTextureCache():addImage(pngPath)
 	if not texture then return nil end
+	-- 坐标系要点(引擎源码 SpriteFrame.cpp + CardGame2 最终纹理像素对照实证,2026-08-20):
+	-- 1. spine 2.1 atlas xy 为左下原点;2 参 createWithTexture 的 rect 为逻辑点(引擎内部 ×contentScale 转像素)
+	-- 2. factor = 逻辑/像素(contentScale 倒数);3. rotate region 用 sprite setRotation(+90) 逆时针转正(cocos 正角逆时针)
+	local pxH = texture:getContentSize().height
+	local factor = 1
+	pcall(function()
+		pxH = texture:getPixelsHigh()
+		factor = texture:getContentSize().width / texture:getPixelsWide()
+	end)
 	local frames = {}
 	for _, r in ipairs(regions) do
-		-- rotate region 在 atlas 内宽高互换存储,先按存储朝向切图,显示时 setRotation 转回
-		local rect
+		local storedW, storedH
 		if r.rotate then
-			rect = CCRectMake(r.x, r.y, r.height, r.width)
+			storedW, storedH = r.height, r.width
 		else
-			rect = CCRectMake(r.x, r.y, r.width, r.height)
+			storedW, storedH = r.width, r.height
 		end
+		local yTop = pxH - r.y - storedH
+		local rect = CCRectMake(r.x * factor, yTop * factor, storedW * factor, storedH * factor)
 		local frame = CCSpriteFrame:createWithTexture(texture, rect)
 		if frame then
 			frames[r.name] = { frame = frame, rotated = r.rotate and true or false }
@@ -171,13 +181,19 @@ local function applyAttToSprite(sprite, att, frames, attName)
 	local entry = frames[attName]
 	if not entry then return end
 	sprite:setDisplayFrame(entry.frame)
-	-- rotate region 补偿 -90:cocos setRotation 正角为顺时针(与 Godot/PIL 逆时针相反),
-	-- 存储朝向贴图需逆时针转正(实测校准,2026-08-20 与 spine-c 语义渲染对照)
-	local rot = (att and att.rotation or 0) + (entry.rotated and -90 or 0)
-	sprite:setRotation(rot)
-	sprite:setPosition((att and att.x) or 0, (att and att.y) or 0)
+	-- rotate region 在 atlas 中转置存储:存储贴图 setRotation(-90)+setScaleX(-1) 复原
+	-- (离屏渲染 vs CardGame2 最终纹理像素对照 0.963 实证,2026-08-20;setFlipX 在 visit 路径不生效,负 scale 可靠)
+	-- 非 rotate 原样直显即正确(同法实证 0.814)
+	local rot = (att and att.rotation) or 0
 	local sx, sy = (att and att.scaleX) or 1, (att and att.scaleY) or 1
-	if sx ~= 1 or sy ~= 1 then sprite:setScale(sx, sy) else sprite:setScale(1, 1) end
+	if entry.rotated then
+		sprite:setRotation(rot - 90)
+		sx = -sx
+	else
+		sprite:setRotation(rot)
+	end
+	sprite:setPosition((att and att.x) or 0, (att and att.y) or 0)
+	sprite:setScale(sx, sy)
 end
 
 -- resource:资源名(如 "eff_UI_Main_Pve")。成功返回带骨骼层级与逐帧动画的 CCNode,失败返回 nil。

@@ -389,8 +389,8 @@ function spineplayer.create(resource)
 					if boneNode then boneNode:addChild(sprite) end
 				end
 				local r, g, b, a = parseColorHex(slot.color)
-				sprite:setColor(ccc3(r, g, b))
-				sprite:setOpacity(a)
+				sprite:setColor(ccc3(math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5)))
+				sprite:setOpacity(math.floor(a + 0.5))
 				local w = math.abs(att.width or 0) * math.abs((att.scaleX or 1))
 				local h = math.abs(att.height or 0) * math.abs((att.scaleY or 1))
 				if w > maxWidth then maxWidth = w end
@@ -441,8 +441,8 @@ function spineplayer.create(resource)
 				entry.sprite:setVisible(true)
 			end
 			local r, g, b, a = parseColorHex(entry.setupColor)
-			entry.sprite:setColor(ccc3(r, g, b))
-			entry.sprite:setOpacity(a)
+			entry.sprite:setColor(ccc3(math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5)))
+			entry.sprite:setOpacity(math.floor(a + 0.5))
 			entry.lastColor = { r, g, b, a }
 		end
 	end
@@ -527,8 +527,9 @@ function spineplayer.create(resource)
 						-- 色值微变(总和<8/1020)跳过 setColor,避免每帧制造 ccc3 临时对象
 						if not lc or (math.abs(r - lc[1]) + math.abs(g - lc[2])
 							+ math.abs(b - lc[3]) + math.abs(a - lc[4])) >= 8 then
-							sprite:setColor(ccc3(r, g, b))
-							sprite:setOpacity(a)
+							-- tolua uint8 绑定对浮点参数会归零(2026-08-20 实测:setOpacity(238.7)→0)——必须取整
+							sprite:setColor(ccc3(math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5)))
+							sprite:setOpacity(math.floor(a + 0.5))
 							entry.lastColor = { r, g, b, a }
 						end
 					end

@@ -163,8 +163,10 @@ local function getFrames(resource)
 		else
 			storedW, storedH = r.width, r.height
 		end
-		local yTop = pxH - r.y - storedH
-		local rect = CCRectMake(r.x * factor, yTop * factor, storedW * factor, storedH * factor)
+		-- atlas xy 为标准左上原点(2026-08-20 终版:Guard/Pvp 主体覆盖率 0.53/0.60 vs 左下解释 0.15/0.42
+		-- 证明左上;此前"左下原点"结论系 Pve 主体两解释重叠 95% + 风车序列帧相邻相似的假阳性)
+		-- rect 单位为逻辑点(×factor,引擎内部 ×contentScale 转像素)
+		local rect = CCRectMake(r.x * factor, r.y * factor, storedW * factor, storedH * factor)
 		local frame = CCSpriteFrame:createWithTexture(texture, rect)
 		if frame then
 			frames[r.name] = { frame = frame, rotated = r.rotate and true or false }

@@ -186,7 +186,9 @@ local function applyAttToSprite(sprite, att, frames, attName)
 	-- rotate region 在 atlas 中转置存储:存储贴图 setRotation(-90)+setScaleX(-1) 复原
 	-- (离屏渲染 vs CardGame2 最终纹理像素对照 0.963 实证,2026-08-20;setFlipX 在 visit 路径不生效,负 scale 可靠)
 	-- 非 rotate 原样直显即正确(同法实证 0.814)
-	local rot = (att and att.rotation) or 0
+	-- spine 角度逆时针正,cocos setRotation 顺时针正 —— 所有 spine 角度入口取负
+	-- (2026-08-20 远征 Light 位置实证:att 偏移被骨骼反向旋转进火山体内)
+	local rot = -((att and att.rotation) or 0)
 	local sx, sy = (att and att.scaleX) or 1, (att and att.scaleY) or 1
 	if entry.rotated then
 		sprite:setRotation(rot - 90)
@@ -216,11 +218,11 @@ function spineplayer.create(resource)
 	for name, b in pairs(data.bones) do
 		local node = CCNode:create()
 		node:setPosition(b.x or 0, b.y or 0)
-		node:setRotation(b.rotation or 0)
+		node:setRotation(-(b.rotation or 0)) -- spine 逆时针正 → cocos 顺时针正
 		node:setScale(b.scaleX or 1, b.scaleY or 1)
 		boneNodes[name] = node
 		setupPos[name] = { x = b.x or 0, y = b.y or 0 }
-		setupRot[name] = b.rotation or 0
+		setupRot[name] = -(b.rotation or 0)
 		setupScale[name] = { x = b.scaleX or 1, y = b.scaleY or 1 }
 	end
 	local rootBoneName = nil
@@ -466,7 +468,7 @@ function spineplayer.create(resource)
 				local node = boneNodes[name]
 				if node then
 					if tl.rotate then
-						node:setRotation(setupRot[name] + interpAngle(tl.rotate, t))
+						node:setRotation(setupRot[name] - interpAngle(tl.rotate, t)) -- spine 增量取负
 					end
 					if tl.translate then
 						local x, y = interpVec(tl.translate, t)

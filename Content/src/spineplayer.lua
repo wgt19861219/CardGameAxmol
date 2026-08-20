@@ -269,8 +269,9 @@ function spineplayer.create(resource)
 		return m
 	end
 
-	-- mesh/skinnedmesh 附件降级摆放:解析 setup 加权世界顶点 + UV 四角,
-	-- 把整块 region 贴图按"四边形刚体近似"摆上(忽略网格非刚性变形)
+	-- mesh/skinnedmesh 附件降级摆放:解析 setup 加权世界顶点,对全部顶点做
+	-- UV→世界 的最小二乘仿射拟合(UV 四角常无精确顶点,取最近点会低估尺寸),
+	-- 贴图按拟合出的 U/V 轴向量做刚体摆放(忽略网格非刚性变形)
 	local function meshPlacement(att, attName)
 		local verts = {}
 		local seq = att.vertices or {}
@@ -292,27 +293,40 @@ function spineplayer.create(resource)
 			verts[#verts + 1] = { x = vx, y = vy }
 		end
 		local uvs = att.uvs or {}
-		local function cornerVertex(tu, tv)
-			local bestI, bestD = 1, math.huge
-			for vi = 1, #verts do
-				local du = math.abs((uvs[vi * 2 - 1] or 0) - tu)
-				local dv = math.abs((uvs[vi * 2] or 0) - tv)
-				local dist = du + dv
-				if dist < bestD then bestD, bestI = dist, vi end
-			end
-			return verts[bestI]
+		local nv = #verts
+		if nv < 3 then return nil end
+		-- 最小二乘拟合 world = (a*u + b*v + c, a2*u + b2*v + c2)
+		local suu, svv, suv, su, sv = 0, 0, 0, 0, 0
+		local sxu, sxv, sx, syu, syv, sy = 0, 0, 0, 0, 0, 0
+		for vi = 1, nv do
+			local u = uvs[vi * 2 - 1] or 0
+			local v = uvs[vi * 2] or 0
+			local p = verts[vi]
+			suu = suu + u * u; svv = svv + v * v; suv = suv + u * v
+			su = su + u; sv = sv + v
+			sxu = sxu + p.x * u; sxv = sxv + p.x * v; sx = sx + p.x
+			syu = syu + p.y * u; syv = syv + p.y * v; sy = sy + p.y
 		end
-		local p00 = cornerVertex(0, 0)
-		local p10 = cornerVertex(1, 0)
-		local p01 = cornerVertex(0, 1)
-		local ux, uy = p10.x - p00.x, p10.y - p00.y
-		local vx, vy = p01.x - p00.x, p01.y - p00.y
-		local uw = math.sqrt(ux * ux + uy * uy)
-		local vh = math.sqrt(vx * vx + vy * vy)
-		local cx = p00.x + (ux + vx) / 2
-		local cy = p00.y + (uy + vy) / 2
-		local angle = math.deg(math.atan2(uy, ux))
-		return { cx = cx, cy = cy, angle = angle, uw = uw, vh = vh }
+		local function solve3(m11, m12, m13, m21, m22, m23, m31, m32, m33, r1, r2, r3)
+			local det = m11 * (m22 * m33 - m23 * m32) - m12 * (m21 * m33 - m23 * m31) + m13 * (m21 * m32 - m22 * m31)
+			if math.abs(det) < 1e-9 then return nil end
+			local d1 = r1 * (m22 * m33 - m23 * m32) - m12 * (r2 * m33 - m23 * r3) + m13 * (r2 * m32 - m22 * r3)
+			local d2 = m11 * (r2 * m33 - r3 * m23) - r1 * (m21 * m33 - m23 * m31) + m13 * (m21 * r3 - r2 * m31)
+			local d3 = m11 * (m22 * r3 - r2 * m32) - m12 * (m21 * r3 - r2 * m31) + r1 * (m21 * m32 - m22 * m31)
+			return d1 / det, d2 / det, d3 / det
+		end
+		local a1, b1, c1 = solve3(suu, suv, su, suv, svv, sv, su, sv, nv, sxu, sxv, sx)
+		local a2, b2, c2 = solve3(suu, suv, su, suv, svv, sv, su, sv, nv, syu, syv, sy)
+		if not a1 or not a2 then return nil end
+		-- U 轴向量(世界)= 拟合式中 u 系数;中心 = u=v=0.5 处
+		local cx = c1 + (a1 + b1) * 0.5
+		local cy = c2 + (a2 + b2) * 0.5
+		return {
+			cx = cx, cy = cy,
+			angle = math.deg(math.atan2(a2, a1)),
+			uw = math.sqrt(a1 * a1 + a2 * a2),
+			vh = math.sqrt(b1 * b1 + b2 * b2),
+		}
 	end
 
 
@@ -327,23 +341,30 @@ function spineplayer.create(resource)
 			local sprite = CCSprite:createWithSpriteFrame(frames[attName].frame)
 			if sprite then
 				if isMesh then
-					-- mesh 降级:按 setup 世界顶点 UV 四角摆放,挂 container(不挂骨骼)
+					-- mesh 降级:按最小二乘仿射拟合的世界摆位,挂 container(不挂骨骼)
 					local pl = meshPlacement(att, attName)
-					local entry = frames[attName]
-					local rw = math.max(att.width or 0, 1)
-					local rh = math.max(att.height or 0, 1)
-					local sx = pl.uw / rw
-					local sy = pl.vh / rh
-					if entry.rotated then
-						sprite:setRotation(pl.angle - 90)
-						sprite:setScaleX(-sx)
-						sprite:setScaleY(sy)
+					if pl then
+						local entry = frames[attName]
+						local rw = math.max(att.width or 0, 1)
+						local rh = math.max(att.height or 0, 1)
+						local sx = pl.uw / rw
+						local sy = pl.vh / rh
+						if entry.rotated then
+							sprite:setRotation(pl.angle - 90)
+							sprite:setScaleX(-sx)
+							sprite:setScaleY(sy)
+						else
+							sprite:setRotation(pl.angle)
+							sprite:setScale(sx, sy)
+						end
+						sprite:setPosition(pl.cx, pl.cy)
+						container:addChild(sprite)
 					else
-						sprite:setRotation(pl.angle)
-						sprite:setScale(sx, sy)
+						-- 拟合失败兜底:按 region 式挂骨骼(att 无 x/y 则零偏移)
+						applyAttToSprite(sprite, att, frames, attName)
+						local boneNode = boneNodes[slot.bone] or boneNodes[rootBoneName]
+						if boneNode then boneNode:addChild(sprite) end
 					end
-					sprite:setPosition(pl.cx, pl.cy)
-					container:addChild(sprite)
 				else
 					applyAttToSprite(sprite, att, frames, attName)
 					local boneNode = boneNodes[slot.bone] or boneNodes[rootBoneName]

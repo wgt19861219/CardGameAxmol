@@ -44,6 +44,7 @@ cd proj.android && ./gradlew assembleRelease
 - **辅助脚本**:`docs/screenshots/test0819/` 下 `inject.sh`(带 3 次重试注入)、`tap_test.sh`(点击+截图+验证)、`batch_goto.sh`(入口批量驱动)、`cmd_*.lua`(场景 dump/popScene/战斗进场等注入片段)。
 - **按钮直调**:`ed.getCurrentScene():getMainButtonHandler(key)()` 与真实点击同路径(14 个入口 key 见 `ui/parameter/mainres.lua` button_key);快捷栏走 `ui/framework.lua` getSCButtonTouchHandler。
 - **MuMu 模拟器坑**:多 display(4/6/7 随 am start 漂移),`input tap` 必须带 `-d <FocusedDisplayId>` 且仍可能间歇失效(monkey 也 Injection Failed)——注入通道比 input 稳定,优先用;Android 返回键会把游戏切后台进 freezer,用注入 `ed.popScene()` 代替;`adb exec-out screencap > file` 在 Git Bash 下会被输出污染,须设备端 screencap 后 pull,目标路径用 Windows 风格 + `MSYS_NO_PATHCONV=1`。
+- **MuMu 失焦降帧(2026-08-20 实测,帧率测试最大陷阱)**:MuMu 宿主窗口(Windows 层)失焦时,模拟器把 Android display 切到 15Hz 模式(`dumpsys display` 可见 supportedModes 60/15 两档、`mDisplayModeSpecs primaryRefreshRateRange=[0 15]` 锁定),vsync 驱动的主循环随之锁 15fps,且**窗口回前台即恢复 60**。表现为:帧率精确稳定 15fps、GLThread CPU <5%(全线程 sleeping)。**任何帧率测试前必须先把 MuMu 窗口激活到 Windows 前台**:`powershell -NoProfile -Command "(New-Object -ComObject WScript.Shell).AppActivate('MuMu安卓设备')"`(返回 True 生效;adb/终端命令不抢 Windows 焦点,激活后可继续跑 adb)。此前 8-19/8-20 测得的"战斗 15fps""帧率随时间劣化"均为此假象——前台实测战斗与主界面都是稳定 60fps。
 - **坐标换算**:world_x = screen_x/2.4,world_y = 480 − screen_y/2.25;按钮位置 = mainres.lua res_pos 的 pos + touchCenter,再按其 parent container 偏移(pve 在 subContainer,volcano 在 middleContainer,其余 topContainer)。
 
 ## 架构与加载链(改代码前必读)

@@ -202,6 +202,7 @@ local function parseSpineJson(resource)
 		return nil
 	end
 	local bones = {}
+	local boneOrder = {}
 	if data.bones then
 		for _, b in ipairs(data.bones) do
 			bones[b.name] = {
@@ -212,6 +213,7 @@ local function parseSpineJson(resource)
 				scaleY = b.scaleY or 1,
 				parent = b.parent
 			}
+			boneOrder[#boneOrder + 1] = b.name
 		end
 	end
 	local slots = {}
@@ -254,6 +256,7 @@ local function parseSpineJson(resource)
 	end
 	return {
 		bones = bones,
+		boneOrder = boneOrder,
 		slots = slots,
 		skins = skins,
 		colorAnimations = colorAnimations,

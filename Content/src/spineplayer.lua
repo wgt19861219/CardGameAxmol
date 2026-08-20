@@ -234,7 +234,88 @@ function spineplayer.create(resource)
 		end
 	end
 
-	-- slot 附件 sprite(数组顺序 = spine 绘制顺序 = addChild z 序)
+	-- setup 世界矩阵(spine-c Bone 语义:世界角=父+子,世界缩放=父×子,位置=父矩阵×局部平移)
+	local boneMats = {}
+	local function boneWorldMat(name)
+		if boneMats[name] then return boneMats[name] end
+		local b = data.bones[name]
+		local m
+		if not b then
+			m = { a = 1, b = 0, c = 0, d = 1, tx = 0, ty = 0 }
+		elseif b.parent and data.bones[b.parent] then
+			local p = boneWorldMat(b.parent)
+			local x, y = b.x or 0, b.y or 0
+			local rot = math.rad((b.rotation or 0) + math.deg(math.atan2(p.b, p.a)))
+			local wsx = p.wsx * (b.scaleX or 1)
+			local wsy = p.wsy * (b.scaleY or 1)
+			m = {
+				a = math.cos(rot) * wsx, b = math.sin(rot) * wsx,
+				c = -math.sin(rot) * wsy, d = math.cos(rot) * wsy,
+				tx = p.a * x + p.c * y + p.tx,
+				ty = p.b * x + p.d * y + p.ty,
+				wsx = wsx, wsy = wsy,
+			}
+		else
+			local rot = math.rad(b.rotation or 0)
+			local wsx, wsy = b.scaleX or 1, b.scaleY or 1
+			m = {
+				a = math.cos(rot) * wsx, b = math.sin(rot) * wsx,
+				c = -math.sin(rot) * wsy, d = math.cos(rot) * wsy,
+				tx = b.x or 0, ty = b.y or 0,
+				wsx = wsx, wsy = wsy,
+			}
+		end
+		boneMats[name] = m
+		return m
+	end
+
+	-- mesh/skinnedmesh 附件降级摆放:解析 setup 加权世界顶点 + UV 四角,
+	-- 把整块 region 贴图按"四边形刚体近似"摆上(忽略网格非刚性变形)
+	local function meshPlacement(att, attName)
+		local verts = {}
+		local seq = att.vertices or {}
+		local i = 1
+		local n = #seq
+		while i <= n do
+			local bc = seq[i] or 0
+			i = i + 1
+			local vx, vy = 0, 0
+			for _ = 1, bc do
+				local bIdx = seq[i]
+				local x, y, w = seq[i + 1] or 0, seq[i + 2] or 0, seq[i + 3] or 1
+				i = i + 4
+				local bName = data.boneOrder and data.boneOrder[bIdx + 1]
+				local m = bName and boneWorldMat(bName) or boneWorldMat(rootBoneName or "")
+				vx = vx + w * (m.a * x + m.c * y + m.tx)
+				vy = vy + w * (m.b * x + m.d * y + m.ty)
+			end
+			verts[#verts + 1] = { x = vx, y = vy }
+		end
+		local uvs = att.uvs or {}
+		local function cornerVertex(tu, tv)
+			local bestI, bestD = 1, math.huge
+			for vi = 1, #verts do
+				local du = math.abs((uvs[vi * 2 - 1] or 0) - tu)
+				local dv = math.abs((uvs[vi * 2] or 0) - tv)
+				local dist = du + dv
+				if dist < bestD then bestD, bestI = dist, vi end
+			end
+			return verts[bestI]
+		end
+		local p00 = cornerVertex(0, 0)
+		local p10 = cornerVertex(1, 0)
+		local p01 = cornerVertex(0, 1)
+		local ux, uy = p10.x - p00.x, p10.y - p00.y
+		local vx, vy = p01.x - p00.x, p01.y - p00.y
+		local uw = math.sqrt(ux * ux + uy * uy)
+		local vh = math.sqrt(vx * vx + vy * vy)
+		local cx = p00.x + (ux + vx) / 2
+		local cy = p00.y + (uy + vy) / 2
+		local angle = math.deg(math.atan2(uy, ux))
+		return { cx = cx, cy = cy, angle = angle, uw = uw, vh = vh }
+	end
+
+
 	local slotSprites = {}
 	local slotByName = {}
 	local maxWidth, maxHeight = 0, 0
@@ -242,14 +323,35 @@ function spineplayer.create(resource)
 		local attName = slot.attachment
 		local att = attName and skin[slot.name] and skin[slot.name][attName]
 		if attName and frames[attName] then
+			local isMesh = att and (att.type == "mesh" or att.type == "skinnedmesh")
 			local sprite = CCSprite:createWithSpriteFrame(frames[attName].frame)
 			if sprite then
-				applyAttToSprite(sprite, att, frames, attName)
+				if isMesh then
+					-- mesh 降级:按 setup 世界顶点 UV 四角摆放,挂 container(不挂骨骼)
+					local pl = meshPlacement(att, attName)
+					local entry = frames[attName]
+					local rw = math.max(att.width or 0, 1)
+					local rh = math.max(att.height or 0, 1)
+					local sx = pl.uw / rw
+					local sy = pl.vh / rh
+					if entry.rotated then
+						sprite:setRotation(pl.angle - 90)
+						sprite:setScaleX(-sx)
+						sprite:setScaleY(sy)
+					else
+						sprite:setRotation(pl.angle)
+						sprite:setScale(sx, sy)
+					end
+					sprite:setPosition(pl.cx, pl.cy)
+					container:addChild(sprite)
+				else
+					applyAttToSprite(sprite, att, frames, attName)
+					local boneNode = boneNodes[slot.bone] or boneNodes[rootBoneName]
+					if boneNode then boneNode:addChild(sprite) end
+				end
 				local r, g, b, a = parseColorHex(slot.color)
 				sprite:setColor(ccc3(r, g, b))
 				sprite:setOpacity(a)
-				local boneNode = boneNodes[slot.bone] or boneNodes[rootBoneName]
-				if boneNode then boneNode:addChild(sprite) end
 				local w = math.abs(att.width or 0) * math.abs((att.scaleX or 1))
 				local h = math.abs(att.height or 0) * math.abs((att.scaleY or 1))
 				if w > maxWidth then maxWidth = w end
@@ -260,6 +362,7 @@ function spineplayer.create(resource)
 					setupColor = slot.color,
 					defaultAtt = attName,
 					curAtt = attName,
+					isMesh = isMesh,
 					lastColor = nil, -- 上一帧已应用的 RGBA(微变跳过,减每帧临时对象)
 				}
 				slotByName[slot.name] = slotSprites[#slotSprites]
@@ -293,7 +396,7 @@ function spineplayer.create(resource)
 		end
 		for _, entry in ipairs(slotSprites) do
 			local att = skin[entry.slot.name] and skin[entry.slot.name][entry.defaultAtt]
-			if att and frames[entry.defaultAtt] then
+			if att and frames[entry.defaultAtt] and not entry.isMesh then
 				applyAttToSprite(entry.sprite, att, frames, entry.defaultAtt)
 				entry.curAtt = entry.defaultAtt
 				entry.sprite:setVisible(true)
@@ -367,10 +470,12 @@ function spineplayer.create(resource)
 							entry.curAtt = nil
 						elseif target ~= entry.curAtt then
 							local att = skin[slotName] and skin[slotName][target]
-							if att and frames[target] then
+							if att and frames[target] and not entry.isMesh then
 								applyAttToSprite(sprite, att, frames, target)
 								entry.curAtt = target
 								sprite:setVisible(true)
+							elseif entry.isMesh then
+								entry.curAtt = target -- mesh 不做帧切换,保持 setup 摆放
 							else
 								sprite:setVisible(false)
 								entry.curAtt = nil

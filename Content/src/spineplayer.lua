@@ -171,7 +171,9 @@ local function applyAttToSprite(sprite, att, frames, attName)
 	local entry = frames[attName]
 	if not entry then return end
 	sprite:setDisplayFrame(entry.frame)
-	local rot = (att and att.rotation or 0) + (entry.rotated and 90 or 0)
+	-- rotate region 补偿 -90:cocos setRotation 正角为顺时针(与 Godot/PIL 逆时针相反),
+	-- 存储朝向贴图需逆时针转正(实测校准,2026-08-20 与 spine-c 语义渲染对照)
+	local rot = (att and att.rotation or 0) + (entry.rotated and -90 or 0)
 	sprite:setRotation(rot)
 	sprite:setPosition((att and att.x) or 0, (att and att.y) or 0)
 	local sx, sy = (att and att.scaleX) or 1, (att and att.scaleY) or 1

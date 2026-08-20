@@ -173,6 +173,9 @@ local function getFrames(resource)
 		end
 	end
 	if not next(frames) then return nil end
+	-- 贴图显示尺寸补偿:contentScale 把贴图逻辑尺寸缩为 像素×factor,
+	-- 而 spine 世界尺寸语义 = 原像素(与 Godot 端逐建筑等大,2026-08-20 远征烟雾排查实证)
+	frames._texScale = 1 / factor
 	frameCache[resource] = frames
 	return frames
 end
@@ -188,14 +191,15 @@ local function applyAttToSprite(sprite, att, frames, attName)
 	-- 非 rotate 原样直显即正确(同法实证 0.814)
 	local rot = (att and att.rotation) or 0
 	local sx, sy = (att and att.scaleX) or 1, (att and att.scaleY) or 1
+	local ts = frames._texScale or 1
 	if entry.rotated then
 		sprite:setRotation(rot - 90)
-		sx = -sx
+		sprite:setScale(-sx * ts, sy * ts)
 	else
 		sprite:setRotation(rot)
+		sprite:setScale(sx * ts, sy * ts)
 	end
 	sprite:setPosition((att and att.x) or 0, (att and att.y) or 0)
-	sprite:setScale(sx, sy)
 end
 
 -- resource:资源名(如 "eff_UI_Main_Pve")。成功返回带骨骼层级与逐帧动画的 CCNode,失败返回 nil。
@@ -345,10 +349,11 @@ function spineplayer.create(resource)
 					local pl = meshPlacement(att, attName)
 					if pl then
 						local entry = frames[attName]
+						local ts = frames._texScale or 1
 						local rw = math.max(att.width or 0, 1)
 						local rh = math.max(att.height or 0, 1)
-						local sx = pl.uw / rw
-						local sy = pl.vh / rh
+						local sx = pl.uw / rw * ts
+						local sy = pl.vh / rh * ts
 						if entry.rotated then
 							sprite:setRotation(pl.angle - 90)
 							sprite:setScaleX(-sx)

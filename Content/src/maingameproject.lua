@@ -5,6 +5,7 @@ ed.needLoadFiles = {
 	"datatable",
 	"GameConfig",
 	"resource_manager",
+	"spineplayer",
 	"event/event",
 	"event/systemevent",
 	"stringutil",

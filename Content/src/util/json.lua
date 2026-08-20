@@ -224,7 +224,8 @@ end
 function decode_scanNumber(s,startPos)
   local endPos = startPos+1
   local stringLen = string.len(s)
-  local acceptableChars = "+-0123456789.e"
+  -- 含大写 E:JSON 规范允许科学计数法用 e 或 E(如 spine json 贝塞尔控制点 1.0E-5)
+  local acceptableChars = "+-0123456789.eE"
   while (string.find(acceptableChars, string.sub(s,endPos,endPos), 1, true)
 	and endPos<=stringLen
 	) do

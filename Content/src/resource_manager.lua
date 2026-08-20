@@ -256,7 +256,8 @@ local function parseSpineJson(resource)
 		bones = bones,
 		slots = slots,
 		skins = skins,
-		colorAnimations = colorAnimations
+		colorAnimations = colorAnimations,
+		animations = data.animations or {}
 	}
 end
 
@@ -270,6 +271,8 @@ local function getOrParseSpineData(resource)
 	end
 	return data
 end
+ed.getOrParseSpineData = getOrParseSpineData
+ed.parseAtlasRegions = parseAtlasRegions
 
 local function computeSlotWorldTransform(slotData, bones)
 	local boneName = slotData.bone
@@ -591,6 +594,18 @@ local function createFcaNode(resource, aniType)
 		end
 	end
 	LegendSetAniScaleFactor(ed.cha_scale)
+	if not node then
+		-- SpineContainer 拒载 spine 2.x / FCA 资源缺失时:优先纯 Lua Spine 播放器(全散件 + 动画),
+		-- 再落单张最大散件静态图(spineplayer.lua,借鉴 CardGame2 spine_skeleton.gd)
+		if ed.createSpinePlayer then
+			node = ed.createSpinePlayer(resource)
+			if node then
+				node:setAction('Start')
+				node:setNextAction('Loop')
+				node:setLoop(true)
+			end
+		end
+	end
 	if not node then
 		node = createStaticSpriteFromSpineAtlas(resource)
 	end
